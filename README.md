@@ -21,7 +21,8 @@ pnpm dev                       # http://localhost:3000
 ## Database (Arnav, once)
 Supabase dashboard → SQL Editor → run in order:
 1. `supabase/migrations/20261030000000_init.sql`
-2. `supabase/seed.sql`
+2. `supabase/migrations/20261031000000_privacy_staff.sql`
+3. `supabase/seed.sql`
 
 Then make yourself super admin: `update profiles set role = 'super_admin' where id = '<your auth user id>';`
 

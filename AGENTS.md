@@ -11,7 +11,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # CivicSense — rules for AI coding agents (Antigravity, Claude, Copilot)
 
 Bilingual (Assamese + English) AI campus issue manager for the Game of Codes hackathon (4 Nov 2026).
-PRD: https://claude.ai/artifact/3B2QdS9acLsMzeoYKsFJ7r
+PRD: `docs/PRD.md` (source of truth)
 
 ## Stack (do not add libraries without asking Arnav)
 Next.js 16 App Router + TypeScript strict · Tailwind v4 · next-intl · Supabase (Postgres + pgvector, Auth, Storage, Realtime) ·

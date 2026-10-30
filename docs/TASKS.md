@@ -1,6 +1,6 @@
 # Tasks — freeze 3 Nov 8 PM
 
-Full plan: PRD → https://claude.ai/artifact/3B2QdS9acLsMzeoYKsFJ7r
+Full spec: `docs/PRD.md` (build milestones in section 14)
 
 ## Done (30 Oct, Arnav)
 - [x] Next 16 scaffold, Tailwind v4 theme tokens (Tea Garden / Brahmaputra / Muga × light/dark), live switchers
