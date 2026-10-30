@@ -13,13 +13,20 @@ const RULES: [Category, RegExp][] = [
   ["infrastructure", /broken|road|door|window|bench|ভগা|পথ|দুৱাৰ/i],
 ];
 
+// Same keyword lists as engine/ so both fallbacks agree.
+const URGENT = /fire|smoke|injur|bleed|accident|unconscious|faint|electrocut|violence|attack|threat|knife|weapon|জুই|ধোঁৱা|আঘাত|দুৰ্ঘটনা|অজ্ঞান|হিংসা|আক্ৰমণ|ভাবুকি|ছুৰী/i;
+const SENSITIVE = /harass|threat|stalk|ragging|abuse|molest|bully|suicid|unsafe|হাৰাশাস|ভাবুকি|ৰেগিং|নিৰ্যাতন|অসুৰক্ষিত/i;
+
 export function fallbackIntake(text: string): Intake {
   const category = RULES.find(([, re]) => re.test(text))?.[0] ?? "other";
   const short = text.trim().slice(0, 80) || "Photo complaint";
+  const isUrgent = URGENT.test(text);
   return {
     title_en: short, title_as: short, summary_en: text.slice(0, 380) || "Photo complaint awaiting AI analysis.",
     summary_as: text.slice(0, 380) || "ফটো অভিযোগ — এআই বিশ্লেষণৰ অপেক্ষাত।",
-    category, priority: 3, priority_reason_en: "Default priority (AI unavailable)", location_hint: null,
-    is_abusive: false, has_personal_data: /\b\d{10}\b/.test(text), confidence: 0.3,
+    category, priority: isUrgent ? 1 : 3,
+    priority_reason_en: isUrgent ? "Possible emergency keywords (AI unavailable)" : "Default priority (AI unavailable)",
+    location_hint: null, is_abusive: false, has_personal_data: /\b\d{10}\b/.test(text),
+    is_urgent: isUrgent, is_sensitive_suggested: SENSITIVE.test(text), confidence: 0.3,
   };
 }

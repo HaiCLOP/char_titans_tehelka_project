@@ -55,6 +55,8 @@ export const IntakeSchema = z.object({
   location_hint: z.string().max(80).nullable().describe("Building/place mentioned or visible, else null"),
   is_abusive: z.boolean().describe("Abusive language or personal attacks"),
   has_personal_data: z.boolean().describe("Contains phone numbers or other personal data"),
+  is_urgent: z.boolean().describe("Immediate danger to people: fire, injury, violence, threats, medical emergency"),
+  is_sensitive_suggested: z.boolean().describe("Harassment, threats, safety or personal matter that only admins should see"),
   confidence: z.number().min(0).max(1),
 });
 export type Intake = z.infer<typeof IntakeSchema>;

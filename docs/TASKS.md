@@ -13,7 +13,10 @@ Full spec: `docs/PRD.md` (build milestones in section 14)
 
 ## 31 Oct
 - [x] Arnav (M1): migration 3 (`app_config` + emergency/security number placeholders, `ai_keys.simulate_failure`, `profiles.font_size`, `profiles.onboarded_at`); `/login` (Google + email magic link), `/auth/callback`, sign-out action, role-based redirect + onboarding redirect; `src/lib/api.ts` + `src/lib/auth.ts` helpers. **Demo accounts / demo login dropped by request — real auth only.**
-- [ ] Arnav: run migrations on Supabase; enable Google provider + redirect URLs; assign first super_admin via SQL
+- [x] Arnav: run migrations 1–4 + seed on Supabase (via Supabase MCP)
+- [ ] Arnav: enable Google provider + redirect URLs; assign first super_admin via SQL; security-advisor fixes (RPC grants, match_complaints privacy, status_transitions read policy)
+- [x] Arnav: Go backend engine (`engine/`, stdlib only): AI router port (key rotation, cooldown, breaker, simulate_failure, free-only OpenRouter), `/v1/intake` `/v1/embed` `/v1/similar` `/v1/router/invalidate`, `/health` `/metrics`, workers (heal_pending_ai, sla_alerts, auto_close, daily_brief); migration 4 (`complaints.sla_alerted_at`); web `analyzeComplaint()` calls engine first, falls back to TS router; intake gains `is_urgent` + `is_sensitive_suggested`
+- [ ] Arnav: test engine against live Gemini/OpenRouter/Supabase; cloudflared tunnel dry run
 - Arnav: `/api/complaints` (intake + dedup + routing); mocks in `src/lib/mock.ts` by noon; deploy to Vercel
 - Devansh: `/report` form (text, 3 photos compressed, building combobox, AI preview card, duplicate prompt), `/report/done`, onboarding
 - Darsh: landing polish, `/my`, `/c/[id]` ticket + timeline, notifications bell (realtime)
