@@ -25,8 +25,9 @@ type Step = 0 | 1 | 2;
 type Kind = "student" | "staff";
 
 const ICON = { strokeWidth: 1.75, "aria-hidden": true } as const;
-const HEADING = "text-display text-[clamp(1.75rem,3.2vw,2.75rem)]";
-const LEAD = "mt-1.5 line-clamp-2 max-w-lg text-[0.9375rem] leading-relaxed text-muted-foreground";
+// Short laptop screens (≤780px tall) get a smaller headline so every step fits without scrolling.
+const HEADING = "text-display text-[1.75rem] sm:text-[clamp(2rem,4vw,3.25rem)] sm:[@media(max-height:780px)]:text-[2.25rem]";
+const LEAD = "mt-2 max-w-xl text-[0.9375rem] leading-relaxed text-muted-foreground sm:mt-3 sm:text-[1.0625rem]";
 
 /**
  * Renders three flex children for the page's full-height column: progress row, step content
@@ -111,23 +112,22 @@ export function OnboardingFlow(p: Props) {
 
   return (
     <>
-      <div className="shrink-0 border-b border-border px-4">
-        <ol aria-label={t("progress", { step: n(step + 1), total: n(3) })} className="mx-auto flex h-10 max-w-xl items-center gap-3">
-          {steps.map((label, i) => (
-            <li key={label} className="flex min-w-0 flex-1 items-center gap-2" aria-current={i === step ? "step" : undefined}>
-              <span className={cn("h-1.5 w-6 shrink-0 rounded-full transition-colors duration-300 sm:w-10", i <= step ? "bg-primary" : "bg-border")} aria-hidden />
-              <span className={cn("truncate text-xs", i === step ? "font-medium text-foreground" : "text-muted-foreground")}>
-                <span className="sr-only">{t("progress", { step: n(i + 1), total: n(3) })}: </span>
-                {label}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      {/* Steps are sized to fit; scrolling here is only a safety net for very short screens. */}
+      {/* One centred column: progress, step, actions. The action row is sticky, so on very short screens it pins
+          to the bottom edge instead of scrolling away; when everything fits it simply sits under the card. */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex min-h-full w-full max-w-xl flex-col justify-center px-4 py-4 sm:py-6">
+        <div className="mx-auto flex min-h-full w-full max-w-[42rem] flex-col justify-center px-4 pt-4 sm:px-6 sm:pt-8">
+          <ol aria-label={t("progress", { step: n(step + 1), total: n(3) })} className="mb-6 grid grid-cols-3 gap-2.5 sm:mb-8">
+            {steps.map((label, i) => (
+              <li key={label} aria-current={i === step ? "step" : undefined}>
+                <span className={cn("block h-1.5 rounded-full transition-colors duration-500 ease-out-expo", i <= step ? "bg-primary" : "bg-border")} aria-hidden />
+                <span className={cn("mt-2.5 block truncate text-[13px]", i === step ? "font-medium text-foreground" : "text-muted-foreground")}>
+                  <span className="sr-only">{t("progress", { step: n(i + 1), total: n(3) })}: </span>
+                  {label}
+                </span>
+              </li>
+            ))}
+          </ol>
+
           {step === 0 && (
             <section aria-labelledby="ob-lang">
               <h1 id="ob-lang" className={HEADING}>{t("langTitle")}</h1>
@@ -171,7 +171,7 @@ export function OnboardingFlow(p: Props) {
               <h1 id="ob-about" className={HEADING}>{t("aboutTitle")}</h1>
               <p className={LEAD}>{t("aboutBody")}</p>
 
-              <Card className="mt-4 space-y-3 p-5 sm:mt-5 sm:space-y-4 sm:p-6">
+              <Card className="mt-5 space-y-4 p-5 sm:mt-6 sm:space-y-5 sm:p-6">
                 <Input
                   label={t("nameLabel")}
                   value={name}
@@ -208,7 +208,7 @@ export function OnboardingFlow(p: Props) {
                         maxLength={80}
                       />
                     )}
-                    <p className="text-xs leading-relaxed text-muted-foreground sm:col-span-2">
+                    <p className="hidden text-xs leading-relaxed text-muted-foreground sm:col-span-2 sm:block">
                       {p.loadFailed ? t("listError") : t("kindHint")}
                     </p>
                   </div>
@@ -259,31 +259,30 @@ export function OnboardingFlow(p: Props) {
               {error}
             </p>
           )}
+
+          <div className="sticky bottom-0 -mx-4 mt-4 flex items-center gap-3 bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:mt-6 sm:px-6 sm:pb-8">
+            {step > 0 && (
+              <Button
+                variant="ghost"
+                size="lg"
+                className="-ml-3"
+                disabled={saving}
+                onClick={() => {
+                  setError(null);
+                  setStep((s) => (s - 1) as Step);
+                }}
+              >
+                <ArrowLeft {...ICON} />
+                {t("back")}
+              </Button>
+            )}
+            <Button size="lg" className="ml-auto" loading={saving} onClick={step === 0 ? () => chooseLanguage(locale) : step === 1 ? saveAbout : finish}>
+              {step === 2 ? t("finish") : t("continue")}
+              {!saving && <ArrowRight {...ICON} />}
+            </Button>
+          </div>
         </div>
       </div>
-
-      <footer className="shrink-0 border-t border-border bg-surface px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto flex max-w-xl items-center gap-3">
-          {step > 0 && (
-            <Button
-              variant="ghost"
-              size="lg"
-              disabled={saving}
-              onClick={() => {
-                setError(null);
-                setStep((s) => (s - 1) as Step);
-              }}
-            >
-              <ArrowLeft {...ICON} />
-              {t("back")}
-            </Button>
-          )}
-          <Button size="lg" className="ml-auto" loading={saving} onClick={step === 0 ? () => chooseLanguage(locale) : step === 1 ? saveAbout : finish}>
-            {step === 2 ? t("finish") : t("continue")}
-            {!saving && <ArrowRight {...ICON} />}
-          </Button>
-        </div>
-      </footer>
     </>
   );
 }

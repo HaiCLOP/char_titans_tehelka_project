@@ -32,9 +32,9 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     // Fixed full-viewport column: the page itself never scrolls; only the step area may, as a last resort.
     <div className="fixed inset-0 flex h-dvh flex-col overflow-hidden bg-background">
       <header className="shrink-0 border-b border-border bg-surface px-4 sm:px-8">
-        <div className="mx-auto flex h-12 max-w-xl items-center gap-3 sm:h-14">
+        <div className="mx-auto flex h-14 max-w-[60rem] items-center gap-3 sm:h-[4.5rem]">
           <Link href="/" aria-label={t("brandHome")} className="flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <BrandMark className="size-9 rounded-xl" />
+            <BrandMark className="size-10 rounded-xl" />
             <span className="hidden text-[0.9375rem] font-semibold tracking-[-0.01em] sm:inline">CivicSense</span>
           </Link>
           <LanguageSwitch className="ml-auto" />
