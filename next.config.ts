@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "*.supabase.co" }],
   },
   experimental: { serverActions: { bodySizeLimit: "6mb" } },
+  // Tailwind v4 runs as a Turbopack loader (no PostCSS config).
+  turbopack: {
+    rules: {
+      "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" },
+    },
+  },
 };
 
 export default withNextIntl(nextConfig);

@@ -3,7 +3,13 @@
   "nav": {
     "home": "Home", "report": "Report Issue", "myReports": "My Reports", "map": "Campus Map",
     "notifications": "Notifications", "community": "Community", "guidelines": "Guidelines",
-    "campusInfo": "Campus Info", "buildings": "Buildings", "departments": "Departments", "help": "Help & Support"
+    "campusInfo": "Campus Info", "buildings": "Buildings", "departments": "Departments", "help": "Help & Support",
+    "main": "Main navigation", "profile": "Profile", "reportShort": "Report", "myReportsShort": "My reports", "mapShort": "Map",
+    "admin": {
+      "title": "Admin", "subtitle": "CivicSense admin", "dashboard": "Dashboard", "queue": "Triage queue", "map": "Campus map",
+      "agent": "Ask CivicSense", "departments": "Departments", "locations": "Locations",
+      "collapse": "Collapse menu", "expand": "Expand menu", "menu": "Menu", "backToSite": "Back to site"
+    }
   },
   "header": { "search": "Search issues, locations, or ask anything...", "language": "Language", "theme": "Theme" },
   "hero": {
@@ -44,5 +50,31 @@
     "privacy": "We use your email only to sign you in and to send updates about your reports.",
     "signOut": "Sign out"
   },
-  "common": { "loading": "Loading...", "error": "Something went wrong", "retry": "Retry", "empty": "Nothing here yet" }
+  "common": { "loading": "Loading...", "error": "Something went wrong", "retry": "Retry", "empty": "Nothing here yet" },
+  "ui": {
+    "close": "Close", "retry": "Retry", "goHome": "Go home", "noLocation": "Location not set", "anonymous": "Anonymous",
+    "photoAlt": "Photo of the issue", "timelineEmpty": "No updates yet",
+    "supports": "{count, plural, one {{n} supporter} other {{n} supporters}}",
+    "error": { "title": "Something went wrong", "body": "We couldn't load this. Check your connection and try again." },
+    "forbidden": { "title": "You don't have access", "body": "This page is only for authorised staff. Ask an administrator if you think this is a mistake." },
+    "comingSoon": { "title": "Coming soon", "adminBody": "The admin dashboard arrives in milestone M5." },
+    "combobox": { "placeholder": "Search...", "noResults": "No matches", "searching": "Searching...", "failed": "Couldn't load options", "clear": "Clear" },
+    "photo": {
+      "add": "Choose photos", "camera": "Take photo", "drop": "Drag photos here or choose them.",
+      "hint": "Up to {max} photos. They are compressed on your device.", "remove": "Remove photo {n}", "preview": "Photo {n}",
+      "compressing": "Preparing photo...", "tooMany": "You can add up to {max} photos.",
+      "invalid": "Some files could not be used. Choose JPG, PNG or WebP photos."
+    }
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{count, plural, one {{n} minute ago} other {{n} minutes ago}}",
+    "hoursAgo": "{count, plural, one {{n} hour ago} other {{n} hours ago}}",
+    "daysAgo": "{count, plural, one {{n} day ago} other {{n} days ago}}",
+    "monthsAgo": "{count, plural, one {{n} month ago} other {{n} months ago}}",
+    "inMinutes": "{count, plural, one {in {n} minute} other {in {n} minutes}}",
+    "inHours": "{count, plural, one {in {n} hour} other {in {n} hours}}",
+    "inDays": "{count, plural, one {in {n} day} other {in {n} days}}",
+    "inMonths": "{count, plural, one {in {n} month} other {in {n} months}}"
+  }
 }

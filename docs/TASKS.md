@@ -16,7 +16,13 @@ Full spec: `docs/PRD.md` (build milestones in section 14)
 - [x] Arnav: run migrations 1–4 + seed on Supabase (via Supabase MCP)
 - [ ] Arnav: enable Google provider + redirect URLs; assign first super_admin via SQL; security-advisor fixes (RPC grants, match_complaints privacy, status_transitions read policy)
 - [x] Arnav: Go backend engine (`engine/`, stdlib only): AI router port (key rotation, cooldown, breaker, simulate_failure, free-only OpenRouter), `/v1/intake` `/v1/embed` `/v1/similar` `/v1/router/invalidate`, `/health` `/metrics`, workers (heal_pending_ai, sla_alerts, auto_close, daily_brief); migration 4 (`complaints.sla_alerted_at`); web `analyzeComplaint()` calls engine first, falls back to TS router; intake gains `is_urgent` + `is_sensitive_suggested`
+- [x] M2: shared UI kit `src/components/ui/*` (+ barrel), `BottomNav` + `(student)` route-group layout, `AdminSidebar` + `/admin` layout/placeholder, `src/lib/mock.ts` (typed mocks for every PRD §10 API), `src/lib/image.ts` (WebP ≤ 400 KB), `src/lib/search.ts`, `src/lib/lang.ts`, dev gallery `/dev/ui`
 - [ ] Arnav: test engine against live Gemini/OpenRouter/Supabase; cloudflared tunnel dry run
+- [x] Arnav (M3 backend): `/api/upload`, `/api/complaints/similar` (engine first, public tickets only), `POST /api/complaints` submit pipeline, `/api/locations`, `/api/meta/config`
+- [x] Arnav (M4 backend): `GET /api/complaints` (mine/public/dept/assigned, keyset pages), `GET /api/complaints/[id]`, support, verify, notifications list + mark read, `PATCH /api/profile`
+- [x] Arnav: migration 5 security hardening (match_complaints public-only, RPC grants, status_transitions readable, search_path); Tailwind wired into Turbopack (`next.config.ts`)
+- [ ] M3 + M4 screens: `/report`, `/report/done`, `/my`, `/c/[id]`, `/notifications`, `/profile`
+- [ ] Migration 6: column-restricting update trigger (owner/assignee), stop full-row public reads (`complaints public read`), notifications `with check`
 - Arnav: `/api/complaints` (intake + dedup + routing); mocks in `src/lib/mock.ts` by noon; deploy to Vercel
 - Devansh: `/report` form (text, 3 photos compressed, building combobox, AI preview card, duplicate prompt), `/report/done`, onboarding
 - Darsh: landing polish, `/my`, `/c/[id]` ticket + timeline, notifications bell (realtime)

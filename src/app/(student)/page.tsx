@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowRight, CheckCircle2, Clock, Play, Sparkles, Users, Wrench } from "lucide-react";
-import { Sidebar } from "@/components/shell/sidebar";
-import { Header } from "@/components/shell/header";
 import { createClient } from "@/lib/supabase/server";
 import { toLocaleDigits } from "@/lib/utils";
 
@@ -28,11 +26,7 @@ export default async function Home() {
   ];
 
   return (
-    <div className="flex">
-      <Sidebar active="/" />
-      <main className="min-w-0 flex-1 px-4 pb-24 sm:px-8">
-        <Header />
-
+    <>
         {/* Hero — Aman: replace with a real DU photo at /public/campus-hero.jpg */}
         <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-r from-background via-background/90 to-primary-soft px-6 py-10 sm:px-10 sm:py-14">
           <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{t("hero.eyebrow")}</p>
@@ -72,7 +66,6 @@ export default async function Home() {
             <p className="mt-4 text-sm text-muted-foreground">AI daily brief — Arnav (F18)</p>
           </div>
         </section>
-      </main>
-    </div>
+    </>
   );
 }

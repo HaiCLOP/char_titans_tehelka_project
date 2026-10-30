@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Bell, BookOpen, Building2, CircleHelp, ClipboardList, Home, Landmark, Map, PlusCircle, Users, ArrowRight } from "lucide-react";
+import { NavLink } from "./nav-link";
 
 const MAIN = [
   { href: "/", key: "home", icon: Home },
@@ -17,20 +18,23 @@ const INFO = [
   { href: "/help", key: "help", icon: CircleHelp },
 ] as const;
 
-export async function Sidebar({ active = "/" }: { active?: string }) {
+/** Desktop (lg+) student sidebar. The active item is derived from the URL. */
+export async function Sidebar() {
   const t = await getTranslations();
-  const item = (i: (typeof MAIN)[number] | (typeof INFO)[number]) => {
-    const on = active === i.href;
-    return (
-      <Link key={i.href} href={i.href}
-        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${on ? "bg-primary-soft font-medium text-primary" : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"}`}>
-        <i.icon className="size-[18px]" aria-hidden />
-        {t(`nav.${i.key}`)}
-      </Link>
-    );
-  };
+  const item = (i: (typeof MAIN)[number] | (typeof INFO)[number]) => (
+    <NavLink
+      key={i.href}
+      href={i.href}
+      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition"
+      activeClassName="bg-primary-soft font-medium text-primary"
+      inactiveClassName="text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+    >
+      <i.icon className="size-[18px]" aria-hidden />
+      {t(`nav.${i.key}`)}
+    </NavLink>
+  );
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r border-border bg-surface/70 px-4 py-6 backdrop-blur lg:flex">
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-surface/70 px-4 py-6 backdrop-blur lg:flex">
       <Link href="/" className="flex items-center gap-3 px-2">
         <span className="grid size-10 place-items-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">C</span>
         <span>
@@ -38,10 +42,10 @@ export async function Sidebar({ active = "/" }: { active?: string }) {
           <span className="block text-xs text-muted-foreground">{t("app.tagline")}</span>
         </span>
       </Link>
-      <nav className="flex flex-col gap-1">{MAIN.map(item)}</nav>
+      <nav aria-label={t("nav.main")} className="flex flex-col gap-1">{MAIN.map(item)}</nav>
       <div>
         <p className="px-3 pb-2 text-xs text-muted-foreground">{t("nav.campusInfo")}</p>
-        <nav className="flex flex-col gap-1">{INFO.map(item)}</nav>
+        <nav aria-label={t("nav.campusInfo")} className="flex flex-col gap-1">{INFO.map(item)}</nav>
       </div>
       <div className="mt-auto rounded-2xl bg-primary-soft p-4 text-sm">
         <p className="text-foreground">{t("home.slogan")}</p>

@@ -30,7 +30,10 @@ func (e *Error) Error() string { return fmt.Sprintf("postgrest %d: %s", e.Status
 
 func New(baseURL, serviceKey string, hc *http.Client) *Client {
 	if hc == nil {
-		hc = &http.Client{Timeout: 15 * time.Second}
+		t := http.DefaultTransport.(*http.Transport).Clone()
+		// Home/ISP networks and Cloudflare drop idle keep-alive connections; don't reuse old ones.
+		t.IdleConnTimeout = 20 * time.Second
+		hc = &http.Client{Timeout: 15 * time.Second, Transport: t}
 	}
 	return &Client{base: strings.TrimRight(baseURL, "/"), key: serviceKey, http: hc}
 }
@@ -49,30 +52,51 @@ func (c *Client) do(ctx context.Context, method, path string, q url.Values, body
 	if len(q) > 0 {
 		u += "?" + q.Encode()
 	}
-	var rd io.Reader
+	var payload []byte
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
 			return err
 		}
-		rd = bytes.NewReader(b)
+		payload = b
 	}
-	req, err := http.NewRequestWithContext(ctx, method, u, rd)
-	if err != nil {
-		return err
+	// A dropped connection (reset, EOF) is retried for idempotent calls: reads, PATCH by filter, RPC.
+	// Plain inserts are not retried, so a notification is never written twice.
+	retries := 0
+	if method == http.MethodGet || method == http.MethodPatch || method == http.MethodHead || strings.HasPrefix(path, "/rest/v1/rpc/") {
+		retries = 2
 	}
-	req.Header.Set("apikey", c.key)
-	req.Header.Set("Authorization", "Bearer "+c.key)
-	req.Header.Set("Accept", "application/json")
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	if prefer != "" {
-		req.Header.Set("Prefer", prefer)
-	}
-	res, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("postgrest %s %s: %w", method, path, stripURL(err))
+	var res *http.Response
+	for attempt := 0; ; attempt++ {
+		var rd io.Reader
+		if payload != nil {
+			rd = bytes.NewReader(payload)
+		}
+		req, err := http.NewRequestWithContext(ctx, method, u, rd)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("apikey", c.key)
+		req.Header.Set("Authorization", "Bearer "+c.key)
+		req.Header.Set("Accept", "application/json")
+		if payload != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		if prefer != "" {
+			req.Header.Set("Prefer", prefer)
+		}
+		res, err = c.http.Do(req)
+		if err == nil {
+			break
+		}
+		if attempt >= retries || ctx.Err() != nil {
+			return fmt.Errorf("postgrest %s %s: %w", method, path, stripURL(err))
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Duration(200*(attempt+1)) * time.Millisecond):
+		}
 	}
 	defer res.Body.Close()
 	data, err := io.ReadAll(io.LimitReader(res.Body, 32<<20))
