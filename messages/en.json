@@ -1,0 +1,31 @@
+{
+  "app": { "name": "CivicSense", "tagline": "Campus Together" },
+  "nav": {
+    "home": "Home", "report": "Report Issue", "myReports": "My Reports", "map": "Campus Map",
+    "notifications": "Notifications", "community": "Community", "guidelines": "Guidelines",
+    "campusInfo": "Campus Info", "buildings": "Buildings", "departments": "Departments", "help": "Help & Support"
+  },
+  "header": { "search": "Search issues, locations, or ask anything...", "language": "Language", "theme": "Theme" },
+  "hero": {
+    "eyebrow": "Campus together",
+    "title": "A Cleaner, Safer, Better Campus",
+    "subtitle": "Report. Track. Resolve. Powered by AI for a smarter and happier campus.",
+    "cta": "Report an Issue", "how": "How it works?"
+  },
+  "stats": { "open": "Open Issues", "progress": "In Progress", "resolved": "Resolved", "contributors": "Students Contributed" },
+  "home": {
+    "map": "Campus Map", "insights": "AI Insights", "ongoing": "Ongoing Issues Near You",
+    "activity": "Recent Activity", "viewAll": "View All", "slogan": "A cleaner campus today for a brighter tomorrow."
+  },
+  "status": {
+    "submitted": "Submitted", "triaged": "Triaged", "needs_review": "Needs review", "assigned": "Assigned",
+    "in_progress": "In Progress", "resolved": "Resolved", "closed": "Closed", "duplicate": "Duplicate", "rejected": "Rejected"
+  },
+  "priority": { "1": "Critical", "2": "High", "3": "Medium", "4": "Low" },
+  "category": {
+    "water_supply": "Water supply", "plumbing": "Plumbing", "electrical": "Electrical", "sanitation": "Sanitation",
+    "hostel": "Hostel", "mess_food": "Mess & food", "infrastructure": "Infrastructure", "it_network": "IT & Wi-Fi",
+    "academic": "Academic", "safety_security": "Safety & security", "transport": "Transport", "other": "Other"
+  },
+  "common": { "loading": "Loading...", "error": "Something went wrong", "retry": "Retry", "empty": "Nothing here yet" }
+}
