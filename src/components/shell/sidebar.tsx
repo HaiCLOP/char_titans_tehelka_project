@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Bell, ClipboardList, House, Map, Plus, UserRound, Wrench } from "lucide-react";
+import { Bell, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { BrandMark } from "./brand-mark";
 import { NavLink } from "./nav-link";
@@ -21,7 +21,13 @@ const OFF = "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
 /** Desktop (lg+) floating icon rail. Labels show as tooltips and stay available to screen readers. */
 export async function Sidebar() {
   const [t, profile] = await Promise.all([getTranslations(), getProfile()]);
-  const main = profile?.role === "field_staff" ? [{ href: "/staff", key: "work", icon: Wrench }, ...MAIN] : MAIN;
+  const role = profile?.role;
+  const main =
+    role === "field_staff"
+      ? [{ href: "/staff", key: "work", icon: Wrench }, ...MAIN]
+      : role === "dept_admin" || role === "super_admin"
+        ? [{ href: "/admin", key: "adminPanel", icon: LayoutDashboard }, ...MAIN]
+        : MAIN;
   const item = (i: { href: string; key: string; icon: typeof House; exact?: boolean }) => (
     <li key={i.href}>
       <NavLink href={i.href} exact={i.exact} aria-label={t(`nav.${i.key}`)} className={ITEM} activeClassName={ON} inactiveClassName={OFF}>

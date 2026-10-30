@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { ChevronDown, GraduationCap, Search } from "lucide-react";
+import { ChevronDown, GraduationCap, LayoutDashboard, Search } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Avatar, buttonVariants } from "@/components/ui";
 import { LanguageSwitch, ModeToggle } from "@/components/preference-switchers";
@@ -44,6 +44,13 @@ export async function Header() {
           <ModeToggle />
           {user ? (
             <>
+              {(role === "dept_admin" || role === "super_admin") && (
+                <Link href="/admin" className={buttonVariants({ variant: "secondary", size: "sm", className: "mr-1" })}>
+                  <LayoutDashboard strokeWidth={1.75} aria-hidden />
+                  <span className="hidden sm:inline">{t("nav.adminPanel")}</span>
+                  <span className="sr-only sm:hidden">{t("nav.adminPanel")}</span>
+                </Link>
+              )}
               <NotificationBell userId={user.id} />
               <Link href="/profile" aria-label={t("shell.openProfile")} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Avatar name={name} src={profile?.avatar_url} size="md" decorative className="ring-1 ring-border" />

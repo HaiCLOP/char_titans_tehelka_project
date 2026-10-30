@@ -36,7 +36,8 @@
       "fieldWork": "Field work"
     },
     "work": "My work",
-    "workShort": "My work"
+    "workShort": "My work",
+    "adminPanel": "Admin"
   },
   "header": {
     "search": "Search issues, locations, or ask anything...",
