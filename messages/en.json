@@ -27,5 +27,22 @@
     "hostel": "Hostel", "mess_food": "Mess & food", "infrastructure": "Infrastructure", "it_network": "IT & Wi-Fi",
     "academic": "Academic", "safety_security": "Safety & security", "transport": "Transport", "other": "Other"
   },
+  "auth": {
+    "metaTitle": "Sign in — CivicSense",
+    "title": "Sign in to CivicSense",
+    "subtitle": "Report campus issues and follow them until they are fixed, in English or Assamese.",
+    "google": "Continue with Google", "redirecting": "Redirecting...", "or": "or",
+    "emailLabel": "Email address", "emailPlaceholder": "name@example.com",
+    "sendLink": "Email me a sign-in link", "sending": "Sending...",
+    "sentTitle": "Check your email",
+    "sentBody": "We sent a sign-in link to {email}. Open it on this device to continue.",
+    "useAnother": "Use a different email",
+    "invalidEmail": "Enter a valid email address.",
+    "errorGeneric": "Could not sign you in. Please try again.",
+    "errorCallback": "That sign-in link is invalid or has expired. Request a new one.",
+    "rateLimited": "Too many attempts. Wait a minute and try again.",
+    "privacy": "We use your email only to sign you in and to send updates about your reports.",
+    "signOut": "Sign out"
+  },
   "common": { "loading": "Loading...", "error": "Something went wrong", "retry": "Retry", "empty": "Nothing here yet" }
 }

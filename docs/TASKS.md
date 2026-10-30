@@ -12,7 +12,9 @@ Full spec: `docs/PRD.md` (build milestones in section 14)
 - [x] Home shell in the reference design
 
 ## 31 Oct
-- Arnav: run migration on Supabase; Google auth + demo accounts; `/api/complaints` (intake + dedup + routing); mocks in `src/lib/mock.ts` by noon; deploy to Vercel
+- [x] Arnav (M1): migration 3 (`app_config` + emergency/security number placeholders, `ai_keys.simulate_failure`, `profiles.font_size`, `profiles.onboarded_at`); `/login` (Google + email magic link), `/auth/callback`, sign-out action, role-based redirect + onboarding redirect; `src/lib/api.ts` + `src/lib/auth.ts` helpers. **Demo accounts / demo login dropped by request — real auth only.**
+- [ ] Arnav: run migrations on Supabase; enable Google provider + redirect URLs; assign first super_admin via SQL
+- Arnav: `/api/complaints` (intake + dedup + routing); mocks in `src/lib/mock.ts` by noon; deploy to Vercel
 - Devansh: `/report` form (text, 3 photos compressed, building combobox, AI preview card, duplicate prompt), `/report/done`, onboarding
 - Darsh: landing polish, `/my`, `/c/[id]` ticket + timeline, notifications bell (realtime)
 - Aman: real DU buildings (+ coordinates), departments, SLA hours; 40 seed complaints (20 Assamese); 10 campus photos; hero photo; ask coordinators about demo slot / projector / hotspot

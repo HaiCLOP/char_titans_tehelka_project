@@ -1,15 +1,24 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { PATH_HEADER } from "@/lib/paths";
 
-// Next 16: `middleware` is now `proxy` (Node runtime). Refreshes the Supabase session cookie.
+// Next 16: `middleware` is now `proxy` (Node runtime). Refreshes the Supabase session cookie and
+// forwards the current path so server components can build `/login?next=…` (see src/lib/auth.ts).
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const path = request.nextUrl.pathname + request.nextUrl.search;
+  const forward = () => {
+    const headers = new Headers(request.headers);
+    headers.set(PATH_HEADER, path);
+    return NextResponse.next({ request: { headers } });
+  };
+
+  let response = forward();
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (list) => {
         list.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = forward();
         list.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },

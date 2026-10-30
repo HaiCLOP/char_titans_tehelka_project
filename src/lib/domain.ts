@@ -11,6 +11,38 @@ export const STATUSES = [
 ] as const;
 export type Status = (typeof STATUSES)[number];
 
+export const ROLES = ["student", "staff", "field_staff", "dept_admin", "super_admin"] as const;
+export type Role = (typeof ROLES)[number];
+export const ADMIN_ROLES = ["dept_admin", "super_admin"] as const satisfies readonly Role[];
+
+/** Columns of `profiles` that server code reads for auth and routing. */
+export type Profile = {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: Role;
+  lang_pref: "en" | "as";
+  theme: string;
+  font_size: "normal" | "large";
+  hostel: string | null;
+  department_id: string | null;
+  onboarded_at: string | null;
+};
+
+/** API error codes → HTTP status (PRD section 10). */
+export const ERROR_STATUS = {
+  VALIDATION_ERROR: 400,
+  UNAUTHENTICATED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  INVALID_TRANSITION: 409,
+  RATE_LIMITED: 429,
+  INTERNAL: 500,
+  AI_UNAVAILABLE: 503,
+} as const;
+export type ErrorCode = keyof typeof ERROR_STATUS;
+export type ApiError = { error: { code: ErrorCode; message: string } };
+
 /** What the intake model must return. Shared by API, UI preview and tests. */
 export const IntakeSchema = z.object({
   title_en: z.string().min(3).max(90).describe("Short English title"),
