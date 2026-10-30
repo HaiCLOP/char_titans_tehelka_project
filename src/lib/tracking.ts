@@ -164,6 +164,8 @@ type ListRow = {
   photo_count?: number | null;
   anonymous?: boolean;
   reporter_id?: string | null;
+  assignee_id?: string | null;
+  user_id?: string | null;
 };
 
 // ---------- GET /api/complaints ----------
@@ -175,13 +177,16 @@ type ListRow = {
 export async function listComplaints(supabase: Client, viewer: Viewer, q: ComplaintListQuery): Promise<ComplaintListPage> {
   const signedOutPublic = q.scope === "public" && !viewer;
   // Public scope always goes through the view (it filters public / not sensitive / not merged itself).
-  const table = q.scope === "public" ? "complaints_public" : q.scope === "dept" ? "complaints_admin" : "complaints";
+  // dept scope reads the base table (admin RLS). complaints_admin predates migration 2 (its `c.*` was expanded
+  // at creation, so it lacks visibility/is_urgent/assignee_id); the anonymous rule is applied below instead:
+  // user_id is read server-side only and turned into reporter_id = null for anonymous reports.
+  const table = q.scope === "public" ? "complaints_public" : "complaints";
   const columns = signedOutPublic
     ? SIGNED_OUT_COLUMNS
     : q.scope === "public"
       ? PUBLIC_LIST_COLUMNS
       : q.scope === "dept"
-        ? `${LIST_COLUMNS}, anonymous, reporter_id`
+        ? `${LIST_COLUMNS}, anonymous, user_id, assignee_id`
         : LIST_COLUMNS;
 
   let query = supabase.from(table).select(columns);
@@ -233,6 +238,7 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
 
   const rows = (data ?? []) as unknown as ListRow[];
   const page = rows.slice(0, LIST_PAGE_SIZE);
+  if (q.scope === "dept") for (const r of page) r.reporter_id = r.anonymous ? null : (r.user_id ?? null);
   const nextCursor = rows.length > LIST_PAGE_SIZE ? encodeCursor(page.at(-1)!.created_at, page.at(-1)!.id) : null;
 
   if (viewer && q.scope === "public") {
@@ -240,7 +246,11 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
     for (const r of page) r.image_urls = paths.get(r.id)?.image_urls ?? [];
   }
 
-  const reporterIds = q.scope === "dept" ? page.map((r) => r.reporter_id).filter((x): x is string => Boolean(x)) : [];
+  // dept scope: reporter (never for anonymous reports — complaints_admin nulls reporter_id) + assignee names.
+  const reporterIds =
+    q.scope === "dept"
+      ? page.flatMap((r) => [r.reporter_id, r.assignee_id]).filter((x): x is string => Boolean(x))
+      : [];
   const [locations, thumbs, supported, reporters] = await Promise.all([
     loadLocations(supabase, page.map((r) => r.location_id)),
     viewer
@@ -289,6 +299,8 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
     if (q.scope === "dept") {
       item.anonymous = Boolean(r.anonymous);
       item.reporter_name = r.reporter_id ? (reporters.get(r.reporter_id) ?? null) : null;
+      item.assigned = Boolean(r.assignee_id);
+      item.assignee_name = r.assignee_id ? (reporters.get(r.assignee_id) ?? null) : null;
     }
     return item;
   });
@@ -575,6 +587,7 @@ export async function getComplaintDetail(
     };
   }
   if (isDeptAdmin) {
+    detail.admin = await loadAdminInfo(supabase, row);
     detail.ai = {
       status: row.ai_status,
       model: str(meta.model),
@@ -584,6 +597,30 @@ export async function getComplaintDetail(
     };
   }
   return ComplaintDetailSchema.parse(detail);
+}
+
+/** Workspace extras for admins of the ticket: assignee name, linked parent, merged duplicates. */
+async function loadAdminInfo(supabase: Client, row: DetailRow): Promise<NonNullable<ComplaintDetail["admin"]>> {
+  type Ref = { id: string; code: string; title_en: string | null; title_as: string | null };
+  const [assignee, parent, children] = await Promise.all([
+    row.assignee_id
+      ? supabase.from("profiles").select("id, full_name").eq("id", row.assignee_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    // The parent may sit in another department (super admin linked it); only its code/title are shown.
+    row.parent_id
+      ? createAdminClient().from("complaints").select("id, code, title_en, title_as").eq("id", row.parent_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.from("complaints").select("id, code, title_en, title_as").eq("parent_id", row.id).order("created_at").limit(20),
+  ]);
+  const a = assignee.data as { id: string; full_name: string | null } | null;
+  return {
+    department_id: row.department_id,
+    assignee: row.assignee_id ? { id: row.assignee_id, name: a?.full_name ?? null } : null,
+    parent: (parent.data as Ref | null) ?? null,
+    duplicates: ((children.data ?? []) as Ref[]),
+    is_sensitive: row.is_sensitive,
+    anonymous: row.anonymous,
+  };
 }
 
 // ---------- POST /api/complaints/[id]/support ----------

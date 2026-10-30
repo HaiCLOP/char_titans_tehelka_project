@@ -1,0 +1,20 @@
+import { BottomNav } from "@/components/shell/bottom-nav";
+import { Header } from "@/components/shell/header";
+import { Sidebar } from "@/components/shell/sidebar";
+import { getProfile } from "@/lib/auth";
+
+/**
+ * Field staff shell (S12): the same calm shell as reporters (floating rail on desktop, bottom nav on mobile),
+ * so staff who also report problems feel at home. Access is checked per page.
+ */
+export default async function StaffLayout({ children }: { children: React.ReactNode }) {
+  const profile = await getProfile();
+  return (
+    <div className="min-h-dvh">
+      <Sidebar />
+      <Header />
+      <main className="mx-auto w-full max-w-[84rem] px-4 pt-6 pb-28 sm:px-8 sm:pt-10 lg:pr-10 lg:pb-16 lg:pl-[7.5rem]">{children}</main>
+      <BottomNav role={profile?.role} />
+    </div>
+  );
+}

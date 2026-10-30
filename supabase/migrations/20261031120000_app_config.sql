@@ -21,13 +21,13 @@ create policy "app config super admin" on app_config for all
   using (current_role_is('super_admin')) with check (current_role_is('super_admin'));
 grant select on app_config to anon, authenticated;
 
--- TODO(Aman): replace the empty numbers with the real Dibrugarh University numbers before the demo.
+-- TODO(Aman): replace the empty numbers with the real Dibrugarh University numbers before launch.
 -- Shown to reporters when a complaint is urgent (PRD rule 5). We never claim to dispatch help.
 insert into app_config (key, value) values
  ('campus_security', '{"phone": "", "label_en": "Campus security", "label_as": "কেম্পাছ সুৰক্ষা", "todo": true}'),
  ('campus_emergency', '{"phone": "", "label_en": "Campus emergency", "label_as": "কেম্পাছ জৰুৰীকালীন সেৱা", "todo": true}');
 
--- ---------- system panel: force a key to behave as rate-limited (demo of failover) ----------
+-- ---------- system panel: force a key to behave as rate-limited (live failover check) ----------
 alter table ai_keys add column simulate_failure boolean not null default false;
 
 -- ---------- profiles ----------

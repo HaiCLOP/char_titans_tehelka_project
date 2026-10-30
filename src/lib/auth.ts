@@ -10,7 +10,7 @@ import { PATH_HEADER, loginUrl, roleHome, safeNext } from "@/lib/paths";
 export { roleHome, safeNext } from "@/lib/paths";
 
 export const PROFILE_COLUMNS =
-  "id, full_name, avatar_url, role, lang_pref, theme, font_size, hostel, department_id, onboarded_at";
+  "id, full_name, avatar_url, role, lang_pref, theme, font_size, hostel, course, department_id, onboarded_at";
 
 /** Signed-in user (verified with Supabase Auth), or null. Deduplicated per request. */
 export const getUser = cache(async (): Promise<User | null> => {

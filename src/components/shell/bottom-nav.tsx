@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ClipboardList, Home, Map, Plus, UserRound } from "lucide-react";
+import { ClipboardList, Home, Map, Plus, UserRound, Wrench } from "lucide-react";
+import type { Role } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { isActivePath } from "./nav-link";
 
@@ -18,17 +19,19 @@ const SIDE = [
  * Mobile bottom navigation (hidden on lg+, where the sidebar shows). Pages using it need bottom padding:
  * the student layout adds `pb-24 lg:pb-0`. Height ≈ 4rem + safe-area inset.
  */
-export function BottomNav() {
+export function BottomNav({ role }: { role?: Role } = {}) {
   const t = useTranslations("nav");
   const pathname = usePathname() ?? "/";
   const reportOn = isActivePath(pathname, "/report");
+  // Field staff: the "My reports" slot becomes their work list (S12).
+  const items = role === "field_staff" ? SIDE.map((i) => (i?.href === "/my" ? { href: "/staff", key: "workShort", icon: Wrench } : i)) : SIDE;
   return (
     <nav
       aria-label={t("main")}
       className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-full border border-border bg-surface/95 shadow-rail backdrop-blur-md lg:hidden"
     >
       <ul className="mx-auto grid h-16 max-w-md grid-cols-5 items-stretch px-1">
-        {SIDE.map((item) => {
+        {items.map((item) => {
           if (!item) {
             return (
               <li key="report" className="flex justify-center">

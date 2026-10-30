@@ -52,3 +52,12 @@ export async function parseJson<S extends z.ZodType>(req: Request, schema: S): P
   if (!parsed.success) return fail("VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid request body");
   return parsed.data;
 }
+
+/** Maps a thrown PipelineError (an Error with an API `code`) to a JSON error Response; logs anything else. */
+export function failFrom(e: unknown, what: string) {
+  if (e instanceof Error && "code" in e && typeof e.code === "string" && e.code in ERROR_STATUS) {
+    return fail(e.code as ErrorCode, e.message);
+  }
+  console.error(`[api] ${what} failed`, e instanceof Error ? e.message : e);
+  return fail("INTERNAL", `Could not ${what}`);
+}

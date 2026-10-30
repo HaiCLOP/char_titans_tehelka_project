@@ -142,7 +142,7 @@ cloudflared tunnel --url http://localhost:8080
 
 Copy the printed `https://<random>.trycloudflare.com` URL. Set it as `ENGINE_URL` in the web app's env (Vercel project settings or `.env.local`), next to the same `ENGINE_SECRET`. The URL changes each time a quick tunnel starts.
 
-## Failure demo (PRD section 15, 4:30)
+## Failover test (PRD section 15, 4:30)
 
 1. Open `/metrics` (or the system panel) and note that the keys are healthy.
 2. Set `ai_keys.simulate_failure = true` on the first Gemini key, either in the system panel or with SQL: `update ai_keys set simulate_failure = true where label = '...'`.

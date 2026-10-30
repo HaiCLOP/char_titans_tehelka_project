@@ -16,8 +16,12 @@ export async function PATCH(req: Request) {
   if (body instanceof Response) return body;
 
   // Department membership of field staff and admins is set by a super admin (S18), not by themselves.
-  if (body.department_id !== undefined && profile.role !== "student" && profile.role !== "staff") {
-    return fail("FORBIDDEN", "Your department is managed by an administrator");
+  // Students never belong to a fixing department; they give a course instead.
+  if (body.department_id !== undefined && profile.role !== "staff") {
+    return fail("FORBIDDEN", profile.role === "student" ? "Students give a course, not a department" : "Your department is managed by an administrator");
+  }
+  if (body.course !== undefined && profile.role !== "student") {
+    return fail("VALIDATION_ERROR", "Only students have a course");
   }
 
   const { onboarded, ...fields } = body;

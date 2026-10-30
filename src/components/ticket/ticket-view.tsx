@@ -21,7 +21,7 @@ import { SlaCountdown } from "./sla-countdown";
 
 const KNOWN_EVENTS = ["created", "status", "assigned", "note", "metoo", "ai"];
 
-function PhotoCarousel({ photos }: { photos: string[] }) {
+export function PhotoCarousel({ photos }: { photos: string[] }) {
   const t = useTranslations("ticket");
   const locale = useLocale();
   const reduce = useReducedMotion();

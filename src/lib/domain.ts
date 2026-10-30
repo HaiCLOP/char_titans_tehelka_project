@@ -25,6 +25,8 @@ export type Profile = {
   theme: string;
   font_size: "normal" | "large";
   hostel: string | null;
+  /** Students only: programme/course (profile info). */
+  course: string | null;
   department_id: string | null;
   onboarded_at: string | null;
 };
@@ -235,6 +237,9 @@ export const ComplaintListItemSchema = z.object({
   /** dept scope only. reporter_name is null when the reporter chose anonymous. */
   anonymous: z.boolean().optional(),
   reporter_name: z.string().nullable().optional(),
+  /** dept scope only: current assignee's name (null = unassigned or no name). */
+  assignee_name: z.string().nullable().optional(),
+  assigned: z.boolean().optional(),
 });
 export type ComplaintListItem = z.infer<typeof ComplaintListItemSchema>;
 
@@ -262,6 +267,17 @@ export const TimelineEventSchema = z.object({
   actor_name: z.string().nullable().optional(),
 });
 export type TimelineEvent = z.infer<typeof TimelineEventSchema>;
+
+/** Extra detail for admins of the ticket (S15); attached to ComplaintDetail as `admin`. */
+export const ComplaintAdminInfoSchema = z.object({
+  department_id: z.string().nullable(),
+  assignee: z.object({ id: z.string(), name: z.string().nullable() }).nullable(),
+  parent: z.object({ id: z.string(), code: z.string(), title_en: z.string().nullable(), title_as: z.string().nullable() }).nullable(),
+  duplicates: z.array(z.object({ id: z.string(), code: z.string(), title_en: z.string().nullable(), title_as: z.string().nullable() })),
+  is_sensitive: z.boolean(),
+  anonymous: z.boolean(),
+});
+export type ComplaintAdminInfo = z.infer<typeof ComplaintAdminInfoSchema>;
 
 export const ComplaintDetailSchema = ComplaintListItemSchema.extend({
   /** Owner, admins of the ticket's department and the assignee only; null for everyone else. */
@@ -298,6 +314,8 @@ export const ComplaintDetailSchema = ComplaintListItemSchema.extend({
     })
     .nullable()
     .optional(),
+  /** Admins of the ticket's department / super admin only (S15 workspace). */
+  admin: ComplaintAdminInfoSchema.optional(),
 });
 export type ComplaintDetail = z.infer<typeof ComplaintDetailSchema>;
 
@@ -360,9 +378,147 @@ export const ProfileUpdateSchema = z
     theme: z.enum(PROFILE_THEMES).optional(),
     font_size: z.enum(["normal", "large"]).optional(),
     hostel: z.string().trim().max(80).nullable().optional(),
+    /** Students only. */
+    course: z.string().trim().max(80).nullable().optional(),
+    /** Staff only: students report issues, they are never part of a fixing department. */
     department_id: z.guid().nullable().optional(),
     /** Sent by /onboarding when the user finishes setup (sets onboarded_at once). */
     onboarded: z.literal(true).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 export type ProfileUpdate = z.infer<typeof ProfileUpdateSchema>;
+
+// ---------- M5: admin core + field staff API contracts (PRD section 10, screens S12–S15) ----------
+
+
+/** `PATCH /api/complaints/[id]`. Admins of the ticket's department / super admin: any field. Assignee: status (in_progress) + note. */
+export const ComplaintPatchSchema = z
+  .strictObject({
+    status: z.enum(STATUSES).optional(),
+    priority: z.number().int().min(1).max(4).optional(),
+    category: z.enum(CATEGORIES).optional(),
+    department_id: z.guid().optional(),
+    /** null unassigns. */
+    assignee_id: z.guid().nullable().optional(),
+    /** Timeline note shown to the reporter (complaint_events type 'note'). */
+    note: z.string().trim().min(1).max(1000).optional(),
+    /** Required when status = rejected; shown on the timeline. */
+    reason: z.string().trim().min(3).max(500).optional(),
+    is_urgent: z.boolean().optional(),
+    /** true also forces visibility private (DB constraint). */
+    is_sensitive: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" })
+  .refine((v) => v.status !== "rejected" || (v.reason?.length ?? 0) >= 3, {
+    message: "A reason is required to reject",
+    path: ["reason"],
+  });
+export type ComplaintPatch = z.infer<typeof ComplaintPatchSchema>;
+
+/** Row returned by PATCH / resolve / link. */
+export const ComplaintUpdateResultSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  status: z.enum(STATUSES),
+  priority: z.number().int(),
+  category: z.enum(CATEGORIES),
+  department_id: z.string().nullable(),
+  assignee_id: z.string().nullable(),
+  parent_id: z.string().nullable(),
+  is_urgent: z.boolean(),
+  is_sensitive: z.boolean(),
+  visibility: z.enum(VISIBILITIES),
+  sla_due_at: z.string().nullable(),
+  updated_at: z.string(),
+});
+export type ComplaintUpdateResult = z.infer<typeof ComplaintUpdateResultSchema>;
+
+/** Storage path returned by /api/upload/resolution: `<complaint uuid>/<uuid>.<ext>` in resolution-photos. */
+export const RESOLUTION_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+
+/** `POST /api/complaints/[id]/resolve`. Photo required for field staff, optional for admins. */
+export const ResolveRequestSchema = z.object({
+  note: z.string().trim().min(3).max(1000),
+  photo_path: z.string().regex(RESOLUTION_PATH, "invalid photo path").nullish(),
+});
+export type ResolveRequest = z.infer<typeof ResolveRequestSchema>;
+
+/** `POST /api/complaints/[id]/link`: mark as duplicate of `parent_id`, or `{unlink: true}`. */
+export const LinkRequestSchema = z.union([
+  z.strictObject({ parent_id: z.guid() }),
+  z.strictObject({ unlink: z.literal(true) }),
+]);
+export type LinkRequest = z.infer<typeof LinkRequestSchema>;
+
+/** One allowed status move (`GET /api/meta/transitions`). */
+export const TransitionSchema = z.object({ from: z.enum(STATUSES), to: z.enum(STATUSES) });
+export type Transition = z.infer<typeof TransitionSchema>;
+
+/** `GET /api/admin/staff?department=` → people who can be assigned (names only). */
+export const StaffMemberSchema = z.object({
+  id: z.string(),
+  full_name: z.string().nullable(),
+  role: z.enum(["field_staff", "dept_admin"]),
+});
+export type StaffMember = z.infer<typeof StaffMemberSchema>;
+
+/** `GET /api/complaints/[id]/similar` (admins): possible duplicates in the admin's reach, private ones included. */
+export const AdminSimilarItemSchema = SimilarItemSchema.extend({
+  department_id: z.string().nullable(),
+  created_at: z.string(),
+});
+export type AdminSimilarItem = z.infer<typeof AdminSimilarItemSchema>;
+
+/** Internal note (messages.internal = true): admins of the ticket + assignee only. */
+export const InternalNoteSchema = z.object({
+  id: z.number().int(),
+  body: z.string(),
+  created_at: z.string(),
+  author: z.string().nullable(),
+  mine: z.boolean(),
+});
+export type InternalNote = z.infer<typeof InternalNoteSchema>;
+export const InternalNoteRequestSchema = z.object({ body: z.string().trim().min(1).max(1000) });
+
+export const ADMIN_STATS_DAYS = [7, 14, 30] as const;
+export const AdminStatsQuerySchema = z.object({
+  days: z.coerce.number().int().refine((d) => (ADMIN_STATS_DAYS as readonly number[]).includes(d), "days must be 7, 14 or 30").default(14),
+  /** super_admin only. */
+  department: z.guid().optional(),
+});
+
+export const AdminStatsSchema = z.object({
+  /** null = all departments (super admin). */
+  department_id: z.string().nullable(),
+  days: z.number().int(),
+  stats: z.object({
+    /** submitted + triaged + needs_review + assigned + in_progress */
+    open: z.number().int(),
+    in_progress: z.number().int(),
+    overdue: z.number().int(),
+    needs_review: z.number().int(),
+    fixed_week: z.number().int(),
+    avg_resolution_hours: z.number().nullable(),
+    rating_avg: z.number().nullable(),
+    rating_count: z.number().int(),
+    by_lang: z.object({ en: z.number().int(), as: z.number().int() }),
+  }),
+  trend: z.array(z.object({ day: z.string(), created: z.number().int(), resolved: z.number().int() })),
+  categories: z.array(z.object({ category: z.enum(CATEGORIES), total: z.number().int() })),
+  /** super admin only; [] otherwise. */
+  load: z.array(
+    z.object({ department_id: z.string(), name_en: z.string(), name_as: z.string(), open_count: z.number().int(), overdue: z.number().int() }),
+  ),
+  overdue: z.array(
+    z.object({
+      id: z.string(),
+      code: z.string(),
+      title_en: z.string().nullable(),
+      title_as: z.string().nullable(),
+      priority: z.number().int(),
+      status: z.enum(STATUSES),
+      sla_due_at: z.string().nullable(),
+    }),
+  ),
+});
+export type AdminStats = z.infer<typeof AdminStatsSchema>;

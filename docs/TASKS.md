@@ -16,14 +16,18 @@ Full spec: `docs/PRD.md` (build milestones in section 14)
 - [x] Arnav: run migrations 1–4 + seed on Supabase (via Supabase MCP)
 - [ ] Arnav: enable Google provider + redirect URLs; assign first super_admin via SQL; security-advisor fixes (RPC grants, match_complaints privacy, status_transitions read policy)
 - [x] Arnav: Go backend engine (`engine/`, stdlib only): AI router port (key rotation, cooldown, breaker, simulate_failure, free-only OpenRouter), `/v1/intake` `/v1/embed` `/v1/similar` `/v1/router/invalidate`, `/health` `/metrics`, workers (heal_pending_ai, sla_alerts, auto_close, daily_brief); migration 4 (`complaints.sla_alerted_at`); web `analyzeComplaint()` calls engine first, falls back to TS router; intake gains `is_urgent` + `is_sensitive_suggested`
-- [x] M2: shared UI kit `src/components/ui/*` (+ barrel), `BottomNav` + `(student)` route-group layout, `AdminSidebar` + `/admin` layout/placeholder, `src/lib/mock.ts` (typed mocks for every PRD §10 API), `src/lib/image.ts` (WebP ≤ 400 KB), `src/lib/search.ts`, `src/lib/lang.ts`, dev gallery `/dev/ui`
+- [x] M2: shared UI kit `src/components/ui/*` (+ barrel), `BottomNav` + `(student)` route-group layout, `AdminSidebar` + `/admin` layout/placeholder, `src/lib/image.ts` (WebP ≤ 400 KB), `src/lib/search.ts`, `src/lib/lang.ts` (mocks + `/dev/ui` gallery since removed)
 - [ ] Arnav: test engine against live Gemini/OpenRouter/Supabase; cloudflared tunnel dry run
 - [x] Arnav (M3 backend): `/api/upload`, `/api/complaints/similar` (engine first, public tickets only), `POST /api/complaints` submit pipeline, `/api/locations`, `/api/meta/config`
 - [x] Arnav (M4 backend): `GET /api/complaints` (mine/public/dept/assigned, keyset pages), `GET /api/complaints/[id]`, support, verify, notifications list + mark read, `PATCH /api/profile`
 - [x] Arnav: migration 5 security hardening (match_complaints public-only, RPC grants, status_transitions readable, search_path); Tailwind wired into Turbopack (`next.config.ts`)
 - [x] M3 + M4 screens: `/report` (AI preview, dedup drawer + Me too, urgent banner, per-photo upload progress), `/report/done`, `/my` (realtime), `/c/[id]` (timeline, verify/reopen, Me too; realtime for owner/staff, polling otherwise), `/notifications`, `/profile`, header bell component, root `not-found` + `error`
+- [x] Demo cleanup: removed `/dev/ui`, `src/lib/mock.ts`, `public/mock/`; migration `20261031230000_remove_demo.sql` (drops `app_config.demo_mode`, applied live)
+- [x] S04 `/onboarding` (language → about you → done; saves via `PATCH /api/profile`, no redirect loop)
+- [x] S11 `/map` (schematic campus plan from `locations.map_x/map_y`, open public issues per building, category + fixed-in-7-days filters in URL, sortable building list, Drawer per building)
+- [x] M5 (admin core + field staff): `PATCH /api/complaints/[id]`, `/resolve`, `/link`, `/similar` (admin, private in reach), `/notes` (internal), `/api/upload/resolution`, `/api/admin/stats`, `/api/admin/staff`, `/api/meta/transitions`, `src/lib/admin.ts`; screens `/admin` (S13), `/admin/queue` (S14, realtime, URL filters), `/admin/t/[id]` (S15 without P1 rail items), `/staff` (S12); admin sidebar trimmed to working pages; field-staff "My work" nav item. Bulk queue actions skipped.
 - [ ] Migration 6: column-restricting update trigger (owner/assignee), stop full-row public reads (`complaints public read`), notifications `with check`
-- Arnav: `/api/complaints` (intake + dedup + routing); mocks in `src/lib/mock.ts` by noon; deploy to Vercel
+- Arnav: `/api/complaints` (intake + dedup + routing); deploy to Vercel
 - Devansh: `/report` form (text, 3 photos compressed, building combobox, AI preview card, duplicate prompt), `/report/done`, onboarding
 - Darsh: landing polish, `/my`, `/c/[id]` ticket + timeline, notifications bell (realtime)
 - Aman: real DU buildings (+ coordinates), departments, SLA hours; 40 seed complaints (20 Assamese); 10 campus photos; hero photo; ask coordinators about demo slot / projector / hotspot

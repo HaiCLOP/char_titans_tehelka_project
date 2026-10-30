@@ -27,7 +27,7 @@ Supabase dashboard → SQL Editor → run in order:
 Then make yourself super admin: `update profiles set role = 'super_admin' where id = '<your auth user id>';`
 
 ## Scripts
-`pnpm dev` · `pnpm build && pnpm start` (local production build = demo backup) · `pnpm lint` · `pnpm exec tsc --noEmit`
+`pnpm dev` · `pnpm build && pnpm start` (local production build = offline backup) · `pnpm lint` · `pnpm exec tsc --noEmit`
 
 ## Where things are
 - `src/lib/ai/router.ts` — model/key rotation, failover, circuit breaker, logging

@@ -14,7 +14,7 @@ import { PURPOSE_TIMEOUT_MS, type AIPurpose, type Attempt, type AttemptStatus, t
  *  - 429 → key cools down 60 s, next key; 5xx/timeout → next model; invalid output → next model
  *  - circuit breaker: 3 failures in 60 s → model skipped for 30 s
  *  - every attempt logged to `ai_logs`
- * State is in-memory per server instance — good enough for a single demo deployment.
+ * State is in-memory per server instance — good enough for a single deployment.
  */
 
 type Key = { id: string | null; provider: string; label: string; value: string; rpm: number };

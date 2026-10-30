@@ -62,10 +62,12 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
   const [lang, setLang] = useState<"en" | "as">(profile.lang_pref);
   const [hostel, setHostel] = useState(profile.hostel ?? "");
   const [dept, setDept] = useState(profile.department_id ?? "");
+  const [course, setCourse] = useState(profile.course ?? "");
   const [font, setFont] = useState<FontSize>(profile.font_size);
   const [dark, setDark] = useState(initialDark);
   const [nameError, setNameError] = useState<string | null>(null);
-  const canPickDept = profile.role === "student" || profile.role === "staff";
+  const isStudent = profile.role === "student";
+  const canPickDept = profile.role === "staff";
 
   // Keep the font cookie in step with the saved profile (e.g. set on another device).
   useEffect(() => {
@@ -88,6 +90,7 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
   if (lang !== profile.lang_pref) patch.lang_pref = lang;
   if (hostel.trim() !== (profile.hostel ?? "")) patch.hostel = hostel.trim() || null;
   if (canPickDept && dept !== (profile.department_id ?? "")) patch.department_id = dept || null;
+  if (isStudent && course.trim() !== (profile.course ?? "")) patch.course = course.trim() || null;
   if (font !== profile.font_size) patch.font_size = font;
   const dirty = Object.keys(patch).length > 0;
 
@@ -149,7 +152,17 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
           maxLength={80}
           onChange={(e) => setHostel(e.target.value)}
         />
-        {canPickDept ? (
+        {isStudent ? (
+          <Input
+            id="profile-course"
+            label={t("course")}
+            hint={t("courseHint")}
+            placeholder={t("coursePlaceholder")}
+            value={course}
+            maxLength={80}
+            onChange={(e) => setCourse(e.target.value)}
+          />
+        ) : canPickDept ? (
           <Select
             id="profile-dept"
             label={t("department")}

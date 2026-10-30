@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Bell, ClipboardList, House, Map, Plus, UserRound } from "lucide-react";
+import { Bell, ClipboardList, House, Map, Plus, UserRound, Wrench } from "lucide-react";
+import { getProfile } from "@/lib/auth";
 import { BrandMark } from "./brand-mark";
 import { NavLink } from "./nav-link";
 
@@ -19,7 +20,8 @@ const OFF = "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
 
 /** Desktop (lg+) floating icon rail. Labels show as tooltips and stay available to screen readers. */
 export async function Sidebar() {
-  const t = await getTranslations();
+  const [t, profile] = await Promise.all([getTranslations(), getProfile()]);
+  const main = profile?.role === "field_staff" ? [{ href: "/staff", key: "work", icon: Wrench }, ...MAIN] : MAIN;
   const item = (i: { href: string; key: string; icon: typeof House; exact?: boolean }) => (
     <li key={i.href}>
       <NavLink href={i.href} exact={i.exact} aria-label={t(`nav.${i.key}`)} className={ITEM} activeClassName={ON} inactiveClassName={OFF}>
@@ -40,7 +42,7 @@ export async function Sidebar() {
           <BrandMark className="size-12" />
         </Link>
         <nav aria-label={t("nav.main")}>
-          <ul className="flex flex-col items-center gap-2">{MAIN.map(item)}</ul>
+          <ul className="flex flex-col items-center gap-2">{main.map(item)}</ul>
         </nav>
         <span className="my-2 h-px w-8 bg-border" aria-hidden />
         <ul>{item({ href: "/profile", key: "profile", icon: UserRound })}</ul>

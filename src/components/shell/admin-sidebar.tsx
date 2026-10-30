@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Bot, Building2, ChevronsLeft, ChevronsRight, ClipboardList, Home, LayoutDashboard, Landmark, Map, Menu } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, ClipboardList, Home, LayoutDashboard, Map, Menu, Wrench } from "lucide-react";
 import type { Role } from "@/lib/domain";
 import { cn, setCookie } from "@/lib/utils";
 import { Drawer } from "@/components/ui/dialog";
@@ -11,17 +11,17 @@ import { NavLink } from "./nav-link";
 
 import { ADMIN_NAV_COOKIE } from "./admin-nav";
 
+// Only screens that exist. Agent (M7), departments and locations (P1) come back when their pages ship.
 const ITEMS = [
-  { href: "/admin", key: "dashboard", icon: LayoutDashboard, exact: true, superOnly: false },
-  { href: "/admin/queue", key: "queue", icon: ClipboardList, exact: false, superOnly: false },
-  { href: "/admin/map", key: "map", icon: Map, exact: false, superOnly: false },
-  { href: "/admin/agent", key: "agent", icon: Bot, exact: false, superOnly: false },
-  { href: "/admin/departments", key: "departments", icon: Landmark, exact: false, superOnly: true },
-  { href: "/admin/locations", key: "locations", icon: Building2, exact: false, superOnly: true },
+  { href: "/admin", key: "dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/queue", key: "queue", icon: ClipboardList, exact: false },
+  { href: "/staff", key: "fieldWork", icon: Wrench, exact: false },
+  { href: "/map", key: "map", icon: Map, exact: false },
 ] as const;
 
 type AdminSidebarProps = {
-  role: Role;
+  /** Kept for callers; every item is shown to both admin roles today. */
+  role?: Role;
   /** From the `cs_admin_nav` cookie so the first paint matches. */
   defaultCollapsed?: boolean;
   /** Extra controls (language/theme switch) shown in the mobile menu sheet. */
@@ -32,11 +32,10 @@ type AdminSidebarProps = {
  * Admin navigation. lg+: sticky sidebar that collapses to icons (state saved in a cookie).
  * < lg: a top bar with a menu button opening a bottom sheet.
  */
-export function AdminSidebar({ role, defaultCollapsed = false, toolbar }: AdminSidebarProps) {
+export function AdminSidebar({ defaultCollapsed = false, toolbar }: AdminSidebarProps) {
   const t = useTranslations("nav");
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [menuOpen, setMenuOpen] = useState(false);
-  const items = ITEMS.filter((i) => !i.superOnly || role === "super_admin");
 
   const toggle = () => {
     const next = !collapsed;
@@ -58,7 +57,7 @@ export function AdminSidebar({ role, defaultCollapsed = false, toolbar }: AdminS
 
   const links = (compact: boolean, onNavigate?: () => void) => (
     <ul className="flex flex-col gap-1">
-      {items.map((i) => (
+      {ITEMS.map((i) => (
         <li key={i.href} onClick={onNavigate}>
           <NavLink
             href={i.href}
@@ -84,7 +83,7 @@ export function AdminSidebar({ role, defaultCollapsed = false, toolbar }: AdminS
       aria-label={compact ? t("admin.backToSite") : undefined}
       className={cn("flex items-center gap-3 rounded-xl py-2.5 text-sm text-muted-foreground transition hover:bg-surface-muted hover:text-foreground", compact ? "justify-center" : "px-3")}
     >
-      <Home className="size-[18px] shrink-0" aria-hidden />
+      <Home className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
       {!compact && t("admin.backToSite")}
     </Link>
   );
@@ -113,7 +112,7 @@ export function AdminSidebar({ role, defaultCollapsed = false, toolbar }: AdminS
               collapsed ? "justify-center" : "px-3",
             )}
           >
-            {collapsed ? <ChevronsRight className="size-[18px]" aria-hidden /> : <ChevronsLeft className="size-[18px]" aria-hidden />}
+            {collapsed ? <ChevronsRight className="size-[18px]" strokeWidth={1.75} aria-hidden /> : <ChevronsLeft className="size-[18px]" strokeWidth={1.75} aria-hidden />}
             {!collapsed && t("admin.collapse")}
           </button>
         </div>
