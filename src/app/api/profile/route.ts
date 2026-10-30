@@ -2,7 +2,7 @@ import { ProfileUpdateSchema, type Profile } from "@/lib/domain";
 import { fail, ok, parseJson, requireUser } from "@/lib/api";
 import { PROFILE_COLUMNS } from "@/lib/auth";
 import { LOCALE_COOKIE } from "@/i18n/config";
-import { THEME_COOKIE } from "@/lib/theme";
+import { FONT_SIZE_COOKIE, THEME_COOKIE } from "@/lib/theme";
 
 const COOKIE = { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" as const };
 
@@ -36,5 +36,6 @@ export async function PATCH(req: Request) {
   const res = ok(data as Profile);
   if (body.lang_pref) res.cookies.set(LOCALE_COOKIE, body.lang_pref, COOKIE);
   if (body.theme) res.cookies.set(THEME_COOKIE, body.theme, COOKIE);
+  if (body.font_size) res.cookies.set(FONT_SIZE_COOKIE, body.font_size, COOKIE);
   return res;
 }

@@ -1,57 +1,49 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Bell, BookOpen, Building2, CircleHelp, ClipboardList, Home, Landmark, Map, PlusCircle, Users, ArrowRight } from "lucide-react";
+import { Bell, ClipboardList, House, Map, Plus, UserRound } from "lucide-react";
+import { BrandMark } from "./brand-mark";
 import { NavLink } from "./nav-link";
 
 const MAIN = [
-  { href: "/", key: "home", icon: Home },
-  { href: "/report", key: "report", icon: PlusCircle },
+  { href: "/", key: "home", icon: House, exact: true },
+  { href: "/report", key: "report", icon: Plus },
   { href: "/my", key: "myReports", icon: ClipboardList },
   { href: "/map", key: "map", icon: Map },
   { href: "/notifications", key: "notifications", icon: Bell },
-  { href: "/community", key: "community", icon: Users },
-  { href: "/guidelines", key: "guidelines", icon: BookOpen },
-] as const;
-const INFO = [
-  { href: "/buildings", key: "buildings", icon: Building2 },
-  { href: "/departments", key: "departments", icon: Landmark },
-  { href: "/help", key: "help", icon: CircleHelp },
 ] as const;
 
-/** Desktop (lg+) student sidebar. The active item is derived from the URL. */
+const ITEM =
+  "group relative grid size-11 place-items-center rounded-full transition-[background-color,color,box-shadow] duration-200 ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const ON = "bg-surface text-foreground shadow-md ring-1 ring-border dark:bg-surface-muted";
+const OFF = "text-muted-foreground hover:bg-surface-muted hover:text-foreground";
+
+/** Desktop (lg+) floating icon rail. Labels show as tooltips and stay available to screen readers. */
 export async function Sidebar() {
   const t = await getTranslations();
-  const item = (i: (typeof MAIN)[number] | (typeof INFO)[number]) => (
-    <NavLink
-      key={i.href}
-      href={i.href}
-      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition"
-      activeClassName="bg-primary-soft font-medium text-primary"
-      inactiveClassName="text-muted-foreground hover:bg-surface-muted hover:text-foreground"
-    >
-      <i.icon className="size-[18px]" aria-hidden />
-      {t(`nav.${i.key}`)}
-    </NavLink>
+  const item = (i: { href: string; key: string; icon: typeof House; exact?: boolean }) => (
+    <li key={i.href}>
+      <NavLink href={i.href} exact={i.exact} aria-label={t(`nav.${i.key}`)} className={ITEM} activeClassName={ON} inactiveClassName={OFF}>
+        <i.icon className="size-[19px]" strokeWidth={1.75} aria-hidden />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-full ml-3 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium whitespace-nowrap text-primary-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+        >
+          {t(`nav.${i.key}`)}
+        </span>
+      </NavLink>
+    </li>
   );
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-surface/70 px-4 py-6 backdrop-blur lg:flex">
-      <Link href="/" className="flex items-center gap-3 px-2">
-        <span className="grid size-10 place-items-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">C</span>
-        <span>
-          <span className="block text-lg font-semibold leading-tight">{t("app.name")}</span>
-          <span className="block text-xs text-muted-foreground">{t("app.tagline")}</span>
-        </span>
-      </Link>
-      <nav aria-label={t("nav.main")} className="flex flex-col gap-1">{MAIN.map(item)}</nav>
-      <div>
-        <p className="px-3 pb-2 text-xs text-muted-foreground">{t("nav.campusInfo")}</p>
-        <nav aria-label={t("nav.campusInfo")} className="flex flex-col gap-1">{INFO.map(item)}</nav>
-      </div>
-      <div className="mt-auto rounded-2xl bg-primary-soft p-4 text-sm">
-        <p className="text-foreground">{t("home.slogan")}</p>
-        <Link href="/report" aria-label={t("nav.report")} className="mt-3 inline-grid size-8 place-items-center rounded-full bg-surface text-primary">
-          <ArrowRight className="size-4" />
+    <aside className="fixed top-1/2 left-5 z-30 hidden -translate-y-1/2 lg:block">
+      <div className="flex w-[4.25rem] flex-col items-center gap-2 rounded-full border border-border bg-surface px-2 py-3 shadow-rail">
+        <Link href="/" aria-label={t("shell.home")} className="mb-2 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <BrandMark className="size-12" />
         </Link>
+        <nav aria-label={t("nav.main")}>
+          <ul className="flex flex-col items-center gap-2">{MAIN.map(item)}</ul>
+        </nav>
+        <span className="my-2 h-px w-8 bg-border" aria-hidden />
+        <ul>{item({ href: "/profile", key: "profile", icon: UserRound })}</ul>
       </div>
     </aside>
   );

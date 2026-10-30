@@ -54,7 +54,7 @@ export function Tabs<V extends string>({ items, value, defaultValue, onValueChan
       <div
         role="tablist"
         aria-label={label}
-        className={cn("flex max-w-full gap-1 overflow-x-auto rounded-full border border-border bg-surface p-1", fill ? "w-full" : "w-fit")}
+        className={cn("flex max-w-full gap-1 overflow-x-auto rounded-full bg-surface-sunken/70 p-1 shadow-[inset_0_1px_2px_rgb(0_0_0/0.04)]", fill ? "w-full" : "w-fit")}
       >
         {items.map((item, i) => {
           const on = item.value === current;
@@ -73,14 +73,14 @@ export function Tabs<V extends string>({ items, value, defaultValue, onValueChan
               onClick={() => select(item.value)}
               onKeyDown={(e) => onKey(e, i)}
               className={cn(
-                "inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm whitespace-nowrap transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 fill && "flex-1",
-                on ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                on ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
               )}
             >
               {item.label}
               {item.count !== undefined && (
-                <span className={cn("rounded-full px-1.5 text-xs", on ? "bg-primary-foreground/20" : "bg-surface-muted")}>
+                <span className={cn("rounded-full px-1.5 text-xs", on ? "bg-surface-muted text-muted-foreground" : "bg-surface/60")}>
                   {toLocaleDigits(item.count, locale)}
                 </span>
               )}

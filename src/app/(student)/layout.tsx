@@ -3,15 +3,15 @@ import { Header } from "@/components/shell/header";
 import { Sidebar } from "@/components/shell/sidebar";
 
 /**
- * Student/staff shell: sidebar on desktop (lg+), bottom nav on mobile.
+ * Student/staff shell: floating icon rail on desktop (lg+), bottom nav on mobile, one top bar for both.
  * Put reporter pages (/report, /my, /c/[id], /map, /notifications, /profile) inside this route group.
  */
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex">
+    <div className="min-h-dvh">
       <Sidebar />
-      <main className="min-w-0 flex-1 px-4 pb-28 sm:px-8 lg:pb-10">
-        <Header />
+      <Header />
+      <main className="mx-auto w-full max-w-[84rem] px-4 pt-6 pb-28 sm:px-8 sm:pt-10 lg:pr-10 lg:pb-16 lg:pl-[7.5rem]">
         {children}
       </main>
       <BottomNav />

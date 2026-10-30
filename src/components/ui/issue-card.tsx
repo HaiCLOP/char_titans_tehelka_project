@@ -78,35 +78,34 @@ export function IssueCard({ issue, href, showStatus = true, showCategory = false
     </div>
   );
 
+  const hasPhoto = Boolean(issue.photo_url);
   const body = compact ? (
     <div className="flex gap-3 p-3">
-      <Photo issue={issue} className="size-20 shrink-0 rounded-xl" />
+      {hasPhoto && <Photo issue={issue} className="size-20 shrink-0 rounded-2xl" />}
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap gap-1.5">
           <PriorityChip priority={issue.priority} />
           {showStatus && <StatusChip status={issue.status} />}
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold">{title}</h3>
+        <h3 className="line-clamp-2 text-sm font-semibold tracking-[-0.01em]">{title}</h3>
         {meta}
         {footer}
       </div>
     </div>
   ) : (
     <>
-      <div className="relative">
-        <Photo issue={issue} className="aspect-[16/9]" />
-        <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
-          <PriorityChip priority={issue.priority} className="bg-surface/95 backdrop-blur" />
+      {hasPhoto && (
+        <div className="relative p-2 pb-0">
+          <Photo issue={issue} className="aspect-[16/9] rounded-[1.1rem]" />
         </div>
-      </div>
-      <div className="space-y-2 p-4">
-        {(showStatus || showCategory) && (
-          <div className="flex flex-wrap gap-1.5">
-            {showStatus && <StatusChip status={issue.status} />}
-            {showCategory && <CategoryChip category={issue.category} />}
-          </div>
-        )}
-        <h3 className="line-clamp-2 font-semibold">{title}</h3>
+      )}
+      <div className="space-y-2.5 p-5">
+        <div className="flex flex-wrap gap-1.5">
+          <PriorityChip priority={issue.priority} />
+          {showStatus && <StatusChip status={issue.status} />}
+          {showCategory && <CategoryChip category={issue.category} />}
+        </div>
+        <h3 className="line-clamp-2 text-[1.0625rem] leading-snug font-semibold tracking-[-0.015em]">{title}</h3>
         {meta}
         {footer}
       </div>
@@ -114,8 +113,8 @@ export function IssueCard({ issue, href, showStatus = true, showCategory = false
   );
 
   const frame = cn(
-    "block overflow-hidden rounded-card border border-border bg-surface shadow-sm transition",
-    link && "hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    "block h-full overflow-hidden rounded-card border border-border bg-surface shadow-sm transition-[border-color,box-shadow,transform] duration-300 ease-out-expo",
+    link && "hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     className,
   );
   return link ? (

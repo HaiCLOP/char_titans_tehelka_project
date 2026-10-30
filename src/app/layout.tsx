@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Bengali } from "next/font/google";
+import { Geist, Noto_Sans_Bengali } from "next/font/google";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { Toaster } from "sonner";
 import { Providers } from "@/components/providers";
-import { THEME_COOKIE, MODE_COOKIE, isTheme } from "@/lib/theme";
+import { FONT_SIZE_COOKIE, MODE_COOKIE } from "@/lib/theme";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+// Geist carries both the UI and the heavy display headings; Assamese falls through to Noto Sans Bengali.
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
 // Noto Sans Bengali covers the Assamese letters ৰ (U+09F0) and ৱ (U+09F1)
 const notoBengali = Noto_Sans_Bengali({ subsets: ["bengali"], variable: "--font-noto-bengali", display: "swap" });
 
@@ -20,16 +21,15 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const store = await cookies();
-  const themeRaw = store.get(THEME_COOKIE)?.value;
-  const theme = isTheme(themeRaw) ? themeRaw : "tea";
   const dark = store.get(MODE_COOKIE)?.value === "dark";
+  const fontSize = store.get(FONT_SIZE_COOKIE)?.value === "large" ? "large" : "normal";
 
   return (
-    <html lang={locale} data-theme={theme} className={`${inter.variable} ${notoBengali.variable} ${dark ? "dark" : ""}`}>
+    <html lang={locale} data-font-size={fontSize} className={`${geist.variable} ${notoBengali.variable} ${dark ? "dark" : ""}`}>
       <body className="min-h-dvh">
         <NextIntlClientProvider>
           <Providers>{children}</Providers>
-          <Toaster richColors position="top-center" />
+          <Toaster position="top-center" toastOptions={{ className: "!rounded-2xl !border-border !bg-surface !text-foreground !shadow-md" }} />
         </NextIntlClientProvider>
       </body>
     </html>

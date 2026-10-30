@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 export function Card({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("rounded-card border border-border bg-surface p-5 shadow-sm", className)} {...props} />;
+  return <div className={cn("rounded-card border border-border bg-surface p-5 shadow-sm sm:p-6", className)} {...props} />;
 }
 
 type CardHeaderProps = Omit<React.ComponentProps<"div">, "title"> & {
@@ -15,9 +15,9 @@ type CardHeaderProps = Omit<React.ComponentProps<"div">, "title"> & {
 
 export function CardHeader({ title, description, icon, action, as: H = "h2", className, ...props }: CardHeaderProps) {
   return (
-    <div className={cn("mb-4 flex items-start justify-between gap-3", className)} {...props}>
+    <div className={cn("mb-5 flex items-start justify-between gap-3", className)} {...props}>
       <div className="min-w-0">
-        <H className="flex items-center gap-2 font-semibold">
+        <H className="text-title flex items-center gap-2 text-[1.0625rem]">
           {icon}
           {title}
         </H>

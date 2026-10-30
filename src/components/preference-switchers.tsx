@@ -2,9 +2,9 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Moon, Sun, Palette } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { LOCALE_COOKIE } from "@/i18n/config";
-import { THEMES, THEME_COOKIE, MODE_COOKIE, type Theme } from "@/lib/theme";
+import { MODE_COOKIE } from "@/lib/theme";
 import { cn, setCookie } from "@/lib/utils";
 
 const withTransition = (fn: () => void) => {
@@ -13,7 +13,8 @@ const withTransition = (fn: () => void) => {
   else fn();
 };
 
-export function LanguageSwitch() {
+/** Segmented EN / অসমীয়া control. */
+export function LanguageSwitch({ className }: { className?: string }) {
   const locale = useLocale();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -24,12 +25,18 @@ export function LanguageSwitch() {
     start(() => router.refresh());
   };
   return (
-    <div role="group" aria-label={t("language")} className={cn("flex rounded-full border border-border bg-surface p-1 text-sm", pending && "opacity-60")}>
+    <div role="group" aria-label={t("language")} className={cn("inline-flex h-10 items-center rounded-full bg-surface-muted p-1 text-[13px]", pending && "opacity-60", className)}>
       {(["en", "as"] as const).map((l) => (
         <button
           key={l}
+          type="button"
           onClick={() => set(l)}
-          className={cn("rounded-full px-3 py-1 transition", locale === l ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
+          aria-pressed={locale === l}
+          lang={l}
+          className={cn(
+            "h-8 rounded-full px-3 font-medium transition-[background-color,color,box-shadow] duration-200",
+            locale === l ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
+          )}
         >
           {l === "en" ? "English" : "অসমীয়া"}
         </button>
@@ -38,30 +45,26 @@ export function LanguageSwitch() {
   );
 }
 
-const THEME_SWATCH: Record<Theme, string> = { tea: "#0f5a43", brahmaputra: "#12497a", muga: "#b8862b" };
-
-export function ThemeSwitch() {
+/** Light / dark. The only theme choice: the product is monochrome by design. */
+export function ModeToggle() {
   const t = useTranslations("header");
-  const setTheme = (th: Theme) =>
-    withTransition(() => {
-      document.documentElement.dataset.theme = th;
-      setCookie(THEME_COOKIE, th);
-    });
-  const toggleMode = () =>
+  const toggle = () =>
     withTransition(() => {
       const dark = document.documentElement.classList.toggle("dark");
       setCookie(MODE_COOKIE, dark ? "dark" : "light");
     });
   return (
-    <div className="flex items-center gap-1 rounded-full border border-border bg-surface p-1" aria-label={t("theme")}>
-      <Palette className="mx-1 size-4 text-muted-foreground" aria-hidden />
-      {THEMES.map((th) => (
-        <button key={th} onClick={() => setTheme(th)} aria-label={th} className="size-5 rounded-full ring-offset-2 hover:ring-2 hover:ring-ring" style={{ background: THEME_SWATCH[th] }} />
-      ))}
-      <button onClick={toggleMode} aria-label="dark mode" className="ml-1 rounded-full p-1 text-muted-foreground hover:text-foreground">
-        <Sun className="size-4 dark:hidden" />
-        <Moon className="hidden size-4 dark:block" />
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={t("darkMode")}
+      className="grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Moon className="size-[18px] dark:hidden" strokeWidth={1.75} aria-hidden />
+      <Sun className="hidden size-[18px] dark:block" strokeWidth={1.75} aria-hidden />
+    </button>
   );
 }
+
+/** @deprecated Colour themes were removed; kept as an alias so older imports keep compiling. */
+export const ThemeSwitch = ModeToggle;

@@ -18,7 +18,7 @@ export type ActivityItemProps = {
 const TONE = {
   primary: "bg-primary-soft text-primary",
   success: "bg-p4/12 text-p4",
-  danger: "bg-p1/12 text-p1",
+  danger: "bg-danger-soft text-danger",
   neutral: "bg-surface-muted text-muted-foreground",
 } as const;
 

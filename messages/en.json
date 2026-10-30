@@ -1,45 +1,141 @@
 {
-  "app": { "name": "CivicSense", "tagline": "Campus Together" },
+  "app": {
+    "name": "CivicSense",
+    "tagline": "Campus Together"
+  },
   "nav": {
-    "home": "Home", "report": "Report Issue", "myReports": "My Reports", "map": "Campus Map",
-    "notifications": "Notifications", "community": "Community", "guidelines": "Guidelines",
-    "campusInfo": "Campus Info", "buildings": "Buildings", "departments": "Departments", "help": "Help & Support",
-    "main": "Main navigation", "profile": "Profile", "reportShort": "Report", "myReportsShort": "My reports", "mapShort": "Map",
+    "home": "Home",
+    "report": "Report Issue",
+    "myReports": "My Reports",
+    "map": "Campus Map",
+    "notifications": "Notifications",
+    "community": "Community",
+    "guidelines": "Guidelines",
+    "campusInfo": "Campus Info",
+    "buildings": "Buildings",
+    "departments": "Departments",
+    "help": "Help & Support",
+    "main": "Main navigation",
+    "profile": "Profile",
+    "reportShort": "Report",
+    "myReportsShort": "My reports",
+    "mapShort": "Map",
     "admin": {
-      "title": "Admin", "subtitle": "CivicSense admin", "dashboard": "Dashboard", "queue": "Triage queue", "map": "Campus map",
-      "agent": "Ask CivicSense", "departments": "Departments", "locations": "Locations",
-      "collapse": "Collapse menu", "expand": "Expand menu", "menu": "Menu", "backToSite": "Back to site"
+      "title": "Admin",
+      "subtitle": "CivicSense admin",
+      "dashboard": "Dashboard",
+      "queue": "Triage queue",
+      "map": "Campus map",
+      "agent": "Ask CivicSense",
+      "departments": "Departments",
+      "locations": "Locations",
+      "collapse": "Collapse menu",
+      "expand": "Expand menu",
+      "menu": "Menu",
+      "backToSite": "Back to site"
     }
   },
-  "header": { "search": "Search issues, locations, or ask anything...", "language": "Language", "theme": "Theme" },
+  "header": {
+    "search": "Search issues, locations, or ask anything...",
+    "language": "Language",
+    "theme": "Theme",
+    "darkMode": "Dark mode",
+    "notifications": "Notifications"
+  },
   "hero": {
     "eyebrow": "Campus together",
     "title": "A Cleaner, Safer, Better Campus",
     "subtitle": "Report. Track. Resolve. Powered by AI for a smarter and happier campus.",
-    "cta": "Report an Issue", "how": "How it works?"
+    "cta": "Report an Issue",
+    "how": "How it works?"
   },
-  "stats": { "open": "Open Issues", "progress": "In Progress", "resolved": "Resolved", "contributors": "Students Contributed" },
+  "stats": {
+    "open": "Open Issues",
+    "progress": "In Progress",
+    "resolved": "Resolved",
+    "contributors": "Students Contributed"
+  },
   "home": {
-    "map": "Campus Map", "insights": "AI Insights", "ongoing": "Ongoing Issues Near You",
-    "activity": "Recent Activity", "viewAll": "View All", "slogan": "A cleaner campus today for a brighter tomorrow."
+    "map": "Campus Map",
+    "insights": "AI Insights",
+    "ongoing": "Ongoing Issues Near You",
+    "activity": "Recent Activity",
+    "viewAll": "View All",
+    "slogan": "A cleaner campus today for a brighter tomorrow.",
+    "title": "Campus issues",
+    "subtitle": "Report a problem in Assamese or English, then watch it move from your phone to the person who fixes it.",
+    "composeTitle": "What needs fixing?",
+    "composeHint": "Write in any language, or just add a photo.",
+    "composePlaceholder": "e.g. No water in the girls’ hostel washroom since Monday",
+    "continue": "Continue",
+    "addPhoto": "Add a photo",
+    "tabOpen": "Open now",
+    "tabResolved": "Recently fixed",
+    "emptyOpenTitle": "A quiet campus",
+    "emptyOpenBody": "No open public issues right now. Seen something that needs fixing? Report it.",
+    "emptyResolvedTitle": "Nothing fixed this week yet",
+    "emptyResolvedBody": "Fixed issues show up here once the reporter confirms them.",
+    "loadError": "Could not load campus issues.",
+    "asideEyebrow": "Any language",
+    "asideTitle": "Write it the way you’d say it.",
+    "asideBody": "AI turns your words or photo into a ticket in both Assamese and English and sends it to the right department with a deadline.",
+    "asidePrivacy": "Public reports are visible to everyone on campus. Private and sensitive reports are seen only by admins.",
+    "pulseTitle": "Reports and fixes",
+    "pulseRange": "Last 14 days",
+    "live": "Live",
+    "legendReported": "Reported",
+    "legendFixed": "Fixed",
+    "weekTitle": "Right now",
+    "statOpen": "Open",
+    "statWorking": "Being fixed",
+    "statFixed": "Fixed",
+    "statOverdue": "Past deadline",
+    "statAvg": "Average time to fix",
+    "hours": "{n} h",
+    "noData": "No data yet"
   },
   "status": {
-    "submitted": "Submitted", "triaged": "Triaged", "needs_review": "Needs review", "assigned": "Assigned",
-    "in_progress": "In Progress", "resolved": "Resolved", "closed": "Closed", "duplicate": "Duplicate", "rejected": "Rejected"
+    "submitted": "Submitted",
+    "triaged": "Triaged",
+    "needs_review": "Needs review",
+    "assigned": "Assigned",
+    "in_progress": "In Progress",
+    "resolved": "Resolved",
+    "closed": "Closed",
+    "duplicate": "Duplicate",
+    "rejected": "Rejected"
   },
-  "priority": { "1": "Critical", "2": "High", "3": "Medium", "4": "Low" },
+  "priority": {
+    "1": "Critical",
+    "2": "High",
+    "3": "Medium",
+    "4": "Low"
+  },
   "category": {
-    "water_supply": "Water supply", "plumbing": "Plumbing", "electrical": "Electrical", "sanitation": "Sanitation",
-    "hostel": "Hostel", "mess_food": "Mess & food", "infrastructure": "Infrastructure", "it_network": "IT & Wi-Fi",
-    "academic": "Academic", "safety_security": "Safety & security", "transport": "Transport", "other": "Other"
+    "water_supply": "Water supply",
+    "plumbing": "Plumbing",
+    "electrical": "Electrical",
+    "sanitation": "Sanitation",
+    "hostel": "Hostel",
+    "mess_food": "Mess & food",
+    "infrastructure": "Infrastructure",
+    "it_network": "IT & Wi-Fi",
+    "academic": "Academic",
+    "safety_security": "Safety & security",
+    "transport": "Transport",
+    "other": "Other"
   },
   "auth": {
     "metaTitle": "Sign in — CivicSense",
     "title": "Sign in to CivicSense",
     "subtitle": "Report campus issues and follow them until they are fixed, in English or Assamese.",
-    "google": "Continue with Google", "redirecting": "Redirecting...", "or": "or",
-    "emailLabel": "Email address", "emailPlaceholder": "name@example.com",
-    "sendLink": "Email me a sign-in link", "sending": "Sending...",
+    "google": "Continue with Google",
+    "redirecting": "Redirecting...",
+    "or": "or",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "name@example.com",
+    "sendLink": "Email me a sign-in link",
+    "sending": "Sending...",
     "sentTitle": "Check your email",
     "sentBody": "We sent a sign-in link to {email}. Open it on this device to continue.",
     "useAnother": "Use a different email",
@@ -50,19 +146,49 @@
     "privacy": "We use your email only to sign you in and to send updates about your reports.",
     "signOut": "Sign out"
   },
-  "common": { "loading": "Loading...", "error": "Something went wrong", "retry": "Retry", "empty": "Nothing here yet" },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "empty": "Nothing here yet"
+  },
   "ui": {
-    "close": "Close", "retry": "Retry", "goHome": "Go home", "noLocation": "Location not set", "anonymous": "Anonymous",
-    "photoAlt": "Photo of the issue", "timelineEmpty": "No updates yet",
+    "close": "Close",
+    "retry": "Retry",
+    "goHome": "Go home",
+    "noLocation": "Location not set",
+    "anonymous": "Anonymous",
+    "photoAlt": "Photo of the issue",
+    "timelineEmpty": "No updates yet",
     "supports": "{count, plural, one {{n} supporter} other {{n} supporters}}",
-    "error": { "title": "Something went wrong", "body": "We couldn't load this. Check your connection and try again." },
-    "forbidden": { "title": "You don't have access", "body": "This page is only for authorised staff. Ask an administrator if you think this is a mistake." },
-    "comingSoon": { "title": "Coming soon", "adminBody": "The admin dashboard arrives in milestone M5." },
-    "combobox": { "placeholder": "Search...", "noResults": "No matches", "searching": "Searching...", "failed": "Couldn't load options", "clear": "Clear" },
+    "error": {
+      "title": "Something went wrong",
+      "body": "We couldn't load this. Check your connection and try again."
+    },
+    "forbidden": {
+      "title": "You don't have access",
+      "body": "This page is only for authorised staff. Ask an administrator if you think this is a mistake."
+    },
+    "comingSoon": {
+      "title": "Coming soon",
+      "adminBody": "The admin dashboard arrives in milestone M5."
+    },
+    "combobox": {
+      "placeholder": "Search...",
+      "noResults": "No matches",
+      "searching": "Searching...",
+      "failed": "Couldn't load options",
+      "clear": "Clear"
+    },
     "photo": {
-      "add": "Choose photos", "camera": "Take photo", "drop": "Drag photos here or choose them.",
-      "hint": "Up to {max} photos. They are compressed on your device.", "remove": "Remove photo {n}", "preview": "Photo {n}",
-      "compressing": "Preparing photo...", "tooMany": "You can add up to {max} photos.",
+      "add": "Choose photos",
+      "camera": "Take photo",
+      "drop": "Drag photos here or choose them.",
+      "hint": "Up to {max} photos. They are compressed on your device.",
+      "remove": "Remove photo {n}",
+      "preview": "Photo {n}",
+      "compressing": "Preparing photo...",
+      "tooMany": "You can add up to {max} photos.",
       "invalid": "Some files could not be used. Choose JPG, PNG or WebP photos."
     }
   },
@@ -76,5 +202,330 @@
     "inHours": "{count, plural, one {in {n} hour} other {in {n} hours}}",
     "inDays": "{count, plural, one {in {n} day} other {in {n} days}}",
     "inMonths": "{count, plural, one {in {n} month} other {in {n} months}}"
+  },
+  "shell": {
+    "university": "Dibrugarh University",
+    "signIn": "Sign in",
+    "openProfile": "Open profile",
+    "home": "CivicSense home"
+  },
+  "roles": {
+    "guest": "Guest",
+    "student": "Student",
+    "staff": "Staff",
+    "field_staff": "Field staff",
+    "dept_admin": "Dept admin",
+    "super_admin": "Super admin"
+  },
+  "track": {
+    "label": "Progress",
+    "reported": "Reported",
+    "routed": "Routed",
+    "assigned": "Assigned",
+    "working": "Being fixed",
+    "fixed": "Fixed",
+    "merged": "Merged with an earlier report",
+    "rejected": "Closed without action",
+    "inReview": "Waiting for review"
+  },
+  "report": {
+    "metaTitle": "Report an issue — CivicSense",
+    "title": "Report an issue",
+    "subtitle": "Describe the problem in English or Assamese, add a photo if you can. AI fills in the details for you.",
+    "description": {
+      "label": "What is the problem?",
+      "hint": "Write in English or Assamese. Say what is wrong and since when.",
+      "placeholder": "e.g. No water in the girls' hostel washroom for three days"
+    },
+    "photos": {
+      "label": "Photos",
+      "statusLabel": "Photo upload status",
+      "item": "Photo {n}",
+      "uploading": "Uploading {pct}%",
+      "uploaded": "Uploaded",
+      "failed": "Upload failed",
+      "retry": "Retry"
+    },
+    "location": {
+      "label": "Location",
+      "hint": "Search the building in English or Assamese.",
+      "placeholder": "Search a building...",
+      "empty": "No building found. Describe the place below.",
+      "noteLabel": "Where exactly? (optional)",
+      "notePlaceholder": "e.g. 2nd floor, near the stairs"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "visibility": "Who can see this report?",
+      "public": "Public",
+      "private": "Private",
+      "publicHint": "Other students can see it and say \"Me too\". Your name is never shown publicly.",
+      "privateHint": "Only you and the staff handling it can see it.",
+      "forcedPrivate": "Sensitive reports are always private.",
+      "anonymous": "Stay anonymous",
+      "anonymousHint": "Hide your name from staff too. You can still track the report.",
+      "sensitive": "Sensitive matter",
+      "sensitiveHint": "Harassment, safety or personal matter — only admins will see it.",
+      "sensitiveAuto": "AI thinks this may be sensitive, so we marked it private. You can undo this.",
+      "undo": "Undo"
+    },
+    "preview": {
+      "title": "AI preview",
+      "edit": "Edit",
+      "done": "Done",
+      "idle": "Write at least {n} characters or add a photo. AI will suggest a title, category and priority.",
+      "analysing": "AI is reading your report...",
+      "updating": "Updating with your latest changes...",
+      "failed": "Could not get the AI preview. You can still submit.",
+      "retry": "Try again",
+      "fallback": "AI unavailable — we'll analyse it shortly. You can still submit now.",
+      "urgent": "Looks urgent",
+      "titleLabel": "Title",
+      "categoryLabel": "Category",
+      "priorityLabel": "Priority",
+      "titleTooShort": "Title needs at least 3 characters.",
+      "reset": "Use AI suggestion",
+      "edited": "Edited by you",
+      "why": "Why:",
+      "summary": "Summary language",
+      "tabEn": "English",
+      "tabAs": "অসমীয়া",
+      "detectedPlace": "Detected place:",
+      "pickPlace": "pick it in Location"
+    },
+    "dup": {
+      "found": "{count, plural, one {{n} similar report found} other {{n} similar reports found}}",
+      "view": "View",
+      "title": "{count, plural, one {Already reported by {n} person} other {Already reported by {n} people}}",
+      "body": "Is this the same problem? Say \"Me too\" to add your support instead of a new report.",
+      "match": "{pct}% match",
+      "people": "{count, plural, one {{n} person affected} other {{n} people affected}}",
+      "metoo": "Me too",
+      "separate": "Submit separately",
+      "supported": "Added your support. We'll keep you posted.",
+      "ownReport": "This is your own report.",
+      "supportFailed": "Could not add your support. Try again."
+    },
+    "errors": {
+      "needContent": "Write a description or add at least one photo.",
+      "uploadPending": "Photos are still uploading. Please wait a moment.",
+      "uploadFailed": "Some photos failed to upload. Retry or remove them.",
+      "rateLimitedTitle": "Too many reports",
+      "rateLimited": "You can send up to {n} reports per hour. Please try again later.",
+      "network": "No connection. Check your internet and try again.",
+      "submitFailed": "Could not submit your report.",
+      "retry": "Retry"
+    },
+    "submit": "Submit report",
+    "submitting": "Submitting...",
+    "waitingUploads": "Uploading photos...",
+    "submitHint": "You can follow every step in My reports.",
+    "sticky": {
+      "review": "Review",
+      "ready": "AI preview is ready",
+      "hint": "Check the details, then submit"
+    }
+  },
+  "emergency": {
+    "title": "If anyone is in danger, call now",
+    "body": "This report goes to campus staff, but it does not send help. For fire, injury, violence or a medical emergency, call:",
+    "bodyShort": "Your report does not send help. If anyone is in danger, call:",
+    "notConfigured": "number not configured yet",
+    "none": "Emergency numbers are not configured yet. Contact the campus security office."
+  },
+  "sla": {
+    "minutes": "{count, plural, one {{n} min} other {{n} min}}",
+    "hours": "{count, plural, one {{n} h} other {{n} h}}",
+    "days": "{count, plural, one {{n} day} other {{n} days}}",
+    "dueIn": "Action due in {time}",
+    "overdue": "Overdue by {time}"
+  },
+  "done": {
+    "metaTitle": "Report submitted — CivicSense",
+    "title": "Report submitted",
+    "subtitle": "Thank you. We'll notify you at every step.",
+    "code": "Ticket",
+    "department": "Sent to",
+    "departmentPending": "Staff will assign a department soon",
+    "sla": "Expected action",
+    "slaBy": "Expect action by {date}",
+    "slaPending": "Will be set after review",
+    "status": "Status",
+    "track": "Track",
+    "another": "Report another",
+    "share": "Share link",
+    "copyLink": "Copy link",
+    "shareText": "CivicSense ticket {code}",
+    "copied": "Link copied",
+    "copyFailed": "Could not copy the link"
+  },
+  "my": {
+    "metaTitle": "My reports — CivicSense",
+    "title": "My reports",
+    "subtitle": "Everything you reported, updated live.",
+    "newReport": "Report an issue",
+    "tabsLabel": "Filter reports",
+    "tabs": {
+      "active": "Active",
+      "resolved": "Resolved",
+      "all": "All"
+    },
+    "search": "Search by title or code",
+    "loading": "Loading your reports...",
+    "emptySearch": {
+      "title": "No matching reports",
+      "body": "Try a different word or ticket code."
+    },
+    "empty": {
+      "active": {
+        "title": "No open reports",
+        "body": "Spotted a problem on campus? Report it in a few seconds."
+      },
+      "resolved": {
+        "title": "Nothing resolved yet",
+        "body": "Fixed reports will show up here."
+      },
+      "all": {
+        "title": "You haven't reported anything yet",
+        "body": "Report a campus problem and follow it until it is fixed."
+      }
+    },
+    "loadMore": "Load more",
+    "loadMoreFailed": "Could not load more. Try again."
+  },
+  "ticket": {
+    "metaTitle": "Ticket — CivicSense",
+    "breadcrumb": "Breadcrumb",
+    "back": "My reports",
+    "private": "Private",
+    "location": "Location",
+    "noLocation": "Location not set",
+    "department": "Department",
+    "departmentPending": "Department not assigned yet",
+    "created": "Created",
+    "reported": "Reported",
+    "photos": "Photos",
+    "photoN": "Photo {n} of {total}",
+    "prevPhoto": "Previous photo",
+    "nextPhoto": "Next photo",
+    "summary": "Summary",
+    "showOriginal": "Show original",
+    "showTranslated": "Show summary",
+    "originalLabel": "Original text",
+    "noSummary": "Summary will appear after review.",
+    "timeline": "Timeline",
+    "reportAnother": "Report another issue",
+    "metoo": {
+      "button": "Me too ({n})",
+      "supported": "You support this ({n})",
+      "count": "{count, plural, one {{n} supporter} other {{n} supporters}}",
+      "done": "Added your support",
+      "failed": "Could not add your support"
+    },
+    "resolution": {
+      "title": "How it was fixed",
+      "noNote": "Staff marked this as resolved.",
+      "photoAlt": "Photo after the fix"
+    },
+    "verify": {
+      "title": "Is it really fixed?",
+      "body": "Tell us if the problem is gone. Your answer closes or reopens the ticket.",
+      "fixed": "Confirm fixed",
+      "notFixed": "Not fixed",
+      "fixedTitle": "Rate the fix",
+      "ratingHint": "How happy are you with how it was handled?",
+      "ratingLabel": "Rating",
+      "stars": "{count, plural, one {{n} star} other {{n} stars}}",
+      "yourRating": "Your rating:",
+      "notFixedTitle": "What is still wrong?",
+      "reopenTitle": "Reopen this ticket",
+      "reasonHint": "Staff will see this and continue the work.",
+      "reasonLabel": "Reason",
+      "reasonRequired": "Please say what is still wrong (at least 3 characters).",
+      "reopenBody": "Problem came back? You can reopen within {n} days of closing.",
+      "reopen": "Reopen",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "send": "Send",
+      "thanks": "Thanks! The ticket is closed.",
+      "reopened": "Sent back to staff.",
+      "changed": "This ticket changed meanwhile. Showing the latest.",
+      "failed": "Could not update the ticket. Try again."
+    },
+    "event": {
+      "created": "Report submitted",
+      "status": "Status changed to {status}",
+      "statusChanged": "Status changed",
+      "assigned": "Assigned to staff",
+      "note": "Note added",
+      "metoo": "Someone said \"Me too\"",
+      "ai": "AI analysed the report",
+      "other": "Update"
+    },
+    "actor": {
+      "me": "You",
+      "reporter": "Reporter",
+      "staff": "Staff",
+      "supporter": "A student",
+      "system": "CivicSense"
+    },
+    "notFound": {
+      "title": "Ticket not found",
+      "body": "This ticket does not exist or you don't have access to it.",
+      "myReports": "My reports",
+      "home": "Go home"
+    }
+  },
+  "notifications": {
+    "metaTitle": "Notifications — CivicSense",
+    "title": "Notifications",
+    "subtitle": "Updates on your reports.",
+    "bell": "Notifications",
+    "bellUnread": "{count, plural, one {Notifications, {n} unread} other {Notifications, {n} unread}}",
+    "markAll": "Mark all read",
+    "loading": "Loading notifications...",
+    "unread": "Unread",
+    "empty": {
+      "title": "No notifications yet",
+      "body": "When your reports move forward, you'll hear about it here."
+    },
+    "loadMore": "Load more",
+    "loadMoreFailed": "Could not load more. Try again."
+  },
+  "profile": {
+    "metaTitle": "Profile — CivicSense",
+    "title": "Profile",
+    "subtitle": "Your details and how CivicSense looks for you.",
+    "noName": "No name yet",
+    "about": "About you",
+    "name": "Name",
+    "nameRequired": "Please enter your name.",
+    "hostel": "Hostel",
+    "hostelHint": "Helps staff find the right place faster.",
+    "department": "Department",
+    "noDepartment": "Not selected",
+    "deptLocked": "Your department is managed by an administrator.",
+    "display": "Display",
+    "language": "Language",
+    "fontSize": "Text size",
+    "fontNormal": "Normal",
+    "fontLarge": "Large",
+    "darkMode": "Dark mode",
+    "darkModeHint": "Easier on the eyes at night.",
+    "save": "Save changes",
+    "noChanges": "No changes",
+    "saved": "Profile saved",
+    "savedEn": "Saved. CivicSense is now in English.",
+    "savedAs": "Saved. CivicSense is now in Assamese.",
+    "saveFailed": "Could not save your profile. Try again.",
+    "signOut": "Sign out"
+  },
+  "errors": {
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The page you are looking for does not exist or was moved.",
+    "errorTitle": "Something went wrong",
+    "errorBody": "An unexpected error happened. Try again, or go back home.",
+    "retry": "Try again",
+    "goHome": "Go home"
   }
 }

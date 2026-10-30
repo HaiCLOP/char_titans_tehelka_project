@@ -36,7 +36,7 @@ export function Field({ id, label, hint, error, required, aside, className, chil
             <label htmlFor={id} className="text-sm font-medium">
               {label}
               {required && (
-                <span className="ml-0.5 text-p1" aria-hidden>
+                <span className="ml-0.5 text-danger" aria-hidden>
                   *
                 </span>
               )}
@@ -52,7 +52,7 @@ export function Field({ id, label, hint, error, required, aside, className, chil
         </p>
       )}
       {error && (
-        <p id={errorId(id)} role="alert" className="text-xs font-medium text-p1">
+        <p id={errorId(id)} role="alert" className="text-xs font-medium text-danger">
           {error}
         </p>
       )}
@@ -61,7 +61,7 @@ export function Field({ id, label, hint, error, required, aside, className, chil
 }
 
 const control =
-  "w-full min-w-0 rounded-xl border border-border bg-surface px-3.5 text-base text-foreground shadow-sm transition placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-p1 sm:text-sm";
+  "w-full min-w-0 rounded-field border border-border bg-surface px-4 text-base text-foreground transition-[border-color,box-shadow] duration-200 placeholder:text-subtle-foreground hover:border-border-strong focus-visible:border-foreground/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-foreground/[0.06] disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-danger sm:text-[0.9375rem]";
 
 type FieldBits = { label?: React.ReactNode; hint?: React.ReactNode; error?: React.ReactNode; fieldClassName?: string };
 
@@ -189,7 +189,7 @@ export function Switch({ checked, onCheckedChange, label, description, disabled,
         onClick={() => onCheckedChange(!checked)}
         className={cn(
           "relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-transparent transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed",
-          checked ? "bg-primary" : "bg-border",
+          checked ? "bg-primary" : "bg-border-strong",
         )}
       >
         <span

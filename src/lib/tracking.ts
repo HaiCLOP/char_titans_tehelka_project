@@ -4,6 +4,7 @@ import {
   ADMIN_ROLES,
   ComplaintDetailSchema,
   ComplaintListPageSchema,
+  EVENT_ACTORS,
   LIST_PAGE_SIZE,
   OPEN_STATUSES,
   REOPEN_WINDOW_DAYS,
@@ -28,13 +29,17 @@ import { isAssameseText } from "@/lib/utils";
  * Read side of the ticket lifecycle (M4): lists, detail, reporter verification.
  *
  * Privacy model
- * - Every row is read with the caller's RLS client; scopes add explicit filters on top because RLS is a
- *   union (e.g. any signed-in user can read every public ticket, so "mine" must still filter user_id).
+ * - Owner / admin-of-department / assignee read the base `complaints` table with their RLS client; scopes
+ *   add explicit filters on top because RLS is a union (an admin's "mine" must still filter user_id).
+ * - Everyone else (scope=public, or the detail of a public ticket the viewer has no role on) reads the
+ *   `complaints_public` definer view and the `public_complaint_events()` RPC (migration 6): no user_id,
+ *   original_text, ai_meta, assignee_id, actor ids or storage paths ever reach those viewers' REST access.
  * - user_id / assignee_id / embedding / ai_meta are read server-side only and never returned, except
  *   reporter name + AI summary for admins of the ticket's department (never for anonymous reports).
  * - Photos are private. Storage RLS only lets the uploader or an admin read them, so for other legitimate
  *   viewers (public-ticket viewers, the assignee, a reporter looking at the staff's after-photo) the URL
- *   is signed with the service role — only for rows the caller's RLS client already returned.
+ *   is signed with the service role — only for rows the caller's RLS client (or the public view) already
+ *   returned. Public rows' photo paths are looked up with the service role for the same reason.
  */
 
 const PHOTO_BUCKET = "complaint-photos";
@@ -106,9 +111,35 @@ async function loadLocations(supabase: Client, ids: (string | null)[]) {
   return map;
 }
 
-const LIST_COLUMNS =
+const BASE_LIST_COLUMNS =
   "id, code, title_en, title_as, summary_en, summary_as, category, priority, status, original_lang, location_id, " +
-  "metoo_count, created_at, updated_at, sla_due_at, is_urgent, visibility, image_urls";
+  "metoo_count, created_at, updated_at, sla_due_at, is_urgent, visibility";
+const LIST_COLUMNS = `${BASE_LIST_COLUMNS}, image_urls`;
+/** complaints_public has no storage paths, only photo_count (paths embed the uploader's uid). */
+const PUBLIC_LIST_COLUMNS = `${BASE_LIST_COLUMNS}, photo_count`;
+const SIGNED_OUT_COLUMNS =
+  "id, code, title_en, title_as, summary_en, summary_as, category, priority, status, location_id, metoo_count, created_at, resolved_at";
+
+/**
+ * Storage paths of rows the public view already returned to this viewer (service role: the view hides
+ * them on purpose). Only ids with photos are looked up.
+ */
+async function publicPhotoPaths(ids: string[]) {
+  const out = new Map<string, { image_urls: string[]; resolution_photo_url: string | null }>();
+  if (ids.length === 0) return out;
+  const { data, error } = await createAdminClient()
+    .from("complaints")
+    .select("id, image_urls, resolution_photo_url")
+    .in("id", ids);
+  if (error) {
+    console.warn("[tracking] public photo paths failed", error.code);
+    return out;
+  }
+  for (const r of (data ?? []) as { id: string; image_urls: string[] | null; resolution_photo_url: string | null }[]) {
+    out.set(r.id, { image_urls: r.image_urls ?? [], resolution_photo_url: r.resolution_photo_url });
+  }
+  return out;
+}
 
 type ListRow = {
   id: string;
@@ -130,6 +161,7 @@ type ListRow = {
   is_urgent?: boolean;
   visibility?: "public" | "private";
   image_urls?: string[];
+  photo_count?: number | null;
   anonymous?: boolean;
   reporter_id?: string | null;
 };
@@ -142,12 +174,15 @@ type ListRow = {
  */
 export async function listComplaints(supabase: Client, viewer: Viewer, q: ComplaintListQuery): Promise<ComplaintListPage> {
   const signedOutPublic = q.scope === "public" && !viewer;
-  const table = signedOutPublic ? "complaints_public" : q.scope === "dept" ? "complaints_admin" : "complaints";
+  // Public scope always goes through the view (it filters public / not sensitive / not merged itself).
+  const table = q.scope === "public" ? "complaints_public" : q.scope === "dept" ? "complaints_admin" : "complaints";
   const columns = signedOutPublic
-    ? "id, code, title_en, title_as, summary_en, summary_as, category, priority, status, location_id, metoo_count, created_at, resolved_at"
-    : q.scope === "dept"
-      ? `${LIST_COLUMNS}, anonymous, reporter_id`
-      : LIST_COLUMNS;
+    ? SIGNED_OUT_COLUMNS
+    : q.scope === "public"
+      ? PUBLIC_LIST_COLUMNS
+      : q.scope === "dept"
+        ? `${LIST_COLUMNS}, anonymous, reporter_id`
+        : LIST_COLUMNS;
 
   let query = supabase.from(table).select(columns);
 
@@ -159,9 +194,7 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
       query = query.eq("assignee_id", viewer!.id);
       break;
     case "public":
-      // The view already filters; the base table needs the same filter because RLS also returns the
-      // viewer's own private tickets and (for admins) their department's.
-      if (viewer) query = query.eq("visibility", "public").eq("is_sensitive", false).is("parent_id", null);
+      // complaints_public already filters public / not sensitive / not merged.
       break;
     case "dept": {
       const role = viewer!.profile.role;
@@ -201,6 +234,11 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
   const rows = (data ?? []) as unknown as ListRow[];
   const page = rows.slice(0, LIST_PAGE_SIZE);
   const nextCursor = rows.length > LIST_PAGE_SIZE ? encodeCursor(page.at(-1)!.created_at, page.at(-1)!.id) : null;
+
+  if (viewer && q.scope === "public") {
+    const paths = await publicPhotoPaths(page.filter((r) => (r.photo_count ?? 0) > 0).map((r) => r.id));
+    for (const r of page) r.image_urls = paths.get(r.id)?.image_urls ?? [];
+  }
 
   const reporterIds = q.scope === "dept" ? page.map((r) => r.reporter_id).filter((x): x is string => Boolean(x)) : [];
   const [locations, thumbs, supported, reporters] = await Promise.all([
@@ -294,7 +332,62 @@ type EventRow = {
   note_as: string | null;
   created_at: string;
   actor_id: string | null;
+  /** Set instead of actor_id for public-view timelines (public_complaint_events). */
+  actor_kind?: EventActor;
 };
+
+type PublicEventRow = Omit<EventRow, "actor_id" | "actor_kind"> & { actor_kind: string };
+
+const PUBLIC_DETAIL_COLUMNS =
+  `${BASE_LIST_COLUMNS}, location_note, department_id, resolution_note_en, resolution_note_as, rating, ` +
+  "verified_by_reporter, resolved_at, photo_count, has_resolution_photo";
+
+/**
+ * Detail row of a public ticket the viewer has no role on, read from complaints_public. Fields the view
+ * never exposes get neutral values (no reporter, no original text, no AI meta); photo paths come from
+ * the service role only for this row the view returned.
+ */
+async function loadPublicDetailRow(supabase: Client, f: { col: "id" | "code"; value: string }): Promise<DetailRow | null> {
+  const { data, error } = await supabase.from("complaints_public").select(PUBLIC_DETAIL_COLUMNS).eq(f.col, f.value).maybeSingle();
+  if (error) {
+    console.error("[tracking] public detail failed", error.code, error.message);
+    throw new PipelineError("INTERNAL", "Could not load the complaint");
+  }
+  if (!data) return null;
+  const v = data as unknown as ListRow & {
+    location_note: string | null;
+    department_id: string | null;
+    resolution_note_en: string | null;
+    resolution_note_as: string | null;
+    rating: number | null;
+    verified_by_reporter: boolean | null;
+    resolved_at: string | null;
+    has_resolution_photo: boolean | null;
+  };
+  const [paths, department] = await Promise.all([
+    (v.photo_count ?? 0) > 0 || v.has_resolution_photo ? publicPhotoPaths([v.id]) : Promise.resolve(null),
+    v.department_id
+      ? supabase.from("departments").select("id, name_en, name_as").eq("id", v.department_id).maybeSingle()
+      : Promise.resolve(null),
+  ]);
+  const p = paths?.get(v.id);
+  return {
+    ...v,
+    image_urls: p?.image_urls ?? [],
+    user_id: null,
+    anonymous: false,
+    original_text: "",
+    assignee_id: null,
+    parent_id: null,
+    is_sensitive: false,
+    ai_status: "",
+    ai_meta: null,
+    resolution_photo_url: p?.resolution_photo_url ?? null,
+    department: (department?.data as NamedRef | null | undefined) ?? null,
+  };
+}
+
+const toActor = (k: string): EventActor => ((EVENT_ACTORS as readonly string[]).includes(k) ? (k as EventActor) : "staff");
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CODE = /^CS-[0-9A-F]{6}$/i;
@@ -328,25 +421,38 @@ export async function getComplaintDetail(
     console.error("[tracking] detail failed", error.code, error.message);
     throw new PipelineError("INTERNAL", "Could not load the complaint");
   }
-  if (!data) return null;
-  const row = data as unknown as DetailRow;
+  // RLS returns the base row only to the owner, admins of the department and the assignee. Anyone else
+  // may still see a public ticket, through the view.
+  const viaPublicView = !data;
+  const row = data ? (data as unknown as DetailRow) : await loadPublicDetailRow(supabase, f);
+  if (!row) return null;
 
   const { profile } = viewer;
-  const isOwner = row.user_id === viewer.id;
+  const isOwner = !viaPublicView && row.user_id === viewer.id;
   const isDeptAdmin =
-    profile.role === "super_admin" ||
-    (profile.role === "dept_admin" && !!profile.department_id && row.department_id === profile.department_id);
-  const isAssignee = row.assignee_id === viewer.id;
+    !viaPublicView &&
+    (profile.role === "super_admin" ||
+      (profile.role === "dept_admin" && !!profile.department_id && row.department_id === profile.department_id));
+  const isAssignee = !viaPublicView && row.assignee_id === viewer.id;
   const staffView = isDeptAdmin || isAssignee;
   const isPublic = row.visibility === "public" && !row.is_sensitive && !row.parent_id;
 
+  const eventsQuery = viaPublicView
+    ? supabase.rpc("public_complaint_events", { cid: row.id }).then(({ data: ev, error: evErr }) => ({
+        error: evErr,
+        data: ((ev ?? []) as PublicEventRow[]).map(
+          (e): EventRow => ({ ...e, actor_id: null, actor_kind: toActor(e.actor_kind) }),
+        ),
+      }))
+    : supabase
+        .from("complaint_events")
+        .select("id, type, from_status, to_status, note_en, note_as, created_at, actor_id")
+        .eq("complaint_id", row.id)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true });
+
   const [eventsRes, supportedRes, transitionsRes, photos, resolutionPhotos, location] = await Promise.all([
-    supabase
-      .from("complaint_events")
-      .select("id, type, from_status, to_status, note_en, note_as, created_at, actor_id")
-      .eq("complaint_id", row.id)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true }),
+    eventsQuery,
     supabase
       .from("complaint_supporters")
       .select("complaint_id")
@@ -376,7 +482,8 @@ export async function getComplaintDetail(
 
   const events: TimelineEvent[] = eventRows.map((e) => {
     let actor: EventActor;
-    if (!e.actor_id) actor = "system";
+    if (e.actor_kind) actor = e.actor_kind;
+    else if (!e.actor_id) actor = "system";
     else if (e.actor_id === viewer.id) actor = "me";
     else if (e.actor_id === row.user_id) actor = "reporter";
     else if (e.type === "metoo") actor = "supporter";
@@ -484,10 +591,14 @@ export async function getComplaintDetail(
 export async function supportComplaint(supabase: Client, viewer: NonNullable<Viewer>, idOrCode: string) {
   const f = idFilter(idOrCode);
   if (!f) throw new PipelineError("NOT_FOUND", "Complaint not found");
-  const { data: row } = await supabase.from("complaints").select("id, user_id").eq(f.col, f.value).maybeSingle();
-  if (!row) throw new PipelineError("NOT_FOUND", "Complaint not found");
-  if (row.user_id === viewer.id) throw new PipelineError("VALIDATION_ERROR", "You cannot support your own report");
-  const { data, error } = await supabase.rpc("support_complaint", { cid: row.id });
+  // Own / role tickets come from the base table (RLS); everyone else only finds public tickets via the view.
+  // The RPC itself re-checks that the ticket is public.
+  const { data: own } = await supabase.from("complaints").select("id, user_id").eq(f.col, f.value).maybeSingle();
+  if (own?.user_id === viewer.id) throw new PipelineError("VALIDATION_ERROR", "You cannot support your own report");
+  const { data: pub } = own ? { data: null } : await supabase.from("complaints_public").select("id").eq(f.col, f.value).maybeSingle();
+  const cid = (own?.id ?? pub?.id) as string | undefined;
+  if (!cid) throw new PipelineError("NOT_FOUND", "Complaint not found");
+  const { data, error } = await supabase.rpc("support_complaint", { cid });
   if (error) {
     if (error.code === "P0002") throw new PipelineError("NOT_FOUND", "Complaint not found");
     console.error("[tracking] support failed", error.code, error.message);
@@ -552,6 +663,13 @@ export async function verifyComplaint(
     .maybeSingle();
   if (upErr) {
     if (upErr.code === "P0001") throw new PipelineError("INVALID_TRANSITION", "That status change is not allowed");
+    // complaints_a_column_guard (migration 6): FORBIDDEN_STATUS / FORBIDDEN_COLUMNS.
+    if (upErr.code === "42501") {
+      if (upErr.message.includes("FORBIDDEN_STATUS")) {
+        throw new PipelineError("INVALID_TRANSITION", "That status change is not allowed");
+      }
+      throw new PipelineError("FORBIDDEN", "You cannot change that");
+    }
     console.error("[tracking] verify failed", upErr.code, upErr.message);
     throw new PipelineError("INTERNAL", "Could not update the complaint");
   }

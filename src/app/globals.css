@@ -1,101 +1,187 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ---------- Theme tokens ----------
-   data-theme on <html>: tea (default) | brahmaputra | muga
-   .dark on <html> for dark mode. Priority + status colours never change. */
-:root,
-[data-theme="tea"] {
-  --background: #f6f4ec;
-  --surface: #ffffff;
-  --surface-muted: #eef3ec;
-  --foreground: #14211a;
-  --muted-foreground: #5e6b63;
-  --border: #e3e6dc;
-  --primary: #0f5a43;
-  --primary-foreground: #ffffff;
-  --primary-soft: #e3efe8;
-  --accent: #8a5a2b;
-  --ring: #0f5a43;
-}
-[data-theme="brahmaputra"] {
-  --background: #f3f6f9;
-  --surface: #ffffff;
-  --surface-muted: #e9f0f6;
-  --foreground: #0f1b2a;
-  --muted-foreground: #586678;
-  --border: #dde4ec;
-  --primary: #12497a;
-  --primary-foreground: #ffffff;
-  --primary-soft: #e1ecf6;
-  --accent: #0e8a86;
-  --ring: #12497a;
-}
-[data-theme="muga"] {
-  --background: #faf6ee;
-  --surface: #ffffff;
-  --surface-muted: #f6eedd;
-  --foreground: #2a1a12;
-  --muted-foreground: #6e5d50;
-  --border: #ece2d0;
-  --primary: #7a1f2b;
-  --primary-foreground: #ffffff;
-  --primary-soft: #f5e5e2;
-  --accent: #b8862b;
-  --ring: #7a1f2b;
-}
-.dark {
-  --background: #0e1411;
-  --surface: #151d19;
-  --surface-muted: #1b2620;
-  --foreground: #e8eee9;
-  --muted-foreground: #9aa8a0;
-  --border: #26332c;
-  --primary-soft: #1d3329;
-}
-.dark[data-theme="tea"] { --primary: #3fae86; --ring: #3fae86; }
-.dark[data-theme="brahmaputra"] { --primary: #5aa3e0; --ring: #5aa3e0; --primary-soft: #182a3b; }
-.dark[data-theme="muga"] { --primary: #e0a24a; --ring: #e0a24a; --primary-soft: #33241a; --primary-foreground: #1b120c; }
-
+/* ---------- Tokens ----------
+   Monochrome workspace: grey ground, white sheets, ink-black actions.
+   Colour is reserved for meaning: priority (p1–p4), live (success), errors (danger).
+   .dark on <html> switches the whole system. Token names are shared by every component;
+   change values here, never in components. */
 :root {
-  --p1: #d63b3b; /* critical */
-  --p2: #e5762b; /* high */
-  --p3: #d9a514; /* medium */
-  --p4: #2f9e6a; /* low */
-  --radius: 1rem;
+  --background: #f3f3f2;
+  --surface: #ffffff;
+  --surface-muted: #f0f0ef;
+  --surface-sunken: #e9e9e8;
+  --foreground: #111111;
+  --muted-foreground: #66666a;
+  --subtle-foreground: #8e8e93;
+  --border: #e4e4e2;
+  --border-strong: #d4d4d1;
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --primary-soft: #ececea;
+  --accent: #3a3a3c;
+  --ring: #111111;
+
+  --success: #12a150;
+  --success-soft: #e4f5ea;
+  --danger: #c4352b;
+  --danger-soft: #fbeceb;
+  --danger-border: #f2d3d0;
+  --warning: #a86a00;
+  --warning-soft: #fbf1df;
+
+  --chart-line: #111111;
+  --chart-fill: rgb(17 17 17 / 0.07);
+
+  --shadow-sm: 0 1px 2px rgb(17 17 17 / 0.04), 0 1px 1px rgb(17 17 17 / 0.02);
+  --shadow-md: 0 6px 18px -6px rgb(17 17 17 / 0.10), 0 2px 4px rgb(17 17 17 / 0.03);
+  --shadow-rail: 0 12px 32px -12px rgb(17 17 17 / 0.16), 0 2px 6px rgb(17 17 17 / 0.04);
+
+  --p1: #d4372f;
+  --p2: #e0701f;
+  --p3: #c99a0a;
+  --p4: #1f9a5c;
+
+  --radius: 1.5rem;
+  --radius-sm: 0.875rem;
+}
+
+.dark {
+  --background: #0c0c0c;
+  --surface: #161616;
+  --surface-muted: #1c1c1c;
+  --surface-sunken: #101010;
+  --foreground: #f2f2f0;
+  --muted-foreground: #a3a3a6;
+  --subtle-foreground: #76767a;
+  --border: #262626;
+  --border-strong: #333333;
+  --primary: #f2f2f0;
+  --primary-foreground: #0c0c0c;
+  --primary-soft: #242424;
+  --accent: #d6d6d4;
+  --ring: #f2f2f0;
+
+  --success: #3ecf7f;
+  --success-soft: #12301f;
+  --danger: #f0675c;
+  --danger-soft: #2c1513;
+  --danger-border: #4a211d;
+  --warning: #e7ad3c;
+  --warning-soft: #2e2311;
+
+  --chart-line: #f2f2f0;
+  --chart-fill: rgb(242 242 240 / 0.08);
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  --shadow-rail: 0 16px 40px -14px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.04);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-sunken: var(--surface-sunken);
   --color-foreground: var(--foreground);
   --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
   --color-accent: var(--accent);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-border: var(--danger-border);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-p1: var(--p1);
   --color-p2: var(--p2);
   --color-p3: var(--p3);
   --color-p4: var(--p4);
   --radius-card: var(--radius);
-  --font-sans: var(--font-inter), var(--font-assamese), system-ui, sans-serif;
+  --radius-field: var(--radius-sm);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-rail: var(--shadow-rail);
+  --font-sans: var(--font-geist), var(--font-assamese), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-geist), var(--font-assamese), ui-sans-serif, system-ui, sans-serif;
   --font-assamese: var(--font-noto-bengali);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ---------- Base ---------- */
+html {
+  background: var(--background);
+  color-scheme: light;
+  -webkit-tap-highlight-color: transparent;
+}
+html.dark { color-scheme: dark; }
+html[data-font-size="large"] { font-size: 112.5%; }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  caret-color: var(--foreground);
 }
+
+::selection { background: var(--foreground); color: var(--background); }
+
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+:where(input, textarea, select):focus-visible { outline-offset: 0; }
+
+a { text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+
+/* Tabular numerals wherever numbers line up (KPIs, SLA clocks, tables). */
+.tabular, td, th, time { font-variant-numeric: tabular-nums; }
+
+/* Display type: heavy and tight, the reference's voice. Assamese never gets negative tracking. */
+.text-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+.text-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+html[lang="as"] .text-display,
+html[lang="as"] .text-title { letter-spacing: 0; line-height: 1.3; }
+html[lang="as"] .eyebrow { letter-spacing: 0.02em; text-transform: none; font-size: 0.75rem; }
 
 /* Assamese conjuncts need more room */
 html[lang="as"] body { line-height: 1.6; }
 html[lang="as"] .text-sm { font-size: 0.9375rem; }
+
+/* Scrollbars carry the palette too */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+input::placeholder, textarea::placeholder { color: var(--subtle-foreground); opacity: 1; }
 
 ::view-transition-old(root),
 ::view-transition-new(root) { animation-duration: 220ms; }

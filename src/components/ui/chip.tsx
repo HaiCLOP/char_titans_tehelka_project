@@ -7,13 +7,13 @@ import { CATEGORY_ICON } from "./category-icon";
 export type ChipTone = "neutral" | "primary" | "success" | "muted" | "danger" | "warning" | "accent";
 
 const TONE: Record<ChipTone, string> = {
-  neutral: "border-border bg-surface-muted text-foreground",
-  primary: "border-primary/25 bg-primary-soft text-primary",
-  success: "border-p4/30 bg-p4/12 text-foreground",
+  neutral: "border-transparent bg-surface-muted text-foreground",
+  primary: "border-transparent bg-primary text-primary-foreground",
+  success: "border-transparent bg-success-soft text-success",
   muted: "border-border bg-transparent text-muted-foreground",
-  danger: "border-p1/30 bg-p1/12 text-foreground",
-  warning: "border-p2/30 bg-p2/12 text-foreground",
-  accent: "border-accent/30 bg-accent/10 text-foreground",
+  danger: "border-transparent bg-danger-soft text-danger",
+  warning: "border-transparent bg-warning-soft text-warning",
+  accent: "border-border bg-surface text-foreground",
 };
 
 export type ChipProps = React.ComponentProps<"span"> & {
@@ -28,7 +28,7 @@ export function Chip({ tone = "neutral", size = "sm", icon: Icon, dot, className
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-full border font-medium whitespace-nowrap",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full border font-medium tracking-[-0.005em] whitespace-nowrap",
         size === "sm" ? "h-6 px-2.5 text-xs" : "h-8 px-3 text-sm",
         TONE[tone],
         className,
@@ -46,10 +46,10 @@ export type Priority = 1 | 2 | 3 | 4;
 
 const PRIORITY_DOT: Record<Priority, string> = { 1: "bg-p1", 2: "bg-p2", 3: "bg-p3", 4: "bg-p4" };
 const PRIORITY_TONE: Record<Priority, string> = {
-  1: "border-p1/35 bg-p1/12",
-  2: "border-p2/35 bg-p2/12",
-  3: "border-p3/40 bg-p3/15",
-  4: "border-p4/35 bg-p4/12",
+  1: "border-p1/30 bg-surface",
+  2: "border-border bg-surface",
+  3: "border-border bg-surface",
+  4: "border-border bg-surface",
 };
 
 /** P1 Critical (bg-p1) … P4 Low (bg-p4). Text stays foreground for AA contrast; the dot carries the colour. */

@@ -6,7 +6,7 @@ export type KpiTone = "primary" | "danger" | "warning" | "success" | "accent" | 
 
 const TONE: Record<KpiTone, string> = {
   primary: "bg-primary-soft text-primary",
-  danger: "bg-p1/12 text-p1",
+  danger: "bg-danger-soft text-danger",
   warning: "bg-p2/12 text-p2",
   success: "bg-p4/12 text-p4",
   accent: "bg-accent/12 text-accent",
@@ -14,7 +14,7 @@ const TONE: Record<KpiTone, string> = {
 };
 const LINE: Record<KpiTone, string> = {
   primary: "text-primary",
-  danger: "text-p1",
+  danger: "text-danger",
   warning: "text-p2",
   success: "text-p4",
   accent: "text-accent",

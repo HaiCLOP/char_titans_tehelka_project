@@ -21,7 +21,7 @@ Full spec: `docs/PRD.md` (build milestones in section 14)
 - [x] Arnav (M3 backend): `/api/upload`, `/api/complaints/similar` (engine first, public tickets only), `POST /api/complaints` submit pipeline, `/api/locations`, `/api/meta/config`
 - [x] Arnav (M4 backend): `GET /api/complaints` (mine/public/dept/assigned, keyset pages), `GET /api/complaints/[id]`, support, verify, notifications list + mark read, `PATCH /api/profile`
 - [x] Arnav: migration 5 security hardening (match_complaints public-only, RPC grants, status_transitions readable, search_path); Tailwind wired into Turbopack (`next.config.ts`)
-- [ ] M3 + M4 screens: `/report`, `/report/done`, `/my`, `/c/[id]`, `/notifications`, `/profile`
+- [x] M3 + M4 screens: `/report` (AI preview, dedup drawer + Me too, urgent banner, per-photo upload progress), `/report/done`, `/my` (realtime), `/c/[id]` (timeline, verify/reopen, Me too; realtime for owner/staff, polling otherwise), `/notifications`, `/profile`, header bell component, root `not-found` + `error`
 - [ ] Migration 6: column-restricting update trigger (owner/assignee), stop full-row public reads (`complaints public read`), notifications `with check`
 - Arnav: `/api/complaints` (intake + dedup + routing); mocks in `src/lib/mock.ts` by noon; deploy to Vercel
 - Devansh: `/report` form (text, 3 photos compressed, building combobox, AI preview card, duplicate prompt), `/report/done`, onboarding

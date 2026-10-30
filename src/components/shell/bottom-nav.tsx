@@ -25,9 +25,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label={t("main")}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-full border border-border bg-surface/95 shadow-rail backdrop-blur-md lg:hidden"
     >
-      <ul className="mx-auto grid h-16 max-w-md grid-cols-5 items-stretch">
+      <ul className="mx-auto grid h-16 max-w-md grid-cols-5 items-stretch px-1">
         {SIDE.map((item) => {
           if (!item) {
             return (
@@ -35,12 +35,12 @@ export function BottomNav() {
                 <Link
                   href="/report"
                   aria-current={reportOn ? "page" : undefined}
-                  className="-mt-5 flex flex-col items-center gap-0.5 text-[11px] font-medium text-primary focus-visible:outline-none"
+                  className="flex items-center justify-center focus-visible:outline-none"
                 >
-                  <span className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-4 ring-background transition active:scale-95">
+                  <span className="grid size-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-md transition-transform duration-200 ease-out-expo active:scale-95">
                     <Plus className="size-6" aria-hidden />
                   </span>
-                  <span className="max-w-full truncate">{t("reportShort")}</span>
+                  <span className="sr-only">{t("reportShort")}</span>
                 </Link>
               </li>
             );
@@ -52,12 +52,12 @@ export function BottomNav() {
                 href={item.href}
                 aria-current={on ? "page" : undefined}
                 className={cn(
-                  "flex h-full flex-col items-center justify-center gap-1 px-1 text-[11px] leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                  on ? "font-semibold text-primary" : "text-muted-foreground hover:text-foreground",
+                  "flex h-full flex-col items-center justify-center gap-1 rounded-full px-1 text-[10.5px] leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  on ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <item.icon className="size-5" aria-hidden />
-                <span className="max-w-full truncate">{t(item.key)}</span>
+                <item.icon className="size-5" strokeWidth={on ? 2.1 : 1.75} aria-hidden />
+                <span className="line-clamp-2 max-w-full text-center break-words">{t(item.key)}</span>
               </Link>
             </li>
           );

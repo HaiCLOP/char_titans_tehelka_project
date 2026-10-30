@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { LanguageSwitch, ThemeSwitch } from "@/components/preference-switchers";
+import { LanguageSwitch, ModeToggle } from "@/components/preference-switchers";
 import { AdminSidebar } from "@/components/shell/admin-sidebar";
 import { ADMIN_NAV_COOKIE } from "@/components/shell/admin-nav";
 import { getProfile } from "@/lib/auth";
@@ -19,16 +19,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         toolbar={
           <>
             <LanguageSwitch />
-            <ThemeSwitch />
+            <ModeToggle />
           </>
         }
       />
       <div className="min-w-0 flex-1">
-        <header className="hidden items-center justify-end gap-3 px-8 py-4 lg:flex">
+        <header className="hidden h-16 items-center justify-end gap-1.5 px-8 lg:flex">
           <LanguageSwitch />
-          <ThemeSwitch />
+          <ModeToggle />
         </header>
-        <main className="px-4 pt-4 pb-10 sm:px-8 lg:pt-0">{children}</main>
+        <main className="px-4 pt-6 pb-12 sm:px-8 lg:pt-2">{children}</main>
       </div>
     </div>
   );

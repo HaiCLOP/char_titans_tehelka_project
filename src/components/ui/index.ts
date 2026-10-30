@@ -24,3 +24,5 @@ export { IssueCard, type IssueCardData } from "./issue-card";
 export { ActivityItem, type ActivityItemProps } from "./activity-item";
 export { LangText } from "./lang-text";
 export { RelativeTime, formatRelative, formatAbsolute } from "./relative-time";
+export { LifecycleTrack } from "./lifecycle-track";
+export { AreaTrend } from "./area-trend";

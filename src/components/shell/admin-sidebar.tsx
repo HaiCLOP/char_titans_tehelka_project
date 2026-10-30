@@ -6,6 +6,7 @@ import { Bot, Building2, ChevronsLeft, ChevronsRight, ClipboardList, Home, Layou
 import type { Role } from "@/lib/domain";
 import { cn, setCookie } from "@/lib/utils";
 import { Drawer } from "@/components/ui/dialog";
+import { BrandMark } from "./brand-mark";
 import { NavLink } from "./nav-link";
 
 import { ADMIN_NAV_COOKIE } from "./admin-nav";
@@ -45,10 +46,10 @@ export function AdminSidebar({ role, defaultCollapsed = false, toolbar }: AdminS
 
   const brand = (compact: boolean) => (
     <Link href="/admin" className="flex min-w-0 items-center gap-3 px-1">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">C</span>
+      <BrandMark className="size-10 shrink-0 rounded-xl" />
       {!compact && (
         <span className="min-w-0">
-          <span className="block truncate font-semibold leading-tight">{t("admin.title")}</span>
+          <span className="block truncate font-semibold leading-tight tracking-[-0.015em]">{t("admin.title")}</span>
           <span className="block truncate text-xs text-muted-foreground">{t("admin.subtitle")}</span>
         </span>
       )}
@@ -64,11 +65,11 @@ export function AdminSidebar({ role, defaultCollapsed = false, toolbar }: AdminS
             exact={i.exact}
             title={compact ? t(`admin.${i.key}`) : undefined}
             aria-label={compact ? t(`admin.${i.key}`) : undefined}
-            className={cn("flex items-center gap-3 rounded-xl py-2.5 text-sm transition", compact ? "justify-center px-0" : "px-3")}
-            activeClassName="bg-primary-soft font-medium text-primary"
+            className={cn("flex items-center gap-3 rounded-full py-2.5 text-sm transition-[background-color,color,box-shadow] duration-200", compact ? "justify-center px-0" : "px-3.5")}
+            activeClassName="bg-surface font-semibold text-foreground shadow-md ring-1 ring-border dark:bg-surface-muted"
             inactiveClassName="text-muted-foreground hover:bg-surface-muted hover:text-foreground"
           >
-            <i.icon className="size-[18px] shrink-0" aria-hidden />
+            <i.icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
             {!compact && <span className="truncate">{t(`admin.${i.key}`)}</span>}
           </NavLink>
         </li>
@@ -93,7 +94,7 @@ export function AdminSidebar({ role, defaultCollapsed = false, toolbar }: AdminS
       {/* Desktop */}
       <aside
         className={cn(
-          "sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-surface/70 py-6 backdrop-blur transition-[width] duration-200 lg:flex",
+          "sticky top-4 m-4 hidden h-[calc(100dvh-2rem)] shrink-0 flex-col gap-6 overflow-y-auto rounded-[2rem] border border-border bg-surface py-6 shadow-rail transition-[width] duration-300 ease-out-expo lg:flex",
           collapsed ? "w-[4.75rem] px-3" : "w-64 px-4",
         )}
       >
