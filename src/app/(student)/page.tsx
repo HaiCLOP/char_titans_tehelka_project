@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Map, Plus } from "lucide-react";
+import { CheckCircle2, Inbox, Map, Plus } from "lucide-react";
 import { AreaTrend, Card, EmptyState, IssueCard, LifecycleTrack, buttonVariants } from "@/components/ui";
 import { getProfile, getUser } from "@/lib/auth";
 import { ComplaintListQuerySchema, type ComplaintListItem } from "@/lib/domain";
@@ -203,13 +203,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
               />
             </Card>
           ) : (
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className="grid gap-3 sm:grid-cols-2">
               {data.issues.map((i: ComplaintListItem) => (
                 <li key={i.id}>
                   <IssueCard
+                    compact
                     issue={{ ...i, photo_url: i.thumb }}
                     showCategory
-                    footer={<LifecycleTrack status={i.status} className="pt-3" />}
+                    footer={<LifecycleTrack status={i.status} showLabel={false} className="pt-1" />}
                   />
                 </li>
               ))}

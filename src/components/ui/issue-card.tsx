@@ -80,20 +80,25 @@ export function IssueCard({ issue, href, showStatus = true, showCategory = false
 
   const hasPhoto = Boolean(issue.photo_url);
   const body = compact ? (
-    <div className="flex gap-3 p-3">
-      {hasPhoto ? (
-        <Photo issue={issue} className="size-20 shrink-0 rounded-xl" />
-      ) : (
-        <Photo issue={issue} className="size-20 shrink-0 rounded-xl bg-surface-muted" />
-      )}
+    <div className="flex items-start gap-3 p-3 sm:p-3.5">
+      <Photo
+        issue={issue}
+        className={cn(
+          "size-20 sm:size-24 shrink-0 rounded-xl border border-border/60 object-cover",
+          !hasPhoto && "bg-surface-muted/60",
+        )}
+      />
       <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <PriorityChip priority={issue.priority} />
           {showStatus && <StatusChip status={issue.status} />}
+          {showCategory && <CategoryChip category={issue.category} />}
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold tracking-[-0.01em]">{title}</h3>
+        <h3 className="line-clamp-2 text-sm sm:text-[15px] font-semibold leading-snug tracking-[-0.01em] text-foreground">
+          {title}
+        </h3>
         {meta}
-        {footer}
+        {footer && <div className="pt-1">{footer}</div>}
       </div>
     </div>
   ) : (
@@ -101,16 +106,16 @@ export function IssueCard({ issue, href, showStatus = true, showCategory = false
       <div className="relative p-2.5 pb-0">
         <Photo
           issue={issue}
-          className={cn("aspect-[16/9] rounded-xl", !hasPhoto && "bg-gradient-to-br from-surface-muted to-surface-muted/30 border border-border/40")}
+          className={cn("aspect-[2.2/1] rounded-xl object-cover", !hasPhoto && "bg-gradient-to-br from-surface-muted to-surface-muted/30 border border-border/40")}
         />
       </div>
-      <div className="space-y-2.5 p-4 sm:p-5">
+      <div className="space-y-2 p-3.5 sm:p-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <PriorityChip priority={issue.priority} />
           {showStatus && <StatusChip status={issue.status} />}
           {showCategory && <CategoryChip category={issue.category} />}
         </div>
-        <h3 className="line-clamp-2 text-[1.0625rem] leading-snug font-semibold tracking-[-0.015em]">{title}</h3>
+        <h3 className="line-clamp-2 text-base leading-snug font-semibold tracking-[-0.015em] text-foreground">{title}</h3>
         {meta}
         {footer}
       </div>

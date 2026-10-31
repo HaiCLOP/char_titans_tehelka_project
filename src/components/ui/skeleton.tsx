@@ -17,10 +17,13 @@ export function SkeletonText({ lines = 3, className }: { lines?: number; classNa
 
 export function IssueCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-card border border-border bg-surface shadow-sm" aria-hidden>
-      <Skeleton className="aspect-[16/9] rounded-none" />
-      <div className="space-y-3 p-4">
-        <Skeleton className="h-5 w-20 rounded-full" />
+    <div className="flex items-start gap-3 rounded-card border border-border bg-surface p-3 sm:p-3.5 shadow-sm" aria-hidden>
+      <Skeleton className="size-20 sm:size-24 shrink-0 rounded-xl" />
+      <div className="flex-1 space-y-2">
+        <div className="flex gap-1.5">
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
         <Skeleton className="h-4 w-4/5" />
         <Skeleton className="h-3 w-1/2" />
       </div>
