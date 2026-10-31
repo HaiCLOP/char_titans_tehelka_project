@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { ChevronDown, GraduationCap, LayoutDashboard, Search } from "lucide-react";
+import { ChevronDown, GraduationCap, LayoutDashboard, LogIn, Search } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Avatar, buttonVariants } from "@/components/ui";
 import { LanguageSwitch, ModeToggle } from "@/components/preference-switchers";
@@ -57,7 +57,12 @@ export async function Header() {
               </Link>
             </>
           ) : (
-            <Link href="/login" className={buttonVariants({ variant: "primary", size: "sm" })}>{t("shell.signIn")}</Link>
+            // Icon-only below sm: the Assamese label does not fit next to the switches at 360 px.
+            <Link href="/login" className={buttonVariants({ variant: "primary", size: "sm", className: "max-sm:size-10 max-sm:px-0" })}>
+              <LogIn strokeWidth={1.75} aria-hidden />
+              <span className="hidden sm:inline">{t("shell.signIn")}</span>
+              <span className="sr-only sm:hidden">{t("shell.signIn")}</span>
+            </Link>
           )}
         </div>
       </div>

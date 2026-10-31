@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, MapPin, MapPinOff, Search, X } from "lucide-react";
+import { Check, Languages, MapPin, MapPinOff, Search, X } from "lucide-react";
 import { CATEGORY_ICON, Card, Chip, Drawer, EmptyState, IssueCard, buttonVariants } from "@/components/ui";
 import { CATEGORIES, type Category, type Status } from "@/lib/domain";
 import { locationMetres } from "@/lib/campus";
@@ -106,7 +106,9 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
   const tp = useTranslations("priority");
   const locale = useLocale();
   const n = (v: number) => toLocaleDigits(v, locale);
-  const name = (l: MapLocation | null) => (l ? (locale === "as" ? l.name_as || l.name_en : l.name_en) : t("noBuilding"));
+  // Building names on the map and in the list: English by default, switchable to Assamese.
+  const [nameLang, setNameLang] = useState<"en" | "as">("en");
+  const name = (l: MapLocation | null) => (l ? (nameLang === "as" ? l.name_as || l.name_en : l.name_en) : t("noBuilding"));
 
   const [selected, setSelected] = useState<string | null>(null);
   const [sort, setSort] = useState<"count" | "name">("count");
@@ -132,10 +134,10 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
         return [{
           id: p.id, x: at.x, y: at.y, count, countText: toLocaleDigits(count, locale), topPriority: p.top,
           fixedOnly: p.top === null && p.fixed.length > 0,
-          label: locale === "as" ? p.location.name_as || p.location.name_en : p.location.name_en,
+          label: nameLang === "as" ? p.location.name_as || p.location.name_en : p.location.name_en,
         }];
       }),
-    [places, sizeBy, locale],
+    [places, sizeBy, locale, nameLang],
   );
 
   const sorted = useMemo(() => {
@@ -152,14 +154,14 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
     // Server (Node ICU) and browser collate Assamese differently, which broke hydration; code-point order
     // follows the Assamese alphabet closely and is identical everywhere.
     const en = new Intl.Collator("en");
-    const coll = { compare: (x: string, y: string) => (locale === "as" ? (x < y ? -1 : x > y ? 1 : 0) : en.compare(x, y)) };
+    const coll = { compare: (x: string, y: string) => (nameLang === "as" ? (x < y ? -1 : x > y ? 1 : 0) : en.compare(x, y)) };
     return rows.sort((a, b) =>
       sort === "name"
         ? coll.compare(name(a.location), name(b.location))
         : b.open.length - a.open.length || b.fixed.length - a.fixed.length || coll.compare(name(a.location), name(b.location)),
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `name` only depends on locale
-  }, [places, sort, locale, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `name` only depends on nameLang
+  }, [places, sort, nameLang, searchQuery]);
 
   const sized = (p: Place) => (sizeBy === "open" ? p.open.length : p.open.length + p.fixed.length);
   const current = selected === NONE ? places.none : places.list.find((p) => p.id === selected) ?? null;
@@ -230,6 +232,26 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
               {t("legendNone")}
             </span>
             <span className="w-full sm:ml-auto sm:w-auto">{labels.legendSize ?? t("legendSize")}</span>
+            <div role="group" aria-label={t("nameLanguage")} className="inline-flex items-center gap-2">
+              <Languages className="size-3.5" {...ICON} />
+              <span className="inline-flex rounded-full bg-surface-sunken/70 p-1">
+                {(["en", "as"] as const).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    lang={l}
+                    aria-pressed={nameLang === l}
+                    onClick={() => setNameLang(l)}
+                    className={cn(
+                      "relative h-8 rounded-full px-3 text-xs font-medium after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      nameLang === l ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {l === "en" ? "English" : "অসমীয়া"}
+                  </button>
+                ))}
+              </span>
+            </div>
           </div>
         </Card>
 
@@ -316,7 +338,7 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
                         <MapPinOff className="size-3.5 shrink-0 text-muted-foreground" {...ICON} />
                       )}
                       <span className="min-w-0 flex-1">
-                        <span lang={locale} className={cn("block truncate text-sm", count ? "font-medium" : "text-muted-foreground")}>{name(p.location)}</span>
+                        <span lang={nameLang} className={cn("block truncate text-sm", count ? "font-medium" : "text-muted-foreground")}>{name(p.location)}</span>
                         <span className="block text-xs text-muted-foreground">{countLabel(p)}</span>
                       </span>
                       <span className={cn("tabular text-base font-semibold", !count && "text-subtle-foreground")}>{n(count)}</span>

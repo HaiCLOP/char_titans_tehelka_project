@@ -611,6 +611,7 @@
     "courseHint": "Optional. Helps admins understand who is affected."
   },
   "map": {
+    "nameLanguage": "Building names",
     "title": "Campus map",
     "subtitle": "Where open issues are right now. Tap a building to see what has been reported there.",
     "loadErrorTitle": "Couldn't load the map",
