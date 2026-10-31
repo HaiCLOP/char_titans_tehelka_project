@@ -1,4 +1,6 @@
 "use client";
+import { useLocale } from "next-intl";
+import { toast } from "sonner";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import type { MarkReadRequest, NotificationsPage, UnreadCount } from "@/lib/domain";
 import { apiFetch } from "@/components/api-client";
@@ -6,9 +8,10 @@ import { useRealtime } from "@/components/use-realtime";
 
 export const NOTIFICATIONS_KEY = ["notifications"] as const;
 
-/** First page only; used by the header bell for the unread count. */
-export function useUnreadCount(userId: string | null) {
+/** First page only; used by the header bell for the unread count. Pass `announce` to toast new arrivals. */
+export function useUnreadCount(userId: string | null, announce = false) {
   const qc = useQueryClient();
+  const locale = useLocale();
   const query = useQuery({
     queryKey: [...NOTIFICATIONS_KEY, "unread"],
     queryFn: ({ signal }) => apiFetch<NotificationsPage>("/api/notifications", { signal }).then((p) => p.unread),
@@ -18,7 +21,13 @@ export function useUnreadCount(userId: string | null) {
   useRealtime(
     "notifications-bell",
     [{ table: "notifications", filter: `user_id=eq.${userId}` }],
-    () => void qc.invalidateQueries({ queryKey: NOTIFICATIONS_KEY }),
+    (payload) => {
+      void qc.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+      if (!announce || payload.eventType !== "INSERT") return;
+      const row = payload.new as { id?: number; title_en?: string; title_as?: string | null };
+      const title = (locale === "as" && row.title_as) || row.title_en;
+      if (title) toast(title, { id: `notification-${row.id}` }); // id: the admin shell mounts two bells
+    },
     Boolean(userId),
   );
   return query;

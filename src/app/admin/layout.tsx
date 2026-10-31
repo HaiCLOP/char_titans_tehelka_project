@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { LanguageSwitch, ModeToggle } from "@/components/preference-switchers";
 import { AdminSidebar } from "@/components/shell/admin-sidebar";
 import { ADMIN_NAV_COOKIE } from "@/components/shell/admin-nav";
@@ -20,6 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <>
             <LanguageSwitch />
             <ModeToggle />
+            <NotificationBell userId={profile?.id ?? null} />
           </>
         }
       />
@@ -27,6 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <header className="hidden h-16 items-center justify-end gap-1.5 px-8 lg:flex">
           <LanguageSwitch />
           <ModeToggle />
+          <NotificationBell userId={profile?.id ?? null} />
         </header>
         <main className="px-4 pt-6 pb-12 sm:px-8 lg:pt-2">{children}</main>
       </div>
