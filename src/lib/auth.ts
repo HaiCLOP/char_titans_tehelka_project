@@ -42,13 +42,29 @@ export const getUser = cache(async (): Promise<User | null> => {
   return data.user ?? null;
 });
 
+// ponytail: cache profile row in memory (20s TTL) to prevent redundant PostgREST roundtrips on navigation and locale changes
+const profileCache = new Map<string, { profile: Profile | null; expiresAt: number }>();
+const PROFILE_CACHE_TTL = 20 * 1000;
+
+export function invalidateProfileCache(userId?: string) {
+  if (userId) profileCache.delete(userId);
+  else profileCache.clear();
+}
+
 /** The signed-in user's profile row, or null when signed out. Deduplicated per request. */
 export const getProfile = cache(async (): Promise<Profile | null> => {
   const user = await getUser();
   if (!user) return null;
+  const now = Date.now();
+  const cached = profileCache.get(user.id);
+  if (cached && cached.expiresAt > now) {
+    return cached.profile;
+  }
   const supabase = await createClient();
   const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", user.id).maybeSingle();
-  return (data as Profile | null) ?? null;
+  const profile = (data as Profile | null) ?? null;
+  profileCache.set(user.id, { profile, expiresAt: now + PROFILE_CACHE_TTL });
+  return profile;
 });
 
 /** Where to send a user right after sign-in: onboarding first, then a safe `next`, then their role home. */

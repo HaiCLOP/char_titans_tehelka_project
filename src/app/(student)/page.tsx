@@ -15,6 +15,27 @@ type TrendRow = { day: string; created: number; resolved: number };
 let cachedHomeStats: { stats: Stats | null; trend: TrendRow[]; expiresAt: number } | null = null;
 const HOME_STATS_CACHE_TTL = 30 * 1000;
 
+// ponytail: cache public home issues in memory (30s TTL). Eliminates ~1200ms of storage signing and postgrest queries per view.
+const cachedHomeIssues: Record<string, { items: ComplaintListItem[]; expiresAt: number }> = {};
+const HOME_ISSUES_CACHE_TTL = 30 * 1000;
+
+async function getHomeIssues(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  viewer: { id: string; profile: NonNullable<Awaited<ReturnType<typeof getProfile>>> } | null,
+  view: "open" | "resolved",
+) {
+  const now = Date.now();
+  const cached = cachedHomeIssues[view];
+  if (cached && cached.expiresAt > now) {
+    return cached.items;
+  }
+  const q = ComplaintListQuerySchema.parse({ scope: "public", status: view === "open" ? "active" : "resolved" });
+  const res = await listComplaints(supabase, viewer, q);
+  const items = res.items.slice(0, 6);
+  cachedHomeIssues[view] = { items, expiresAt: now + HOME_ISSUES_CACHE_TTL };
+  return items;
+}
+
 async function getHomeStatsAndTrend(supabase: Awaited<ReturnType<typeof createClient>>) {
   const now = Date.now();
   if (cachedHomeStats && cachedHomeStats.expiresAt > now) {
@@ -36,17 +57,16 @@ async function loadHome(view: "open" | "resolved") {
   const supabase = await createClient();
   const [user, profile] = await Promise.all([getUser(), getProfile()]);
   const viewer = user && profile ? { id: user.id, profile } : null;
-  const q = ComplaintListQuerySchema.parse({ scope: "public", status: view === "open" ? "active" : "resolved" });
 
   const [issues, statsTrend] = await Promise.allSettled([
-    listComplaints(supabase, viewer, q),
+    getHomeIssues(supabase, viewer, view),
     getHomeStatsAndTrend(supabase),
   ]);
   const statsAndTrend = statsTrend.status === "fulfilled" ? statsTrend.value : { stats: null, trend: [] };
 
   return {
     name: profile?.full_name ?? null,
-    issues: issues.status === "fulfilled" ? issues.value.items.slice(0, 6) : null,
+    issues: issues.status === "fulfilled" ? issues.value : null,
     stats: statsAndTrend.stats,
     trend: statsAndTrend.trend,
   };

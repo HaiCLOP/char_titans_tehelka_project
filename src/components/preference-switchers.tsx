@@ -1,7 +1,7 @@
 "use client";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Moon, Sun } from "lucide-react";
 import { LOCALE_COOKIE } from "@/i18n/config";
 import { MODE_COOKIE } from "@/lib/theme";
@@ -18,24 +18,31 @@ export function LanguageSwitch({ className }: { className?: string }) {
   const locale = useLocale();
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [optimisticLocale, setOptimisticLocale] = useState<string | null>(null);
+  const currentLocale = optimisticLocale ?? locale;
   const t = useTranslations("header");
+
   const set = (l: "en" | "as") => {
-    if (l === locale) return;
+    if (l === currentLocale) return;
+    setOptimisticLocale(l);
     setCookie(LOCALE_COOKIE, l);
-    start(() => router.refresh());
+    start(() => {
+      router.refresh();
+      setOptimisticLocale(null);
+    });
   };
   return (
-    <div role="group" aria-label={t("language")} className={cn("inline-flex h-9 sm:h-10 items-center rounded-full bg-surface-muted p-0.5 sm:p-1 text-xs sm:text-[13px]", pending && "opacity-60", className)}>
+    <div role="group" aria-label={t("language")} className={cn("inline-flex h-9 sm:h-10 items-center rounded-full bg-surface-muted p-0.5 sm:p-1 text-xs sm:text-[13px]", pending && "opacity-80", className)}>
       {(["en", "as"] as const).map((l) => (
         <button
           key={l}
           type="button"
           onClick={() => set(l)}
-          aria-pressed={locale === l}
+          aria-pressed={currentLocale === l}
           lang={l}
           className={cn(
             "h-7 sm:h-8 rounded-full px-2.5 sm:px-3 font-medium transition-[background-color,color,box-shadow] duration-200",
-            locale === l ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
+            currentLocale === l ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
           )}
         >
           <span className="sm:hidden">{l === "en" ? "EN" : "অস"}</span>

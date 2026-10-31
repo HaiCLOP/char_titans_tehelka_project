@@ -1,6 +1,6 @@
 import { ProfileUpdateSchema, type Profile } from "@/lib/domain";
 import { fail, ok, parseJson, requireUser } from "@/lib/api";
-import { PROFILE_COLUMNS } from "@/lib/auth";
+import { PROFILE_COLUMNS, invalidateProfileCache } from "@/lib/auth";
 import { LOCALE_COOKIE } from "@/i18n/config";
 import { FONT_SIZE_COOKIE, THEME_COOKIE } from "@/lib/theme";
 
@@ -36,6 +36,7 @@ export async function PATCH(req: Request) {
     return fail("INTERNAL", "Could not update your profile");
   }
   if (!data) return fail("FORBIDDEN", "Profile not found");
+  invalidateProfileCache(user.id);
 
   const res = ok(data as Profile);
   if (body.lang_pref) res.cookies.set(LOCALE_COOKIE, body.lang_pref, COOKIE);
