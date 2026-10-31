@@ -81,7 +81,11 @@ export function IssueCard({ issue, href, showStatus = true, showCategory = false
   const hasPhoto = Boolean(issue.photo_url);
   const body = compact ? (
     <div className="flex gap-3 p-3">
-      {hasPhoto && <Photo issue={issue} className="size-20 shrink-0 rounded-2xl" />}
+      {hasPhoto ? (
+        <Photo issue={issue} className="size-20 shrink-0 rounded-xl" />
+      ) : (
+        <Photo issue={issue} className="size-20 shrink-0 rounded-xl bg-surface-muted" />
+      )}
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap gap-1.5">
           <PriorityChip priority={issue.priority} />
@@ -94,13 +98,14 @@ export function IssueCard({ issue, href, showStatus = true, showCategory = false
     </div>
   ) : (
     <>
-      {hasPhoto && (
-        <div className="relative p-2 pb-0">
-          <Photo issue={issue} className="aspect-[16/9] rounded-[1.1rem]" />
-        </div>
-      )}
-      <div className="space-y-2.5 p-5">
-        <div className="flex flex-wrap gap-1.5">
+      <div className="relative p-2.5 pb-0">
+        <Photo
+          issue={issue}
+          className={cn("aspect-[16/9] rounded-xl", !hasPhoto && "bg-gradient-to-br from-surface-muted to-surface-muted/30 border border-border/40")}
+        />
+      </div>
+      <div className="space-y-2.5 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <PriorityChip priority={issue.priority} />
           {showStatus && <StatusChip status={issue.status} />}
           {showCategory && <CategoryChip category={issue.category} />}

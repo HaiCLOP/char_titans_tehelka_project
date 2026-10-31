@@ -10,10 +10,10 @@ import { getProfile } from "@/lib/auth";
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const profile = await getProfile();
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh flex flex-col bg-background">
       <Sidebar />
       <Header />
-      <main className="mx-auto w-full max-w-[84rem] px-4 pt-6 pb-28 sm:px-8 sm:pt-10 lg:pr-10 lg:pb-16 lg:pl-[7.5rem]">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-6 pb-28 sm:px-8 sm:pt-8 lg:pb-16 lg:pl-72">{children}</main>
       <BottomNav role={profile?.role} />
     </div>
   );
