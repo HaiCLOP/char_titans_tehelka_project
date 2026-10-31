@@ -49,6 +49,17 @@ const SIGNED_URL_TTL = 60 * 60;
 type Client = SupabaseClient;
 export type Viewer = { id: string; profile: Profile } | null;
 
+// Anonymous reports keep their reporter in complaint_owners (migration 13), not in complaints.user_id.
+// RLS on complaint_owners lets each user read only their own rows.
+async function ownedAnonymousIds(supabase: Client): Promise<string[]> {
+  const { data } = await supabase.from("complaint_owners").select("complaint_id");
+  return (data ?? []).map((r: { complaint_id: string }) => r.complaint_id);
+}
+async function ownsAnonymously(supabase: Client, complaintId: string): Promise<boolean> {
+  const { data } = await supabase.from("complaint_owners").select("complaint_id").eq("complaint_id", complaintId).maybeSingle();
+  return Boolean(data);
+}
+
 const isAdminRole = (r: Role) => (ADMIN_ROLES as readonly Role[]).includes(r);
 
 // ---------- helpers ----------
@@ -219,9 +230,13 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
   let query = supabase.from(table).select(columns);
 
   switch (q.scope) {
-    case "mine":
-      query = query.eq("user_id", viewer!.id);
+    case "mine": {
+      const owned = await ownedAnonymousIds(supabase);
+      query = owned.length
+        ? query.or(`user_id.eq.${viewer!.id},id.in.(${owned.join(",")})`)
+        : query.eq("user_id", viewer!.id);
       break;
+    }
     case "assigned":
       query = query.eq("assignee_id", viewer!.id);
       break;
@@ -372,6 +387,8 @@ type EventRow = {
   note_as: string | null;
   created_at: string;
   actor_id: string | null;
+  /** The reporter acted (kept even when an anonymous reporter's actor_id is hidden). */
+  by_reporter?: boolean;
   /** Set instead of actor_id for public-view timelines (public_complaint_events). */
   actor_kind?: EventActor;
 };
@@ -468,7 +485,7 @@ export async function getComplaintDetail(
   if (!row) return null;
 
   const { profile } = viewer;
-  const isOwner = !viaPublicView && row.user_id === viewer.id;
+  const isOwner = !viaPublicView && (row.user_id === viewer.id || (row.anonymous && (await ownsAnonymously(supabase, row.id))));
   const isDeptAdmin =
     !viaPublicView &&
     (profile.role === "super_admin" ||
@@ -486,7 +503,7 @@ export async function getComplaintDetail(
       }))
     : supabase
         .from("complaint_events")
-        .select("id, type, from_status, to_status, note_en, note_as, created_at, actor_id")
+        .select("id, type, from_status, to_status, note_en, note_as, created_at, actor_id, by_reporter")
         .eq("complaint_id", row.id)
         .order("created_at", { ascending: true })
         .order("id", { ascending: true });
@@ -523,8 +540,8 @@ export async function getComplaintDetail(
   const events: TimelineEvent[] = eventRows.map((e) => {
     let actor: EventActor;
     if (e.actor_kind) actor = e.actor_kind;
-    // "created" is always the reporter's act; anonymous reports store no actor id for it (migration 11).
-    else if (e.type === "created") actor = isOwner ? "me" : "reporter";
+    // The reporter's own acts are flagged; anonymous reports store no actor id for them (migrations 11, 13).
+    else if (e.by_reporter || e.type === "created") actor = isOwner ? "me" : "reporter";
     else if (!e.actor_id) actor = "system";
     else if (e.actor_id === viewer.id) actor = "me";
     else if (e.actor_id === row.user_id) actor = "reporter";
@@ -676,7 +693,9 @@ export async function supportComplaint(supabase: Client, viewer: NonNullable<Vie
   // Own / role tickets come from the base table (RLS); everyone else only finds public tickets via the view.
   // The RPC itself re-checks that the ticket is public.
   const { data: own } = await supabase.from("complaints").select("id, user_id").eq(f.col, f.value).maybeSingle();
-  if (own?.user_id === viewer.id) throw new PipelineError("VALIDATION_ERROR", "You cannot support your own report");
+  if (own && (own.user_id === viewer.id || (await ownsAnonymously(supabase, own.id)))) {
+    throw new PipelineError("VALIDATION_ERROR", "You cannot support your own report");
+  }
   const { data: pub } = own ? { data: null } : await supabase.from("complaints_public").select("id").eq(f.col, f.value).maybeSingle();
   const cid = (own?.id ?? pub?.id) as string | undefined;
   if (!cid) throw new PipelineError("NOT_FOUND", "Complaint not found");
@@ -713,7 +732,9 @@ export async function verifyComplaint(
   if (error) throw new PipelineError("INTERNAL", "Could not load the complaint");
   if (!data) throw new PipelineError("NOT_FOUND", "Complaint not found");
   const row = data as { id: string; user_id: string | null; status: Status; created_at: string; updated_at: string };
-  if (row.user_id !== viewer.id) throw new PipelineError("FORBIDDEN", "Only the reporter can confirm this");
+  if (row.user_id !== viewer.id && !(await ownsAnonymously(supabase, row.id))) {
+    throw new PipelineError("FORBIDDEN", "Only the reporter can confirm this");
+  }
 
   let patch: Record<string, unknown>;
   if (row.status === "resolved" && body.fixed) {

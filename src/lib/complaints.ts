@@ -97,11 +97,12 @@ export type SubmitInput = {
 type Department = { id: string; name_en: string; name_as: string };
 
 /** The ticket an earlier submit with the same idempotency key created, in the submit response shape. */
-async function existingSubmit(supabase: SupabaseClient, userId: string, requestId: string): Promise<SubmitResult | null> {
+async function existingSubmit(supabase: SupabaseClient, requestId: string): Promise<SubmitResult | null> {
   const { data } = await supabase
     .from("complaints")
     .select("id, code, sla_due_at, status, is_urgent, departments(id, name_en, name_as)")
-    .eq("user_id", userId)
+    // Not filtered by user_id: anonymous rows have none (migration 13). RLS limits this to the caller's own
+    // tickets and the key is a random UUID, so it can only match the caller's earlier attempt.
     .eq("client_request_id", requestId)
     .maybeSingle();
   if (!data) return null;
@@ -152,7 +153,7 @@ export async function submitComplaint(
 
   // A retried submit (timeout, double tap) returns the ticket the first attempt created.
   if (input.client_request_id) {
-    const prior = await existingSubmit(supabase, user.id, input.client_request_id);
+    const prior = await existingSubmit(supabase, input.client_request_id);
     if (prior) return prior;
   }
 
@@ -284,7 +285,7 @@ export async function submitComplaint(
     .single();
   // Two identical submits racing: the unique (user_id, client_request_id) index lets only one in.
   if (insErr?.code === "23505" && input.client_request_id) {
-    const prior = await existingSubmit(supabase, user.id, input.client_request_id);
+    const prior = await existingSubmit(supabase, input.client_request_id);
     if (prior) return prior;
   }
   if (insErr || !row) {

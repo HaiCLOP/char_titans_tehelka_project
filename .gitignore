@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Go engine binary
 /engine/*.exe
+
+# graphify knowledge-graph output (local tool, not part of the app)
+graphify-out/
