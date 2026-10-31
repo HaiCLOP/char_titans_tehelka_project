@@ -602,6 +602,8 @@
   "map": {
     "title": "Campus map",
     "subtitle": "Where open issues are right now. Tap a building to see what has been reported there.",
+    "tabMap": "Map view",
+    "tabBuildings": "Buildings",
     "loadErrorTitle": "Couldn't load the map",
     "loadErrorBody": "Check your connection and try again.",
     "filterLabel": "Filter issues",

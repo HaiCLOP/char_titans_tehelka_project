@@ -53,12 +53,16 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
   if (failed) console.error("[map] load failed", failed.code, failed.message);
 
   return (
-    <div>
-      <header className="max-w-2xl">
-        <h1 className="text-display text-[2.25rem] sm:text-[3rem]">{t("title")}</h1>
-        <p className="mt-3 text-[1.0625rem] leading-relaxed text-muted-foreground">{t("subtitle")}</p>
+    <div className="space-y-6 sm:space-y-8">
+      <header className="max-w-2xl space-y-2">
+        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-primary shadow-xs">
+          <span className="size-2 rounded-full bg-primary animate-pulse" aria-hidden />
+          {t("title")} · Dibrugarh University
+        </div>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-4xl text-foreground">{t("title")}</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{t("subtitle")}</p>
       </header>
-      <div className="mt-8">
+      <div>
         {failed ? (
           <ErrorState title={t("loadErrorTitle")} body={t("loadErrorBody")} />
         ) : (

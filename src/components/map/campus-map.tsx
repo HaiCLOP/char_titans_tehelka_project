@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, MapPin, MapPinOff, Search, X } from "lucide-react";
+import { Building2, Check, Map as MapIcon, MapPin, MapPinOff, Search, X } from "lucide-react";
 import { CATEGORY_ICON, Card, Drawer, EmptyState, IssueCard, buttonVariants } from "@/components/ui";
 import { CATEGORIES, type Category, type Status } from "@/lib/domain";
 import { cn, toLocaleDigits } from "@/lib/utils";
@@ -98,6 +98,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
   const [selected, setSelected] = useState<string | null>(null);
   const [sort, setSort] = useState<"count" | "name">("count");
   const [searchQuery, setSearchQuery] = useState("");
+  const [mobileTab, setMobileTab] = useState<"map" | "list">("map");
 
   // Category counts ignore the category filter so the chips always show what is there.
   const catCounts = useMemo(() => {
@@ -110,13 +111,16 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
 
   const total = places.list.reduce((s, p) => s + p.open.length + p.fixed.length, 0) + places.none.open.length + places.none.fixed.length;
   const plotted = places.list.filter((p) => p.location?.map_x != null && p.location?.map_y != null);
-  // Stretch the plotted positions to the plan's bounding box so the schematic uses the whole sheet.
+  // Stretch the plotted positions to the plan's bounding box with safe padding so pins never clip outside card edges
   const xs = plotted.map((p) => p.location!.map_x!);
   const ys = plotted.map((p) => p.location!.map_y!);
   const fit = (v: number, vals: number[]) => {
+    if (vals.length <= 1) return 0.5;
     const lo = Math.min(...vals);
     const span = Math.max(...vals) - lo;
-    return span > 0 ? (v - lo) / span : 0.5;
+    if (span <= 0) return 0.5;
+    // Map to 10%..90% safe range so outer pins with -translate-x-1/2 never clip against overflow-hidden card borders
+    return 0.10 + 0.80 * ((v - lo) / span);
   };
 
   const sorted = useMemo(() => {
@@ -146,14 +150,15 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
 
   const chip = (active: boolean) =>
     cn(
-      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-      active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface text-foreground hover:border-border-strong",
+      "inline-flex h-8 sm:h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 sm:px-3.5 text-xs sm:text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      active ? "border-primary bg-primary text-primary-foreground font-semibold" : "border-border bg-surface text-foreground hover:border-border-strong",
     );
 
   const presentCats = CATEGORIES.filter((c) => catCounts.has(c) || c === category);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Category Filter Chips Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 [scrollbar-width:none]" role="group" aria-label={t("filterLabel")}>
         <Link href={href(null, includeFixed)} scroll={false} aria-current={category === null ? "true" : undefined} className={chip(category === null)}>
           {t("allCategories")}
@@ -163,7 +168,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
           const Icon = CATEGORY_ICON[c];
           return (
             <Link key={c} href={href(c, includeFixed)} scroll={false} aria-current={category === c ? "true" : undefined} className={chip(category === c)}>
-              <Icon className="size-4" {...ICON} />
+              <Icon className="size-3.5 sm:size-4" {...ICON} />
               {tc(c)}
               <span className="tabular text-xs opacity-70">{n(catCounts.get(c) ?? 0)}</span>
             </Link>
@@ -178,18 +183,50 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
         </Link>
       </div>
 
+      {/* Mobile Segmented Switch: Map vs Buildings List */}
+      <div className="flex xl:hidden rounded-full border border-border bg-surface-muted/80 p-1" role="tablist" aria-label={t("filterLabel")}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === "map"}
+          onClick={() => setMobileTab("map")}
+          className={cn(
+            "flex-1 rounded-full py-2 text-xs font-semibold transition-all flex items-center justify-center gap-1.5",
+            mobileTab === "map" ? "bg-surface text-foreground shadow-xs ring-1 ring-border font-bold" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <MapIcon className="size-3.5" aria-hidden />
+          {t("tabMap")}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === "list"}
+          onClick={() => setMobileTab("list")}
+          className={cn(
+            "flex-1 rounded-full py-2 text-xs font-semibold transition-all flex items-center justify-center gap-1.5",
+            mobileTab === "list" ? "bg-surface text-foreground shadow-xs ring-1 ring-border font-bold" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Building2 className="size-3.5" aria-hidden />
+          {t("tabBuildings")}
+          <span className="tabular text-[10px] opacity-75">({n(sorted.length)})</span>
+        </button>
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <Card className="overflow-hidden p-0">
-          <div className="relative aspect-[3/4] bg-surface-muted/40 sm:aspect-[4/3] lg:aspect-[16/11]">
-            <svg className="absolute inset-0 size-full text-border" aria-hidden>
+        {/* Schematic Campus Plan */}
+        <Card className={cn("overflow-hidden p-0", mobileTab === "list" && "hidden xl:block")}>
+          <div className="relative aspect-[4/3] bg-surface-muted/40 sm:aspect-[16/10] lg:aspect-[16/11]">
+            <svg className="absolute inset-0 size-full text-border/70" aria-hidden>
               <defs>
-                <pattern id="cs-campus-grid" width="32" height="32" patternUnits="userSpaceOnUse">
-                  <path d="M32 0H0V32" fill="none" stroke="currentColor" strokeWidth="1" />
+                <pattern id="cs-campus-grid" width="28" height="28" patternUnits="userSpaceOnUse">
+                  <path d="M28 0H0V28" fill="none" stroke="currentColor" strokeWidth="1" />
                 </pattern>
               </defs>
               <rect width="100%" height="100%" fill="url(#cs-campus-grid)" />
             </svg>
-            <div className="absolute inset-x-6 top-6 bottom-16 sm:inset-x-16 sm:top-12 sm:bottom-20" role="group" aria-label={t("planLabel")}>
+            <div className="absolute inset-x-4 top-4 bottom-12 sm:inset-x-12 sm:top-8 sm:bottom-16" role="group" aria-label={t("planLabel")}>
               {plotted.map((p) => {
                 const count = p.open.length + p.fixed.length;
                 const d = diameter(count);
@@ -203,16 +240,16 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                     aria-haspopup="dialog"
                     style={{ left: `${fit(p.location!.map_x!, xs) * 100}%`, top: `${fit(p.location!.map_y!, ys) * 100}%`, ["--d" as string]: d }}
                     className={cn(
-                      "group absolute flex w-[5.5rem] -translate-x-1/2 sm:w-28 -translate-y-[calc(var(--d)*0.4px)] flex-col items-center rounded-2xl transition-all focus-visible:outline-none sm:-translate-y-[calc(var(--d)*0.5px)]",
+                      "group absolute flex w-20 sm:w-24 -translate-x-1/2 -translate-y-[calc(var(--d)*0.4px)] sm:-translate-y-[calc(var(--d)*0.5px)] flex-col items-center rounded-2xl transition-all focus-visible:outline-none touch-manipulation",
                       count > 0 ? "z-10" : "z-0",
                       on && "z-30 scale-105",
                     )}
                   >
                     <span
                       className={cn(
-                        "relative grid size-[calc(var(--d)*0.8px)] place-items-center rounded-full bg-surface text-xs font-semibold tabular shadow-sm transition-all duration-200 group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface sm:size-[calc(var(--d)*1px)] sm:text-sm",
+                        "relative grid size-[calc(var(--d)*0.8px)] place-items-center rounded-full bg-surface text-xs font-semibold tabular shadow-xs transition-all duration-200 group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface sm:size-[calc(var(--d)*1px)] sm:text-sm",
                         count > 0 ? "border-[3px]" : "border-2",
-                        on ? "ring-4 ring-primary ring-offset-2 ring-offset-surface shadow-md" : "",
+                        on ? "ring-4 ring-primary ring-offset-2 ring-offset-surface shadow-md scale-110" : "",
                       )}
                       style={{ borderColor: ringColor(p) }}
                     >
@@ -220,8 +257,9 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                     </span>
                     <span
                       lang={locale}
+                      title={name(p.location)}
                       className={cn(
-                        "mt-1 line-clamp-2 max-w-full text-center text-[10px] leading-tight transition-colors sm:text-xs",
+                        "mt-1 max-w-full truncate text-center text-[10px] leading-tight transition-colors sm:text-xs px-1",
                         on ? "font-bold text-primary underline underline-offset-2" : count > 0 ? "font-medium text-foreground group-hover:text-primary" : "text-muted-foreground",
                       )}
                     >
@@ -231,33 +269,34 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                 );
               })}
             </div>
-            <p className="absolute bottom-3 left-4 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] text-muted-foreground ring-1 ring-border">{t("schematic")}</p>
+            <p className="absolute bottom-2.5 left-3 sm:bottom-3 sm:left-4 rounded-full bg-surface/90 px-2.5 py-0.5 text-[10px] sm:text-[11px] text-muted-foreground ring-1 ring-border shadow-xs">{t("schematic")}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border px-5 py-3.5 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border px-3.5 py-2.5 sm:px-5 sm:py-3.5 text-[11px] sm:text-xs text-muted-foreground">
             {[1, 2, 3, 4].map((p) => (
               <span key={p} className="inline-flex items-center gap-1.5">
-                <span className="size-3 rounded-full border-[2.5px] bg-surface" style={{ borderColor: `var(--p${p})` }} aria-hidden />
+                <span className="size-2.5 sm:size-3 rounded-full border-[2.5px] bg-surface" style={{ borderColor: `var(--p${p})` }} aria-hidden />
                 {tp(String(p))}
               </span>
             ))}
             {includeFixed && (
               <span key="fixed" className="inline-flex items-center gap-1.5">
-                <span className="size-3 rounded-full border-[2.5px] border-success bg-surface" aria-hidden />
+                <span className="size-2.5 sm:size-3 rounded-full border-[2.5px] border-success bg-surface" aria-hidden />
                 {t("legendFixed")}
               </span>
             )}
             <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full border-2 border-border-strong bg-surface" aria-hidden />
+              <span className="size-2 sm:size-2.5 rounded-full border-2 border-border-strong bg-surface" aria-hidden />
               {t("legendNone")}
             </span>
-            <span className="w-full sm:ml-auto sm:w-auto">{t("legendSize")}</span>
+            <span className="w-full sm:ml-auto sm:w-auto text-[10px] sm:text-[11px]">{t("legendSize")}</span>
           </div>
         </Card>
 
-        <Card className="self-start p-0">
-          <div className="flex items-center justify-between gap-3 px-5 pt-5">
-            <h2 className="text-title text-lg">{t("buildings")}</h2>
-            <div role="group" aria-label={t("sortLabel")} className="inline-flex rounded-full bg-surface-sunken/70 p-1">
+        {/* Buildings Directory */}
+        <Card className={cn("self-start p-0", mobileTab === "map" && "hidden xl:block")}>
+          <div className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
+            <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">{t("buildings")}</h2>
+            <div role="group" aria-label={t("sortLabel")} className="inline-flex rounded-full bg-surface-muted/80 p-0.5 sm:p-1 border border-border/60">
               {(["count", "name"] as const).map((s) => (
                 <button
                   key={s}
@@ -265,8 +304,8 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                   aria-pressed={sort === s}
                   onClick={() => setSort(s)}
                   className={cn(
-                    "h-8 rounded-full px-3 text-xs font-medium transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    sort === s ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
+                    "h-7 sm:h-8 rounded-full px-2.5 sm:px-3 text-[11px] sm:text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    sort === s ? "bg-surface text-foreground shadow-xs ring-1 ring-border font-semibold" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {s === "count" ? t("sortCount") : t("sortName")}
@@ -275,7 +314,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
             </div>
           </div>
 
-          <div className="px-5 pt-3">
+          <div className="px-4 pt-3 sm:px-5">
             <div className="relative flex items-center">
               <Search className="pointer-events-none absolute left-3 size-3.5 text-muted-foreground" aria-hidden />
               <input
@@ -327,7 +366,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                       onClick={() => setSelected(p.id)}
                       aria-haspopup="dialog"
                       className={cn(
-                        "flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none",
+                        "flex w-full items-center gap-2.5 sm:gap-3 px-4 sm:px-5 py-3 text-left transition-colors hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none",
                         on && "bg-surface-muted font-medium",
                       )}
                     >
