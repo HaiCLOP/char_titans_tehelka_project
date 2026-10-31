@@ -184,7 +184,7 @@ export async function submitComplaint(
     throw new PipelineError("VALIDATION_ERROR", intake.image_rejection_reason_en || "Abusive, offensive, or explicit images are strictly prohibited");
   }
   if (intake.has_ai_image) {
-    throw new PipelineError("VALIDATION_ERROR", intake.image_rejection_reason_en || "AI-generated or synthetic images are not permitted");
+    throw new PipelineError("VALIDATION_ERROR", intake.image_rejection_reason_en || "Stock photos, internet images (OSINT), and AI-generated pictures are strictly prohibited. Please capture an authentic campus photo directly.");
   }
   if (intake.is_abusive && (hasAbuse || !intake.is_relevant)) {
     throw new PipelineError("VALIDATION_ERROR", intake.abusive_reason_en || "Abusive language or personal attacks are strictly prohibited");

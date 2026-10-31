@@ -187,8 +187,13 @@
     "photo": {
       "add": "Choose photos",
       "camera": "Take photo",
+      "takeLive": "Live Camera",
+      "snap": "Capture Photo",
+      "switchCam": "Switch Camera",
+      "cameraError": "Camera not available or access denied. Please select an image file.",
+      "osintNotice": "Authentic campus photos only. Web/stock images (OSINT) and AI are strictly prohibited.",
       "drop": "Drag photos here or choose them.",
-      "hint": "Up to {max} photos. They are compressed on your device.",
+      "hint": "Up to {max} photos. Live photos recommended; stock/web images prohibited.",
       "remove": "Remove photo {n}",
       "preview": "Photo {n}",
       "compressing": "Preparing photo...",
@@ -272,8 +277,8 @@
     "imageModeration": {
       "explicitTitle": "Inappropriate image detected",
       "explicitBody": "Images containing nudity, violence, or explicit material are strictly prohibited.",
-      "aiTitle": "AI-generated image detected",
-      "aiBody": "CivicSense requires authentic photos of the actual campus issue. AI-generated, synthetic, or digitally rendered images cannot be accepted.",
+      "aiTitle": "Web, stock, or AI image detected",
+      "aiBody": "CivicSense requires authentic photos of the actual campus issue. Web/stock photos, internet screenshots (OSINT), and AI-generated images are not permitted. Please take a photo directly on campus.",
       "cannotSubmit": "Submission blocked: please remove or replace the flagged photo."
     },
     "moderation": {

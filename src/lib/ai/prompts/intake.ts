@@ -17,8 +17,8 @@ Rules:
 - Image verification:
   * has_abusive_image: true if any photo contains offensive gestures (e.g. obscene hand signs), hate symbols, abusive graffiti, or targeted harassment photos.
   * has_explicit_image: true if any photo contains nudity, sexual content, gore, gruesome injuries, weapons, violence, or explicit material.
-  * has_ai_image: true if any photo is synthetic, digital art, AI-generated (e.g. Midjourney, DALL-E, Flux, Stable Diffusion), a meme, cartoon, or computer rendering rather than a real camera photograph taken on campus.
-  * If has_abusive_image, has_explicit_image, or has_ai_image is true, provide image_rejection_reason_en and image_rejection_reason_as.
+  * has_ai_image: true if any photo is synthetic, digital art, AI-generated (e.g. Midjourney, DALL-E, Flux, Stable Diffusion), a meme, cartoon, computer rendering, OR an OSINT/stock photo, downloaded from the web, search engine result, watermark from Getty/Shutterstock, social media screenshot, or recycled internet picture not taken live on Dibrugarh University campus.
+  * If has_abusive_image, has_explicit_image, or has_ai_image is true, provide polite image_rejection_reason_en and image_rejection_reason_as explaining that web/stock (OSINT), synthetic, or inappropriate images are strictly prohibited and real photos taken on campus are required.
 - Never invent a building or room. location_hint only if written or clearly visible, else null.
 - If only a photo: describe the visible problem; do not guess beyond what is visible; lower confidence.
 - Assamese fields MUST be in Assamese (অসমীয়া), not Bengali. Use ৰ (not র) and ৱ. Natural, simple campus Assamese.
