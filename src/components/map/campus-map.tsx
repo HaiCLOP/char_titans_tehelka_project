@@ -217,7 +217,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         {/* Schematic Campus Plan */}
         <Card className={cn("overflow-hidden p-0", mobileTab === "list" && "hidden xl:block")}>
-          <div className="relative aspect-[4/3] bg-surface-muted/40 sm:aspect-[16/10] lg:aspect-[16/11]">
+          <div className="relative h-[360px] sm:h-[420px] lg:h-[480px] w-full bg-surface-muted/40 overflow-hidden">
             <svg className="absolute inset-0 size-full text-border/70" aria-hidden>
               <defs>
                 <pattern id="cs-campus-grid" width="28" height="28" patternUnits="userSpaceOnUse">
@@ -226,7 +226,9 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
               </defs>
               <rect width="100%" height="100%" fill="url(#cs-campus-grid)" />
             </svg>
-            <div className="absolute inset-x-4 top-4 bottom-12 sm:inset-x-12 sm:top-8 sm:bottom-16" role="group" aria-label={t("planLabel")}>
+
+            {/* Plotted Building Markers */}
+            <div className="absolute inset-x-6 top-6 bottom-10 sm:inset-x-12 sm:top-8 sm:bottom-12" role="group" aria-label={t("planLabel")}>
               {plotted.map((p) => {
                 const count = p.open.length + p.fixed.length;
                 const d = diameter(count);
@@ -235,32 +237,39 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => setSelected(p.id)}
+                    onClick={() => setSelected(selected === p.id ? null : p.id)}
                     aria-label={`${name(p.location)}: ${countLabel(p)}`}
-                    aria-haspopup="dialog"
-                    style={{ left: `${fit(p.location!.map_x!, xs) * 100}%`, top: `${fit(p.location!.map_y!, ys) * 100}%`, ["--d" as string]: d }}
+                    style={{
+                      left: `${fit(p.location!.map_x!, xs) * 100}%`,
+                      top: `${fit(p.location!.map_y!, ys) * 100}%`,
+                      ["--d" as string]: d,
+                    }}
                     className={cn(
-                      "group absolute flex w-20 sm:w-24 -translate-x-1/2 -translate-y-[calc(var(--d)*0.4px)] sm:-translate-y-[calc(var(--d)*0.5px)] flex-col items-center rounded-2xl transition-all focus-visible:outline-none touch-manipulation",
+                      "group absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-200 focus-visible:outline-none touch-manipulation",
                       count > 0 ? "z-10" : "z-0",
-                      on && "z-30 scale-105",
+                      on && "z-30 scale-110",
                     )}
                   >
                     <span
                       className={cn(
-                        "relative grid size-[calc(var(--d)*0.8px)] place-items-center rounded-full bg-surface text-xs font-semibold tabular shadow-xs transition-all duration-200 group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface sm:size-[calc(var(--d)*1px)] sm:text-sm",
+                        "relative grid size-8 sm:size-9 place-items-center rounded-full bg-surface text-xs font-bold tabular shadow-xs transition-all duration-200 group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface",
                         count > 0 ? "border-[3px]" : "border-2",
-                        on ? "ring-4 ring-primary ring-offset-2 ring-offset-surface shadow-md scale-110" : "",
+                        on ? "ring-4 ring-primary ring-offset-2 ring-offset-surface shadow-md bg-primary text-primary-foreground border-primary" : "",
                       )}
-                      style={{ borderColor: ringColor(p) }}
+                      style={{ borderColor: on ? undefined : ringColor(p) }}
                     >
-                      {count > 0 && n(count)}
+                      {count > 0 ? n(count) : <MapPin className="size-3.5 text-muted-foreground/60" aria-hidden />}
                     </span>
                     <span
                       lang={locale}
                       title={name(p.location)}
                       className={cn(
-                        "mt-1 max-w-full truncate text-center text-[10px] leading-tight transition-colors sm:text-xs px-1",
-                        on ? "font-bold text-primary underline underline-offset-2" : count > 0 ? "font-medium text-foreground group-hover:text-primary" : "text-muted-foreground",
+                        "mt-1 max-w-[75px] sm:max-w-[95px] truncate rounded-md px-1.5 py-0.5 text-center text-[10px] sm:text-[11px] font-semibold leading-tight shadow-2xs transition-colors border",
+                        on
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : count > 0
+                            ? "bg-surface/95 text-foreground border-border/80 group-hover:border-primary/50"
+                            : "bg-surface/80 text-muted-foreground border-border/50",
                       )}
                     >
                       {name(p.location)}
@@ -269,9 +278,69 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                 );
               })}
             </div>
-            <p className="absolute bottom-2.5 left-3 sm:bottom-3 sm:left-4 rounded-full bg-surface/90 px-2.5 py-0.5 text-[10px] sm:text-[11px] text-muted-foreground ring-1 ring-border shadow-xs">{t("schematic")}</p>
+
+            <p className="absolute bottom-2.5 left-3 sm:bottom-3 sm:left-4 rounded-full bg-surface/90 px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-muted-foreground ring-1 ring-border shadow-xs">
+              {t("schematic")}
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border px-3.5 py-2.5 sm:px-5 sm:py-3.5 text-[11px] sm:text-xs text-muted-foreground">
+
+          {/* Active Building Inspector Card (Docked directly into the map view) */}
+          {current && current.location && (
+            <div className="border-t border-border bg-surface p-4 sm:p-5 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-bold text-sm sm:text-base text-foreground">{name(current.location)}</h3>
+                    {current.location.type && (
+                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border border-border/50">
+                        {current.location.type}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{countLabel(current)}</p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link
+                    href={`/report?location=${encodeURIComponent(current.location.id)}`}
+                    className={buttonVariants({ variant: "primary", size: "sm", className: "h-8 px-3 text-xs gap-1.5 rounded-lg font-semibold shadow-xs" })}
+                  >
+                    <MapPin className="size-3.5" aria-hidden />
+                    <span>{t("reportHere")}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(null)}
+                    className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-surface-muted hover:text-foreground transition-colors"
+                    aria-label="Close details"
+                  >
+                    <X className="size-4" aria-hidden />
+                  </button>
+                </div>
+              </div>
+
+              {/* Complaints at selected building */}
+              {current.open.length + current.fixed.length > 0 ? (
+                <div className="space-y-2 pt-2 border-t border-border/60">
+                  <ul className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {[...current.open, ...current.fixed].map((i) => (
+                      <li key={i.id}>
+                        <IssueCard
+                          compact
+                          issue={{ ...i, photo_url: null, location: { name_en: current.location!.name_en, name_as: current.location!.name_as } }}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground pt-1">{t("drawerEmptyBody")}</p>
+              )}
+            </div>
+          )}
+
+          {/* Map Legend */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border px-3.5 py-2.5 sm:px-5 sm:py-3.5 text-[11px] sm:text-xs text-muted-foreground bg-surface/50">
             {[1, 2, 3, 4].map((p) => (
               <span key={p} className="inline-flex items-center gap-1.5">
                 <span className="size-2.5 sm:size-3 rounded-full border-[2.5px] bg-surface" style={{ borderColor: `var(--p${p})` }} aria-hidden />
