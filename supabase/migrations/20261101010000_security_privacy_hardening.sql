@@ -16,3 +16,4 @@ drop trigger if exists complaints_sensitive_privacy on complaints;
 create trigger complaints_sensitive_privacy
   before insert or update on complaints
   for each row execute function complaints_enforce_sensitive_privacy();
+

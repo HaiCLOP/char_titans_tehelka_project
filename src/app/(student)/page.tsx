@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import { CheckCircle2, Clock, Inbox, Map, Plus, Zap } from "lucide-react";
-import { AreaTrend, Card, EmptyState, IssueCard, KpiCard, LifecycleTrack, buttonVariants } from "@/components/ui";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Map, Plus } from "lucide-react";
+import { AreaTrend, Card, EmptyState, IssueCard, LifecycleTrack, buttonVariants } from "@/components/ui";
 import { getProfile, getUser } from "@/lib/auth";
 import { ComplaintListQuerySchema, type ComplaintListItem } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { listComplaints } from "@/lib/tracking";
-import { cn } from "@/lib/utils";
+import { cn, toLocaleDigits } from "@/lib/utils";
+import { getCampusDailyBrief } from "@/lib/ai/brief";
+import { AiDailyBriefCard } from "@/components/home/ai-daily-brief";
 
 type Stats = { open: number; in_progress: number; resolved: number; overdue: number; avg_resolution_hours: number | null };
 type TrendRow = { day: string; created: number; resolved: number };
@@ -63,19 +65,21 @@ async function loadHome(view: "open" | "resolved") {
     getHomeStatsAndTrend(supabase),
   ]);
   const statsAndTrend = statsTrend.status === "fulfilled" ? statsTrend.value : { stats: null, trend: [] };
+  const brief = await getCampusDailyBrief(supabase, statsAndTrend.stats);
 
   return {
     name: profile?.full_name ?? null,
     issues: issues.status === "fulfilled" ? issues.value : null,
     stats: statsAndTrend.stats,
     trend: statsAndTrend.trend,
+    brief,
   };
 }
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const { view: rawView } = await searchParams;
   const view = rawView === "resolved" ? "resolved" : "open";
-  const [t, data] = await Promise.all([getTranslations(), loadHome(view)]);
+  const [t, locale, data] = await Promise.all([getTranslations(), getLocale(), loadHome(view)]);
 
   const created = data.trend.map((r) => Number(r.created));
   const fixed = data.trend.map((r) => Number(r.resolved));
@@ -123,34 +127,34 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
         </div>
       </section>
 
-      {/* Transparent 4-Metric Campus KPI Strip */}
-      <section aria-label="Campus metrics" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <KpiCard
-          label={t("home.statOpen")}
-          value={s?.open ?? 0}
-          icon={Inbox}
-          tone="warning"
-        />
-        <KpiCard
-          label={t("home.statWorking")}
-          value={s?.in_progress ?? 0}
-          icon={Clock}
-          tone="primary"
-        />
-        <KpiCard
-          label={t("home.statFixed")}
-          value={s?.resolved ?? 0}
-          icon={CheckCircle2}
-          tone="success"
-        />
-        <KpiCard
-          label={t("home.statAvg")}
-          value={s?.avg_resolution_hours != null ? Number(s.avg_resolution_hours.toFixed(1)) : "—"}
-          unit={s?.avg_resolution_hours != null ? "h" : undefined}
-          icon={Zap}
-          tone="accent"
-        />
+      {/* Ultra-compact 1-Row Campus KPI Strip (saves ~200px vertical space so reports are visible immediately) */}
+      <section aria-label="Campus metrics" className="grid grid-cols-4 divide-x divide-border/60 rounded-xl border border-border/80 bg-surface p-2 text-center shadow-xs">
+        <div className="flex flex-col items-center justify-center px-1">
+          <span className="text-base sm:text-lg font-bold text-warning">{toLocaleDigits(s?.open ?? 0, locale)}</span>
+          <span className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">{t("home.statOpen")}</span>
+        </div>
+        <div className="flex flex-col items-center justify-center px-1">
+          <span className="text-base sm:text-lg font-bold text-primary">{toLocaleDigits(s?.in_progress ?? 0, locale)}</span>
+          <span className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">{t("home.statWorking")}</span>
+        </div>
+        <div className="flex flex-col items-center justify-center px-1">
+          <span className="text-base sm:text-lg font-bold text-success">{toLocaleDigits(s?.resolved ?? 0, locale)}</span>
+          <span className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">{t("home.statFixed")}</span>
+        </div>
+        <div className="flex flex-col items-center justify-center px-1">
+          <span className="text-base sm:text-lg font-bold text-foreground">
+            {s?.avg_resolution_hours != null ? `${toLocaleDigits(Number(s.avg_resolution_hours.toFixed(1)), locale)}h` : "—"}
+          </span>
+          <span className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">{t("home.statAvg")}</span>
+        </div>
       </section>
+
+      {/* AI Campus Daily Brief directly above Campus Reports */}
+      <AiDailyBriefCard
+        bullets={locale === "as" ? data.brief.bullets_as : data.brief.bullets_en}
+        title={locale === "as" ? "দৈনিক এআই চৌহদ সাৰাংশ" : "AI Campus Daily Brief"}
+        badge={locale === "as" ? "এআই লাইভ" : "AI Live"}
+      />
 
       {/* Main Content: Issues & Activity Pulse */}
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8">

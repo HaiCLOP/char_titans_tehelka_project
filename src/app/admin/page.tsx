@@ -10,6 +10,8 @@ import { ADMIN_STATS_DAYS, CATEGORIES, type AdminStats } from "@/lib/domain";
 import { PipelineError } from "@/lib/complaints";
 import { createClient } from "@/lib/supabase/server";
 import { cn, toLocaleDigits } from "@/lib/utils";
+import { getCampusDailyBrief, type DailyBrief } from "@/lib/ai/brief";
+import { AiDailyBriefCard } from "@/components/home/ai-daily-brief";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("nav.admin");
@@ -79,6 +81,11 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     failure = e instanceof PipelineError && e.code === "FORBIDDEN" ? "noDept" : "error";
   }
 
+  const brief = await getCampusDailyBrief(
+    supabase,
+    data?.stats ? { open: data.stats.open, in_progress: 0, resolved: data.stats.fixed_week } : null,
+  );
+
   const qs = (patch: Record<string, string | null>) => {
     const p = new URLSearchParams();
     const merged = { days: String(days), department: requested, ...patch };
@@ -141,7 +148,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       ) : failure || !data ? (
         <ErrorState className="mt-8" title={t("loadError")} />
       ) : (
-        <Dashboard data={data} t={t} tc={tc} n={n} isSuper={isSuper && !requested} />
+        <Dashboard data={data} t={t} tc={tc} n={n} isSuper={isSuper && !requested} brief={brief} locale={locale} />
       )}
     </div>
   );
@@ -150,7 +157,23 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 type T = Awaited<ReturnType<typeof getTranslations>>;
 type TC = T;
 
-function Dashboard({ data, t, tc, n, isSuper }: { data: AdminStats; t: T; tc: TC; n: (v: number | string) => string; isSuper: boolean }) {
+function Dashboard({
+  data,
+  t,
+  tc,
+  n,
+  isSuper,
+  brief,
+  locale,
+}: {
+  data: AdminStats;
+  t: T;
+  tc: TC;
+  n: (v: number | string) => string;
+  isSuper: boolean;
+  brief: DailyBrief;
+  locale: string;
+}) {
   const s = data.stats;
   const created = data.trend.map((r) => r.created);
   const fixed = data.trend.map((r) => r.resolved);
@@ -163,6 +186,13 @@ function Dashboard({ data, t, tc, n, isSuper }: { data: AdminStats; t: T; tc: TC
 
   return (
     <div className="mt-8 space-y-6">
+      {/* AI Daily Operational Brief for Admins */}
+      <AiDailyBriefCard
+        bullets={locale === "as" ? brief.bullets_as : brief.bullets_en}
+        title={locale === "as" ? "প্ৰশাসকৰ বাবে দৈনিক এআই সাৰাংশ" : "Admin AI Daily Operational Brief"}
+        badge={locale === "as" ? "এআই লাইভ" : "AI Live"}
+      />
+
       <section aria-label={t("kpiLabel")} className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <Kpi label={t("kpi.open")} value={n(s.open)} hint={s.needs_review ? t("kpi.needsReview", { n: n(s.needs_review) }) : undefined} />
         <Kpi label={t("kpi.overdue")} value={n(s.overdue)} tone={s.overdue > 0 ? "danger" : undefined} />
