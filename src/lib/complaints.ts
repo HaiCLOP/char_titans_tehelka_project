@@ -72,11 +72,49 @@ export async function findSimilar(
     .in("id", matches.map((m) => m.id));
   if (error) throw new PipelineError("INTERNAL", "Similarity search failed");
   const allowed = new Set((visible ?? []).map((r: { id: string }) => r.id));
-  return matches
-    .filter((m) => allowed.has(m.id))
-    .map(({ id, code, title_en, title_as, status, metoo_count, similarity }) => ({
-      id, code, title_en, title_as, status, metoo_count, similarity,
-    }));
+  const filteredMatches = matches.filter((m) => allowed.has(m.id));
+  if (filteredMatches.length === 0) return [];
+
+  // Fetch and sign first uploaded photo for each candidate duplicate
+  const photoMap = new Map<string, string>();
+  try {
+    const admin = createAdminClient();
+    const { data: photoRows } = await admin
+      .from("complaints")
+      .select("id, image_urls")
+      .in("id", filteredMatches.map((m) => m.id));
+
+    const toSign: { id: string; path: string }[] = [];
+    for (const r of (photoRows ?? []) as { id: string; image_urls: string[] | null }[]) {
+      const first = r.image_urls?.[0];
+      if (first) toSign.push({ id: r.id, path: first });
+    }
+
+    if (toSign.length > 0) {
+      const { data: signed } = await admin.storage
+        .from(BUCKET)
+        .createSignedUrls(toSign.map((t) => t.path), 3600);
+      for (const s of signed ?? []) {
+        if (s.path && s.signedUrl) {
+          const item = toSign.find((t) => t.path === s.path);
+          if (item) photoMap.set(item.id, s.signedUrl);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[dedup] could not sign candidate photos:", err);
+  }
+
+  return filteredMatches.map(({ id, code, title_en, title_as, status, metoo_count, similarity }) => ({
+    id,
+    code,
+    title_en,
+    title_as,
+    status,
+    metoo_count,
+    similarity,
+    photo_url: photoMap.get(id) ?? null,
+  }));
 }
 
 // ---------- submit pipeline ----------

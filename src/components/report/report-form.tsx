@@ -1066,24 +1066,74 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
           </Button>
         }
       >
+        {/* Your currently uploaded photo reference (for direct visual comparison) */}
+        {photos.length > 0 && photos[0]?.url && (
+          <div className="mb-3.5 flex items-center gap-3 rounded-xl border border-border/80 bg-surface-muted/60 p-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photos[0].url}
+              alt={t("dup.yourPhoto")}
+              className="size-14 rounded-lg object-cover border border-border shrink-0 shadow-2xs"
+            />
+            <div className="min-w-0 flex-1">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-primary">
+                {t("dup.yourPhoto")}
+              </span>
+              <span className="block text-xs font-semibold text-foreground truncate mt-0.5">
+                {text.trim() || t("dup.yourPhoto")}
+              </span>
+            </div>
+          </div>
+        )}
+
         <ul className="space-y-3">
           {similarItems.map((item) => (
-            <li key={item.id} className="rounded-card border border-border bg-surface p-4">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <StatusChip status={item.status} />
-                <span className="font-mono text-xs text-muted-foreground">{item.code}</span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {t("dup.match", { pct: n(Math.round(item.similarity * 100)) })}
-                </span>
-              </div>
-              <LangText tag="h3" en={item.title_en} as={item.title_as} fallback={item.code} className="mt-2 font-semibold" />
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {t("dup.people", { count: item.metoo_count + 1, n: n(item.metoo_count + 1) })}
-                </span>
-                <Button size="sm" onClick={() => support.mutate(item.id)} loading={supportingId === item.id} disabled={support.isPending}>
-                  {t("dup.metoo")}
-                </Button>
+            <li key={item.id} className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 shadow-2xs transition-all hover:border-border-strong">
+              <div className="flex gap-3 sm:gap-3.5">
+                {/* Uploaded photo of the already reported complaint */}
+                {item.photo_url && (
+                  <div className="shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.photo_url}
+                      alt={item.title_en ?? item.code}
+                      className="size-20 sm:size-24 rounded-xl object-cover border border-border/80 shadow-2xs"
+                    />
+                  </div>
+                )}
+
+                <div className="min-w-0 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <StatusChip status={item.status} />
+                      <span className="font-mono text-xs text-muted-foreground">{item.code}</span>
+                      <span className="ml-auto text-xs font-bold text-primary">
+                        {t("dup.match", { pct: n(Math.round(item.similarity * 100)) })}
+                      </span>
+                    </div>
+                    <LangText
+                      tag="h3"
+                      en={item.title_en}
+                      as={item.title_as}
+                      fallback={item.code}
+                      className="mt-1.5 text-xs sm:text-sm font-semibold text-foreground line-clamp-2"
+                    />
+                  </div>
+
+                  <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] text-muted-foreground">
+                      {t("dup.people", { count: item.metoo_count + 1, n: n(item.metoo_count + 1) })}
+                    </span>
+                    <Button
+                      size="sm"
+                      onClick={() => support.mutate(item.id)}
+                      loading={supportingId === item.id}
+                      disabled={support.isPending}
+                    >
+                      {t("dup.metoo")}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </li>
           ))}

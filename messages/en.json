@@ -353,6 +353,8 @@
       "people": "{count, plural, one {{n} person affected} other {{n} people affected}}",
       "metoo": "Me too",
       "separate": "Submit separately",
+      "yourPhoto": "Your uploaded photo",
+      "reportedPhoto": "Reported photo",
       "supported": "Added your support. We'll keep you posted.",
       "ownReport": "This is your own report.",
       "supportFailed": "Could not add your support. Try again."

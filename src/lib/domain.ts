@@ -120,6 +120,7 @@ export const SimilarItemSchema = z.object({
   status: z.enum(STATUSES),
   metoo_count: z.number().int(),
   similarity: z.number(),
+  photo_url: z.string().nullable().optional(),
 });
 export type SimilarItem = z.infer<typeof SimilarItemSchema>;
 
