@@ -162,7 +162,7 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
 
   const chip = (active: boolean) =>
     cn(
-      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface text-foreground hover:border-border-strong",
     );
 
@@ -196,8 +196,8 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
       </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <Card className="overflow-hidden p-0">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <Card className="min-w-0 overflow-hidden p-0">
           <div className="relative aspect-[3/4] bg-surface-muted/40 sm:aspect-[4/3] lg:aspect-[16/11]">
             <svg className="absolute inset-0 size-full text-border" aria-hidden>
               <defs>
@@ -221,7 +221,7 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
                     aria-haspopup="dialog"
                     style={{ left: `${fit(p.location!.map_x!, xs) * 100}%`, top: `${fit(p.location!.map_y!, ys) * 100}%`, ["--d" as string]: d }}
                     className={cn(
-                      "group absolute flex w-[5.5rem] -translate-x-1/2 sm:w-28 -translate-y-[calc(var(--d)*0.4px)] flex-col items-center rounded-2xl transition-all focus-visible:outline-none sm:-translate-y-[calc(var(--d)*0.5px)]",
+                      "group absolute flex w-[5.5rem] -translate-x-1/2 after:absolute after:-inset-x-1 after:-inset-y-2 after:content-[''] sm:w-28 -translate-y-[calc(var(--d)*0.4px)] flex-col items-center rounded-2xl transition-all focus-visible:outline-none sm:-translate-y-[calc(var(--d)*0.5px)]",
                       count > 0 ? "z-10" : "z-0",
                       on && "z-30 scale-105",
                     )}
@@ -283,7 +283,7 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
                   aria-pressed={sort === s}
                   onClick={() => setSort(s)}
                   className={cn(
-                    "h-8 rounded-full px-3 text-xs font-medium transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "relative h-8 rounded-full px-3 text-xs font-medium after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     sort === s ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -301,7 +301,7 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("searchPlaceholder")}
-                className="h-9 w-full rounded-full border border-border bg-surface-muted/60 pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground transition-colors focus:border-border-strong focus:bg-surface focus:outline-none focus:ring-1 focus:ring-ring"
+                className="h-10 w-full rounded-full border border-border bg-surface-muted/60 pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground transition-colors focus:border-border-strong focus:bg-surface focus:outline-none focus:ring-1 focus:ring-ring"
               />
               {searchQuery && (
                 <button

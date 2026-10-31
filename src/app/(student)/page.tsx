@@ -81,7 +81,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
                 scroll={false}
                 aria-current={view === v ? "page" : undefined}
                 className={cn(
-                  "rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-200",
+                  "inline-flex h-10 items-center rounded-full px-4 text-sm font-medium transition-[background-color,color,box-shadow] duration-200",
                   view === v ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
                 )}
               >
