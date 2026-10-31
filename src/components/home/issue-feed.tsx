@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowUpDown, CheckCircle2, Clock, Inbox, RotateCcw, ThumbsUp, Zap } from "lucide-react";
+import { ArrowUpDown, CheckCircle2, Clock, Inbox, Plus, RotateCcw, ThumbsUp, Zap } from "lucide-react";
 import { CATEGORY_ICON, Card, EmptyState, IssueCard, LifecycleTrack, buttonVariants } from "@/components/ui";
 import { CATEGORIES, type Category, type ComplaintListItem } from "@/lib/domain";
 import { cn, toLocaleDigits } from "@/lib/utils";
@@ -279,8 +279,38 @@ export function IssueFeed({ issues, view }: IssueFeedProps) {
               />
             </li>
           ))}
+
+          {/* Balanced layout: fill odd slot so grid never has an awkward void */}
+          {filteredIssues.length % 2 !== 0 && (
+            <li className="h-full">
+              <div className="flex h-full min-h-[110px] flex-col justify-between rounded-card border border-dashed border-border/80 bg-surface/50 p-3.5 sm:p-4 transition-colors hover:border-primary/50">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                    <Plus className="size-2.5" aria-hidden />
+                    <span>{t("reportPromptCta")}</span>
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-semibold text-foreground line-clamp-1">
+                    {t("reportPromptTitle")}
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                    {t("reportPromptBody")}
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <Link
+                    href="/report"
+                    className={buttonVariants({ variant: "primary", size: "sm", className: "h-7 sm:h-8 rounded-lg px-3 text-xs gap-1 font-semibold" })}
+                  >
+                    <Plus className="size-3" strokeWidth={2.5} aria-hidden />
+                    {t("reportPromptCta")}
+                  </Link>
+                </div>
+              </div>
+            </li>
+          )}
         </ul>
       )}
     </div>
   );
 }
+

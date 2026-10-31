@@ -94,7 +94,7 @@
     "statWorking": "কাম চলি আছে",
     "statFixed": "সমাধান",
     "statOverdue": "সময়সীমা পাৰ",
-    "statAvg": "সমাধানৰ গড় সময়",
+    "statAvg": "গড় সময়",
     "hours": "{n} ঘণ্টা",
     "noData": "এতিয়াও তথ্য নাই",
     "sortBy": "সজাওক",
@@ -107,7 +107,10 @@
     "clearFilters": "পূৰ্বৰ অৱস্থা",
     "filteredCount": "{n}টা অভিযোগ",
     "emptyFilteredTitle": "ফিল্টাৰ অনুসৰি কোনো অভিযোগ নাই",
-    "emptyFilteredBody": "আন এটা শ্ৰেণী বাছক বা ফিল্টাৰ আঁতৰাই চাওক।"
+    "emptyFilteredBody": "আন এটা শ্ৰেণী বাছক বা ফিল্টাৰ আঁতৰাই চাওক।",
+    "reportPromptTitle": "কেম্পাছত আন কিবা সমস্যা দেখিছে নেকি?",
+    "reportPromptBody": "ভঙা আন্তঃগাঁথনি, বিদ্যুৎ বা পানীৰ সমস্যা? ফটো তুলি কৰ্তৃপক্ষক জনাওক।",
+    "reportPromptCta": "অভিযোগ দাখিল কৰক"
   },
   "status": {
     "submitted": "দাখিল কৰা হ'ল",

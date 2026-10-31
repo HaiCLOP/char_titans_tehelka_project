@@ -94,7 +94,7 @@
     "statWorking": "Being fixed",
     "statFixed": "Fixed",
     "statOverdue": "Past deadline",
-    "statAvg": "Average time to fix",
+    "statAvg": "Avg Fix Time",
     "hours": "{n} h",
     "noData": "No data yet",
     "sortBy": "Sort by",
@@ -107,7 +107,10 @@
     "clearFilters": "Reset",
     "filteredCount": "{count, plural, one {{n} issue} other {{n} issues}}",
     "emptyFilteredTitle": "No issues match your filters",
-    "emptyFilteredBody": "Try changing the category or clearing the active filters."
+    "emptyFilteredBody": "Try changing the category or clearing the active filters.",
+    "reportPromptTitle": "See another issue on campus?",
+    "reportPromptBody": "Broken infrastructure, electrical hazard, or water leak? Submit a photo to alert staff.",
+    "reportPromptCta": "Report a Complaint"
   },
   "status": {
     "submitted": "Submitted",

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Map, Plus } from "lucide-react";
-import { AreaTrend, Card, buttonVariants } from "@/components/ui";
+import { Card, buttonVariants } from "@/components/ui";
 import { getProfile, getUser } from "@/lib/auth";
 import { ComplaintListQuerySchema, type ComplaintListItem } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
@@ -91,90 +91,91 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
   const view = rawView === "resolved" ? "resolved" : "open";
   const [t, locale, data] = await Promise.all([getTranslations(), getLocale(), loadHome(view)]);
 
-  const created = data.trend.map((r) => Number(r.created));
-  const fixed = data.trend.map((r) => Number(r.resolved));
   const s = data.stats;
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Top Section: Hero (Left) & Campus Intelligence (Right) */}
-      <section className="grid gap-5 lg:grid-cols-12 items-start">
-        {/* Left Column: Hero Banner */}
-        <div className="lg:col-span-7 flex flex-col justify-between rounded-2xl border border-border bg-gradient-to-br from-surface to-surface-muted/50 p-5 sm:p-7 shadow-xs">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-primary shadow-xs">
+    <div className="space-y-6 sm:space-y-7">
+      {/* Executive Hero Banner with Integrated 4-Tile KPI Matrix */}
+      <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-surface via-surface to-surface-muted/60 p-5 sm:p-7 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          {/* Left: Branding & Core CTA */}
+          <div className="max-w-xl space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-primary shadow-2xs">
               <span className="size-2 rounded-full bg-primary animate-pulse" aria-hidden />
               {t("hero.eyebrow")} · {t("shell.university")}
             </div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl text-foreground">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground">
               {t("hero.title")}
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-xl">
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               {t("hero.subtitle")}
             </p>
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <Link
+                href="/report"
+                className={buttonVariants({
+                  variant: "primary",
+                  size: "md",
+                  className: "rounded-xl px-5 gap-2 shadow-sm font-semibold",
+                })}
+              >
+                <Plus className="size-4" strokeWidth={2.5} aria-hidden />
+                {t("hero.cta")}
+              </Link>
+              <Link
+                href="/map"
+                className={buttonVariants({
+                  variant: "secondary",
+                  size: "md",
+                  className: "rounded-xl px-5 gap-2 font-medium",
+                })}
+              >
+                <Map className="size-4 text-muted-foreground" aria-hidden />
+                {t("home.map")}
+              </Link>
+            </div>
           </div>
-          <div className="mt-6 flex flex-wrap items-center gap-2.5">
-            <Link
-              href="/report"
-              className={buttonVariants({
-                variant: "primary",
-                size: "md",
-                className: "justify-center gap-2 shadow-sm rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold",
-              })}
-            >
-              <Plus className="size-4" strokeWidth={2.5} aria-hidden />
-              {t("hero.cta")}
-            </Link>
-            <Link
-              href="/map"
-              className={buttonVariants({
-                variant: "secondary",
-                size: "md",
-                className: "justify-center gap-2 rounded-xl px-4 py-2 text-xs sm:text-sm font-medium",
-              })}
-            >
-              <Map className="size-4 text-muted-foreground" aria-hidden />
-              {t("home.map")}
-            </Link>
-          </div>
-        </div>
 
-        {/* Right Column: Live KPI Metrics & AI Daily Brief (Compact, non-stretching) */}
-        <div className="lg:col-span-5 space-y-3 self-start">
-          {/* KPI Metrics Strip */}
-          <div className="grid grid-cols-4 gap-2 rounded-2xl border border-border bg-surface p-2.5 sm:p-3 text-center shadow-xs">
-            <div className="rounded-lg bg-surface-muted/50 p-1.5 sm:p-2">
-              <span className="block text-base sm:text-lg font-bold text-warning">{toLocaleDigits(s?.open ?? 0, locale)}</span>
-              <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground truncate block">{t("home.statOpen")}</span>
+          {/* Right: Integrated 4-Tile KPI Matrix (2x2 layout, zero text truncation) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5 sm:gap-3 w-full lg:w-80 shrink-0">
+            <div className="rounded-xl border border-border/80 bg-surface p-3 sm:p-3.5 shadow-2xs text-center transition-all hover:border-warning/50">
+              <span className="text-2xl sm:text-3xl font-extrabold text-warning tabular-nums">
+                {toLocaleDigits(s?.open ?? 0, locale)}
+              </span>
+              <span className="mt-1 block text-xs font-medium text-muted-foreground">{t("home.statOpen")}</span>
             </div>
-            <div className="rounded-lg bg-surface-muted/50 p-1.5 sm:p-2">
-              <span className="block text-base sm:text-lg font-bold text-primary">{toLocaleDigits(s?.in_progress ?? 0, locale)}</span>
-              <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground truncate block">{t("home.statWorking")}</span>
+            <div className="rounded-xl border border-border/80 bg-surface p-3 sm:p-3.5 shadow-2xs text-center transition-all hover:border-primary/50">
+              <span className="text-2xl sm:text-3xl font-extrabold text-primary tabular-nums">
+                {toLocaleDigits(s?.in_progress ?? 0, locale)}
+              </span>
+              <span className="mt-1 block text-xs font-medium text-muted-foreground">{t("home.statWorking")}</span>
             </div>
-            <div className="rounded-lg bg-surface-muted/50 p-1.5 sm:p-2">
-              <span className="block text-base sm:text-lg font-bold text-success">{toLocaleDigits(s?.resolved ?? 0, locale)}</span>
-              <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground truncate block">{t("home.statFixed")}</span>
+            <div className="rounded-xl border border-border/80 bg-surface p-3 sm:p-3.5 shadow-2xs text-center transition-all hover:border-success/50">
+              <span className="text-2xl sm:text-3xl font-extrabold text-success tabular-nums">
+                {toLocaleDigits(s?.resolved ?? 0, locale)}
+              </span>
+              <span className="mt-1 block text-xs font-medium text-muted-foreground">{t("home.statFixed")}</span>
             </div>
-            <div className="rounded-lg bg-surface-muted/50 p-1.5 sm:p-2">
-              <span className="block text-base sm:text-lg font-bold text-foreground">
+            <div className="rounded-xl border border-border/80 bg-surface p-3 sm:p-3.5 shadow-2xs text-center transition-all hover:border-border-strong">
+              <span className="text-2xl sm:text-3xl font-extrabold text-foreground tabular-nums">
                 {s?.avg_resolution_hours != null ? `${toLocaleDigits(Number(s.avg_resolution_hours.toFixed(1)), locale)}h` : "—"}
               </span>
-              <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground truncate block">{t("home.statAvg")}</span>
+              <span className="mt-1 block text-xs font-medium text-muted-foreground">{t("home.statAvg")}</span>
             </div>
           </div>
-
-          {/* AI Campus Daily Brief in Right Sidebar */}
-          <AiDailyBriefCard
-            bullets={locale === "as" ? data.brief.bullets_as : data.brief.bullets_en}
-            title={locale === "as" ? "দৈনিক এআই চৌহদ সাৰাংশ" : "AI Campus Daily Brief"}
-            badge={locale === "as" ? "এআই লাইভ" : "AI Live"}
-          />
         </div>
       </section>
 
+      {/* AI Campus Daily Brief (Sleek Horizontal 3-Column Strip) */}
+      <AiDailyBriefCard
+        bullets={locale === "as" ? data.brief.bullets_as : data.brief.bullets_en}
+        title={locale === "as" ? "দৈনিক এআই চৌহদ সাৰাংশ" : "AI Campus Daily Brief"}
+        badge={locale === "as" ? "এআই লাইভ" : "AI Live"}
+      />
+
       {/* Main Content: Issues Section */}
       <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3">
           <div>
             <h2 className="text-lg font-bold tracking-tight text-foreground">
               {view === "open" ? t("home.tabOpen") : t("home.tabResolved")}
@@ -210,38 +211,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
           <IssueFeed issues={data.issues} view={view} />
         )}
       </section>
-
-      {/* Campus Resolution Velocity (Last 14 Days) */}
-      {(created.some((v) => v > 0) || fixed.some((v) => v > 0)) && (
-        <Card className="p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="font-semibold text-base tracking-tight">{t("home.pulseTitle")}</h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">{t("home.pulseRange")}</p>
-            </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
-              <span className="size-1.5 rounded-full bg-success animate-pulse" />
-              {t("home.live")}
-            </span>
-          </div>
-          <AreaTrend
-            series={created}
-            compare={fixed}
-            label={`${t("home.legendReported")}: ${created.join(", ")}. ${t("home.legendFixed")}: ${fixed.join(", ")}.`}
-            className="mt-4"
-          />
-          <div className="mt-3 flex gap-4 text-xs text-muted-foreground border-t border-border pt-2.5">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-[2px] w-3.5 rounded-full bg-foreground" aria-hidden />
-              {t("home.legendReported")}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-3.5 border-t-[1.5px] border-dashed border-subtle-foreground" aria-hidden />
-              {t("home.legendFixed")}
-            </span>
-          </div>
-        </Card>
-      )}
     </div>
   );
 }
