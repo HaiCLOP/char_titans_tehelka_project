@@ -1,11 +1,11 @@
 import "server-only";
 import { cache } from "react";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import type { Profile, Role } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
-import { PATH_HEADER, loginUrl, roleHome, safeNext } from "@/lib/paths";
+import { INTERNAL_AUTH_HEADER, INTERNAL_AUTH_SECRET, PATH_HEADER, loginUrl, roleHome, safeNext } from "@/lib/paths";
 
 export { roleHome, safeNext } from "@/lib/paths";
 
@@ -14,6 +14,29 @@ export const PROFILE_COLUMNS =
 
 /** Signed-in user (verified with Supabase Auth), or null. Deduplicated per request. */
 export const getUser = cache(async (): Promise<User | null> => {
+  const store = await cookies();
+  const hasAuthCookie = store.getAll().some((c) => c.name.includes("-auth-token") || c.name.startsWith("sb-"));
+  if (!hasAuthCookie) return null;
+
+  try {
+    const hdrs = await headers();
+    const verifiedSecret = hdrs.get(INTERNAL_AUTH_HEADER);
+    const verifiedId = hdrs.get("x-cs-user-id");
+    if (verifiedSecret && verifiedSecret === INTERNAL_AUTH_SECRET && verifiedId) {
+      const verifiedEmail = hdrs.get("x-cs-user-email") ?? undefined;
+      return {
+        id: verifiedId,
+        email: verifiedEmail,
+        app_metadata: {},
+        user_metadata: {},
+        aud: "authenticated",
+        created_at: "",
+      } as User;
+    }
+  } catch {
+    /* headers() may throw if called outside request context */
+  }
+
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   return data.user ?? null;

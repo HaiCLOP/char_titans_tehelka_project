@@ -58,10 +58,20 @@ export const IntakeSchema = z.object({
   priority_reason_en: z.string().max(160),
   location_hint: z.string().max(80).nullable().describe("Building/place mentioned or visible, else null"),
   is_abusive: z.boolean().describe("Abusive language or personal attacks"),
+  abusive_reason_en: z.string().max(200).nullable().default(null).describe("If is_abusive is true, polite explanation of the violation"),
+  abusive_reason_as: z.string().max(250).nullable().default(null).describe("Assamese translation of abusive explanation"),
   has_personal_data: z.boolean().describe("Contains phone numbers or other personal data"),
   is_urgent: z.boolean().describe("Immediate danger to people: fire, injury, violence, threats, medical emergency"),
   is_sensitive_suggested: z.boolean().describe("Harassment, threats, safety or personal matter that only admins should see"),
   confidence: z.number().min(0).max(1),
+  is_relevant: z.boolean().default(true).describe("Whether this is a genuine university/campus civic/facility/academic/safety issue. False if spam, test gibberish, homework question, or unrelated."),
+  rejection_reason_en: z.string().max(200).nullable().default(null).describe("If is_relevant is false, polite reason why it's not a campus issue"),
+  rejection_reason_as: z.string().max(250).nullable().default(null).describe("Assamese translation of rejection reason"),
+  has_abusive_image: z.boolean().default(false).describe("True if any uploaded image contains offensive gestures, hate symbols, vulgar graffiti, or targeted harassment"),
+  has_explicit_image: z.boolean().default(false).describe("True if any uploaded image contains explicit, NSFW, sexual, gore, or violent content"),
+  has_ai_image: z.boolean().default(false).describe("True if any uploaded image is AI-generated, synthetic, digital render, or artificial rather than an authentic photo"),
+  image_rejection_reason_en: z.string().max(200).nullable().default(null),
+  image_rejection_reason_as: z.string().max(250).nullable().default(null),
 });
 export type Intake = z.infer<typeof IntakeSchema>;
 

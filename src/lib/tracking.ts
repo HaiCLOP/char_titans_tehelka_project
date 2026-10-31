@@ -102,13 +102,38 @@ async function signPaths(supabase: Client, viewer: NonNullable<Viewer>, bucket: 
   return out;
 }
 
-async function loadLocations(supabase: Client, ids: (string | null)[]) {
+// ponytail: cache static campus locations in memory (5m TTL). Prevents redundant 300-400ms PostgREST queries per ticket fetch.
+let cachedLocations: { data: Map<string, NamedRef>; expiresAt: number } | null = null;
+const LOCATIONS_CACHE_TTL = 5 * 60 * 1000;
+
+async function getAllLocations(supabase: Client): Promise<Map<string, NamedRef>> {
+  const now = Date.now();
+  if (cachedLocations && cachedLocations.expiresAt > now) {
+    return cachedLocations.data;
+  }
+  const { data, error } = await supabase.from("locations").select("id, name_en, name_as");
+  if (error) {
+    console.warn("[tracking] load all locations failed", error.message);
+    if (cachedLocations) return cachedLocations.data;
+    return new Map();
+  }
   const map = new Map<string, NamedRef>();
-  const unique = [...new Set(ids.filter((x): x is string => Boolean(x)))];
-  if (unique.length === 0) return map;
-  const { data } = await supabase.from("locations").select("id, name_en, name_as").in("id", unique);
   for (const l of (data ?? []) as NamedRef[]) map.set(l.id, l);
+  if (map.size > 0) {
+    cachedLocations = { data: map, expiresAt: now + LOCATIONS_CACHE_TTL };
+  }
   return map;
+}
+
+async function loadLocations(supabase: Client, ids: (string | null)[]) {
+  const unique = [...new Set(ids.filter((x): x is string => Boolean(x)))];
+  if (unique.length === 0) return new Map<string, NamedRef>();
+  const all = await getAllLocations(supabase);
+  const out = new Map<string, NamedRef>();
+  for (const id of unique) {
+    if (all.has(id)) out.set(id, all.get(id)!);
+  }
+  return out;
 }
 
 const BASE_LIST_COLUMNS =

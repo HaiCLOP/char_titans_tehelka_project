@@ -18,11 +18,12 @@ import { blobToDataURL } from "@/lib/image";
 import { pickLang } from "@/lib/lang";
 import { cn, toLocaleDigits } from "@/lib/utils";
 import {
-  Button, Card, CardHeader, CategoryChip, Chip, Combobox, Drawer, Input, LangText, PhotoDropzone, PriorityChip, Select,
+  Button, Card, CardHeader, CATEGORY_ICON, CategoryChip, Chip, Combobox, Drawer, Input, LangText, PhotoDropzone, PriorityChip, Select,
   Skeleton, SkeletonText, StatusChip, Switch, Tabs, Textarea, type PhotoItem,
 } from "@/components/ui";
 import { ApiError, apiFetch, isApiError, uploadWithProgress } from "@/components/api-client";
 import { REPORT_DRAFT_KEY } from "@/components/home/composer";
+import { containsAbuse, filterAbusiveText } from "@/lib/moderation";
 import { EmergencyBanner } from "./emergency-banner";
 
 const MIN_CHARS = 15;
@@ -53,13 +54,21 @@ type Overrides = Partial<Pick<Intake, "title_en" | "title_as" | "category" | "pr
 
 const fileName = (blob: Blob) => `photo.${blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg"}`;
 
-export function ReportForm() {
+export type ReportFormProps = {
+  initialLocationId?: string;
+  initialCategory?: string;
+};
+
+export function ReportForm({ initialLocationId, initialCategory }: ReportFormProps = {}) {
   const t = useTranslations("report");
   const tc = useTranslations("category");
   const tp = useTranslations("priority");
   const locale = useLocale();
   const router = useRouter();
   const reduceMotion = useReducedMotion();
+
+  const initialValidCat = initialCategory && (CATEGORIES as readonly string[]).includes(initialCategory) ? (initialCategory as Category) : null;
+  const [userCategory, setUserCategory] = useState<Category | "auto">(initialValidCat ?? "auto");
 
   // ---------- form state ----------
   const [text, setText] = useState("");
@@ -77,7 +86,7 @@ export function ReportForm() {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [failedKey, setFailedKey] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
-  const [overrides, setOverrides] = useState<Overrides>({});
+  const [overrides, setOverrides] = useState<Overrides>(initialValidCat ? { category: initialValidCat } : {});
   const [editing, setEditing] = useState(false);
   const [similar, setSimilar] = useState<{ key: string; items: SimilarItem[] } | null>(null);
   const [dupOpen, setDupOpen] = useState(false);
@@ -114,6 +123,18 @@ export function ReportForm() {
     const id = setTimeout(() => setText((cur) => (cur.trim() ? cur : value)), 0);
     return () => clearTimeout(id);
   }, []);
+
+  // Prefill location from the URL (e.g. from the campus map).
+  useEffect(() => {
+    if (!initialLocationId) return;
+    const ctrl = new AbortController();
+    apiFetch<LocationItem>(`/api/locations?id=${encodeURIComponent(initialLocationId)}`, { signal: ctrl.signal })
+      .then((loc) => {
+        if (loc) setLocation(loc);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [initialLocationId]);
 
   // Latest values for async callbacks (updated after render, read only inside timers/promises).
   const latest = useRef({ text, photos, location, sensitive });
@@ -274,7 +295,44 @@ export function ReportForm() {
   // The preview is only sent with the report when it describes what is written now (small edits are fine).
   const current = preview && requested && preview.key === requested.key && !needsRequest ? preview : null;
   const shown = canAnalyze ? preview : null; // stale preview stays visible while the next one loads
-  const effective: Intake | null = shown ? { ...shown.intake, ...overrides } : null;
+  const effective: Intake | null = shown
+    ? {
+        ...shown.intake,
+        ...overrides,
+        ...(userCategory !== "auto" ? { category: userCategory } : {}),
+      }
+    : userCategory !== "auto"
+      ? ({
+          title_en: text.slice(0, 80) || "Issue report",
+          title_as: text.slice(0, 80) || "সমস্যা প্ৰতিবেদন",
+          summary_en: text.slice(0, 400),
+          summary_as: text.slice(0, 400),
+          category: userCategory,
+          priority: 3,
+          priority_reason_en: "",
+          location_hint: null,
+          is_abusive: false,
+          has_personal_data: false,
+          is_urgent: false,
+          is_sensitive_suggested: false,
+          confidence: 1,
+          is_relevant: true,
+          rejection_reason_en: null,
+          rejection_reason_as: null,
+          has_abusive_image: false,
+          has_explicit_image: false,
+          has_ai_image: false,
+          image_rejection_reason_en: null,
+          image_rejection_reason_as: null,
+        } as Intake)
+      : null;
+  const effectiveCategory: Category = userCategory !== "auto" ? userCategory : (effective?.category ?? "other");
+  const isRelevant = effective?.is_relevant !== false;
+  const isAbusive = Boolean(effective?.is_abusive) || containsAbuse(text);
+  const hasAbusiveImage = Boolean(effective?.has_abusive_image);
+  const hasExplicitImage = Boolean(effective?.has_explicit_image);
+  const hasAiImage = Boolean(effective?.has_ai_image);
+  const isBlocked = !isRelevant || hasExplicitImage || hasAiImage || isAbusive || hasAbusiveImage;
   const titleField = locale === "as" ? "title_as" : "title_en";
   const titleMax = locale === "as" ? 120 : 90;
   const editedTitle = overrides[titleField];
@@ -292,18 +350,49 @@ export function ReportForm() {
   const onSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     setShowErrors(true);
-    if (missingContent || titleError || uploading || uploadFailed) return;
-    const intake = current ? { ...current.intake, ...overrides, [titleField]: (overrides[titleField] ?? current.intake[titleField]).trim() } : undefined;
+
+    // Automatically sanitize and mask any abusive terms
+    let cleanText = trimmed;
+    if (containsAbuse(cleanText)) {
+      const sanitized = filterAbusiveText(cleanText);
+      cleanText = sanitized.cleanText;
+      setText(cleanText);
+    }
+
+    if (missingContent || titleError || uploading || uploadFailed || isBlocked) {
+      if (isAbusive || hasAbusiveImage) toast.error(t("moderation.cannotSubmitAbuse"));
+      else if (!isRelevant) toast.error(t("rejection.cannotSubmit"));
+      else if (hasExplicitImage || hasAiImage) toast.error(t("imageModeration.cannotSubmit"));
+      return;
+    }
+    const intake = current
+      ? {
+          ...current.intake,
+          ...overrides,
+          ...(userCategory !== "auto" ? { category: userCategory } : {}),
+          [titleField]: (overrides[titleField] ?? current.intake[titleField]).trim(),
+        }
+      : effective && userCategory !== "auto"
+        ? {
+            ...effective,
+            category: userCategory,
+            [titleField]: (overrides[titleField] ?? effective[titleField]).trim(),
+          }
+        : undefined;
     submit.mutate({
-      text: trimmed,
+      text: cleanText,
       image_paths: uploadList.flatMap((u) => (u.status === "done" ? [u.path] : [])),
       location_id: location?.id ?? null,
       location_note: locationNote.trim() || null,
       visibility: effectiveVisibility,
       anonymous,
       is_sensitive: sensitive,
-      ...(intake && current
-        ? { intake, intake_source: current.source, ...(current.model ? { intake_model: current.model } : {}) }
+      ...(intake && (current || userCategory !== "auto")
+        ? {
+            intake,
+            intake_source: current ? current.source : "fallback",
+            ...(current?.model ? { intake_model: current.model } : {}),
+          }
         : {}),
     });
   };
@@ -365,6 +454,11 @@ export function ReportForm() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               onBlur={() => {
+                if (containsAbuse(text)) {
+                  const { cleanText } = filterAbusiveText(text);
+                  setText(cleanText);
+                  toast.info(t("moderation.abusiveWordFiltered"));
+                }
                 if (needsRequest) commitRequest();
               }}
               maxLength={MAX_TEXT}
@@ -417,6 +511,76 @@ export function ReportForm() {
                 })}
               </ul>
             )}
+          </Card>
+
+          {/* Category */}
+          <Card className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-title text-[1.0625rem]">{t("category.label")}</h2>
+                <p className="text-xs text-muted-foreground">{t("category.hint")}</p>
+              </div>
+              {userCategory !== "auto" && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setUserCategory("auto");
+                    setOverrides((o) => {
+                      const next = { ...o };
+                      delete next.category;
+                      return next;
+                    });
+                  }}
+                  className="shrink-0 text-xs"
+                >
+                  <RotateCw className="size-3.5" aria-hidden />
+                  {t("category.autoOption")}
+                </Button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              {CATEGORIES.map((c) => {
+                const Icon = CATEGORY_ICON[c];
+                const isSelected = effectiveCategory === c;
+                const isManual = userCategory === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => {
+                      setUserCategory(c);
+                      setOverrides((o) => ({ ...o, category: c }));
+                    }}
+                    className={cn(
+                      "group flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      isSelected
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                        : "border-border bg-surface text-foreground hover:border-border-strong hover:bg-surface-muted/50",
+                    )}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span
+                        className={cn(
+                          "grid size-7 place-items-center rounded-lg transition-colors",
+                          isSelected ? "bg-primary text-primary-foreground" : "bg-surface-muted text-muted-foreground group-hover:text-foreground",
+                        )}
+                      >
+                        <Icon className="size-4" strokeWidth={1.75} aria-hidden />
+                      </span>
+                      {isSelected && !isManual && (
+                        <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                          AI
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium leading-tight">{tc(c)}</span>
+                  </button>
+                );
+              })}
+            </div>
           </Card>
 
           {/* Location */}
@@ -606,7 +770,11 @@ export function ReportForm() {
                       id="preview-category"
                       label={t("preview.categoryLabel")}
                       value={effective.category}
-                      onChange={(e) => setOverrides((o) => ({ ...o, category: e.target.value as Category }))}
+                      onChange={(e) => {
+                        const nextCat = e.target.value as Category;
+                        setUserCategory(nextCat);
+                        setOverrides((o) => ({ ...o, category: nextCat }));
+                      }}
                       options={CATEGORIES.map((c) => ({ value: c, label: tc(c) }))}
                     />
                     <Select
@@ -616,8 +784,15 @@ export function ReportForm() {
                       onChange={(e) => setOverrides((o) => ({ ...o, priority: Number(e.target.value) }))}
                       options={[1, 2, 3, 4].map((p) => ({ value: String(p), label: `P${n(p)} · ${tp(String(p))}` }))}
                     />
-                    {Object.keys(overrides).length > 0 && (
-                      <Button size="sm" variant="ghost" onClick={() => setOverrides({})}>
+                    {(Object.keys(overrides).length > 0 || userCategory !== "auto") && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setUserCategory("auto");
+                          setOverrides({});
+                        }}
+                      >
                         <Undo2 aria-hidden />
                         {t("preview.reset")}
                       </Button>
@@ -675,6 +850,77 @@ export function ReportForm() {
 
           {isUrgent && <EmergencyBanner />}
 
+          {/* Moderation & Relevance Alerts */}
+          {effective && !isRelevant && (
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-xs">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="size-4 shrink-0 text-danger mt-0.5" />
+                <div>
+                  <p className="font-semibold text-danger">{t("rejection.title")}</p>
+                  <p className="mt-1 text-foreground/90 leading-relaxed">
+                    {locale === "as" ? (effective.rejection_reason_as || t("rejection.body")) : (effective.rejection_reason_en || t("rejection.body"))}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {effective && hasExplicitImage && (
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-xs">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="size-4 shrink-0 text-danger mt-0.5" />
+                <div>
+                  <p className="font-semibold text-danger">{t("imageModeration.explicitTitle")}</p>
+                  <p className="mt-1 text-foreground/90 leading-relaxed">
+                    {locale === "as" ? (effective.image_rejection_reason_as || t("imageModeration.explicitBody")) : (effective.image_rejection_reason_en || t("imageModeration.explicitBody"))}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {effective && hasAiImage && (
+            <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-amber-700 dark:text-amber-300">{t("imageModeration.aiTitle")}</p>
+                  <p className="mt-1 text-foreground/90 leading-relaxed">
+                    {locale === "as" ? (effective.image_rejection_reason_as || t("imageModeration.aiBody")) : (effective.image_rejection_reason_en || t("imageModeration.aiBody"))}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {effective && hasAbusiveImage && (
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-xs">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="size-4 shrink-0 text-danger mt-0.5" />
+                <div>
+                  <p className="font-semibold text-danger">{t("moderation.abusiveImageTitle")}</p>
+                  <p className="mt-1 text-foreground/90 leading-relaxed">
+                    {locale === "as" ? (effective.image_rejection_reason_as || t("moderation.abusiveImageBody")) : (effective.image_rejection_reason_en || t("moderation.abusiveImageBody"))}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {effective && isAbusive && (
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-xs">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="size-4 shrink-0 text-danger mt-0.5" />
+                <div>
+                  <p className="font-semibold text-danger">{t("moderation.abusiveTitle")}</p>
+                  <p className="mt-1 text-foreground/90 leading-relaxed">
+                    {locale === "as" ? (effective.abusive_reason_as || t("moderation.abusiveBody")) : (effective.abusive_reason_en || t("moderation.abusiveBody"))}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {rateLimited && (
             <div role="alert" className="rounded-card border border-p2/40 bg-p2/10 p-4 text-sm">
               <p className="font-semibold">{t("errors.rateLimitedTitle")}</p>
@@ -704,9 +950,19 @@ export function ReportForm() {
             </p>
           )}
 
-          <Button type="submit" size="lg" block loading={submit.isPending} disabled={rateLimited}>
+          <Button type="submit" size="lg" block loading={submit.isPending} disabled={rateLimited || isBlocked}>
             {!submit.isPending && <Send aria-hidden />}
-            {submit.isPending ? t("submitting") : uploading ? t("waitingUploads") : t("submit")}
+            {submit.isPending
+              ? t("submitting")
+              : uploading
+                ? t("waitingUploads")
+                : isBlocked
+                  ? isAbusive || hasAbusiveImage
+                    ? t("moderation.cannotSubmitAbuse")
+                    : isRelevant
+                      ? t("imageModeration.cannotSubmit")
+                      : t("rejection.cannotSubmit")
+                  : t("submit")}
           </Button>
           <p className="text-center text-xs text-muted-foreground">{t("submitHint")}</p>
         </div>

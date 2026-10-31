@@ -259,6 +259,32 @@
       "noteLabel": "Where exactly? (optional)",
       "notePlaceholder": "e.g. 2nd floor, near the stairs"
     },
+    "category": {
+      "label": "Category",
+      "hint": "Pick the category or let AI auto-detect from your description.",
+      "autoOption": "Auto-detect (AI)",
+      "selected": "Selected category"
+    },
+    "rejection": {
+      "title": "Not a campus civic issue",
+      "body": "CivicSense is strictly for Dibrugarh University facilities, hostels, infrastructure, and campus services. Please describe a genuine campus issue to submit a report.",
+      "cannotSubmit": "Submission blocked: this is not a campus civic issue."
+    },
+    "imageModeration": {
+      "explicitTitle": "Inappropriate image detected",
+      "explicitBody": "Images containing nudity, violence, or explicit material are strictly prohibited.",
+      "aiTitle": "AI-generated image detected",
+      "aiBody": "CivicSense requires authentic photos of the actual campus issue. AI-generated, synthetic, or digitally rendered images cannot be accepted.",
+      "cannotSubmit": "Submission blocked: please remove or replace the flagged photo."
+    },
+    "moderation": {
+      "abusiveTitle": "Abusive or offensive language detected",
+      "abusiveBody": "CivicSense is a respectful campus platform. Please remove profanity, insults, or personal attacks.",
+      "abusiveWordFiltered": "Inappropriate language was automatically filtered.",
+      "abusiveImageTitle": "Offensive or abusive image detected",
+      "abusiveImageBody": "Photos containing offensive gestures, hate symbols, vulgar graffiti, or harassment are prohibited.",
+      "cannotSubmitAbuse": "Submission blocked: please remove abusive language or images."
+    },
     "privacy": {
       "title": "Privacy",
       "visibility": "Who can see this report?",
@@ -586,6 +612,10 @@
     "sortLabel": "Sort buildings",
     "sortCount": "Most issues",
     "sortName": "A–Z",
+    "searchPlaceholder": "Search building or department...",
+    "searchEmpty": "No matching buildings found.",
+    "reportHere": "Report issue at this location",
+    "pinTooltip": "{count} issues",
     "openCount": "{count, plural, =0 {No open issues} one {{n} open} other {{n} open}}",
     "fixedCount": "{n} fixed",
     "noBuilding": "No building given",

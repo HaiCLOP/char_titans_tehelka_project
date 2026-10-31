@@ -19,6 +19,7 @@ import { autoAssign } from "@/lib/assign";
 import { engineFetch } from "@/lib/engine";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAssameseText } from "@/lib/utils";
+import { filterAbusiveText } from "@/lib/moderation";
 
 /** Safe auto-routing threshold (PRD rule 1). */
 export const AUTO_ROUTE_CONFIDENCE = 0.75;
@@ -120,6 +121,10 @@ export async function submitComplaint(
   profile: Profile,
   input: SubmitInput,
 ): Promise<SubmitResult> {
+  // Automatically filter and mask abusive words from input text
+  const { cleanText, hasAbuse } = filterAbusiveText(input.text);
+  input.text = cleanText;
+
   // Photo paths must be the caller's own uploads (storage RLS also enforces this on upload).
   if (input.image_paths.some((p) => !p.startsWith(`${user.id}/`))) {
     throw new PipelineError("VALIDATION_ERROR", "Photos must be your own uploads");
@@ -171,6 +176,23 @@ export async function submitComplaint(
     };
   }
   if (intake.is_urgent) intake = { ...intake, priority: 1 };
+
+  if (intake.is_relevant === false) {
+    throw new PipelineError("VALIDATION_ERROR", intake.rejection_reason_en || "Only genuine campus civic, facility, or safety issues can be submitted");
+  }
+  if (intake.has_abusive_image || intake.has_explicit_image) {
+    throw new PipelineError("VALIDATION_ERROR", intake.image_rejection_reason_en || "Abusive, offensive, or explicit images are strictly prohibited");
+  }
+  if (intake.has_ai_image) {
+    throw new PipelineError("VALIDATION_ERROR", intake.image_rejection_reason_en || "AI-generated or synthetic images are not permitted");
+  }
+  if (intake.is_abusive && (hasAbuse || !intake.is_relevant)) {
+    throw new PipelineError("VALIDATION_ERROR", intake.abusive_reason_en || "Abusive language or personal attacks are strictly prohibited");
+  }
+  if (intake.is_abusive) {
+    input.is_sensitive = true;
+    input.visibility = "private";
+  }
 
   // ---- embed ∥ route ----
   const [embedding, deptRes] = await Promise.all([
