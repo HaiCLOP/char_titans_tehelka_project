@@ -21,6 +21,7 @@ export type IssueCardData = {
   created_at: string;
   /** Signed URL of the first photo, or null. */
   photo_url?: string | null;
+  thumb?: string | null;
   location?: { name_en: string; name_as: string } | null;
 };
 
@@ -40,11 +41,12 @@ type IssueCardProps = {
 function Photo({ issue, className }: { issue: IssueCardData; className?: string }) {
   const t = useTranslations("ui");
   const Icon = CATEGORY_ICON[issue.category];
+  const imgUrl = issue.photo_url ?? issue.thumb ?? null;
   return (
     <div className={cn("relative overflow-hidden bg-surface-muted", className)}>
-      {issue.photo_url ? (
+      {imgUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- signed Supabase URLs expire; skip the optimiser
-        <img src={issue.photo_url} alt={t("photoAlt")} loading="lazy" className="size-full object-cover" />
+        <img src={imgUrl} alt={t("photoAlt")} loading="lazy" className="size-full object-cover" />
       ) : (
         <div className="grid size-full place-items-center text-muted-foreground/70">
           <Icon className="size-8" aria-hidden />
@@ -78,7 +80,7 @@ export function IssueCard({ issue, href, showStatus = true, showCategory = false
     </div>
   );
 
-  const hasPhoto = Boolean(issue.photo_url);
+  const hasPhoto = Boolean(issue.photo_url || issue.thumb);
   const body = compact ? (
     <div className="flex items-start gap-3 p-3 sm:p-3.5">
       <Photo
