@@ -81,17 +81,27 @@ export function PhotoDropzone({ value, onChange, max = 3, label, hint, error, di
     stopCamera();
     setCameraError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: facing },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: false,
+        });
+      } catch {
+        // Fallback constraint if high-res profile is rejected by mobile hardware
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing },
+          audio: false,
+        });
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        void videoRef.current.play().catch(() => {});
       }
     } catch (err) {
       console.warn("[camera] getUserMedia failed:", err);
@@ -101,12 +111,8 @@ export function PhotoDropzone({ value, onChange, max = 3, label, hint, error, di
 
   const handleCameraClick = () => {
     if (disabled || full) return;
-    const isMobile = typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-    if (isMobile) {
-      cameraRef.current?.click();
-      return;
-    }
 
+    // Use live in-app camera on both mobile and desktop to bypass file manager
     if (typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia)) {
       setCameraModalOpen(true);
       void startCamera(facingMode);
