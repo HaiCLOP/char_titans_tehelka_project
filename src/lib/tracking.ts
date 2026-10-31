@@ -23,6 +23,7 @@ import {
 } from "@/lib/domain";
 import { PipelineError } from "@/lib/complaints";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { CivicShieldReport } from "@/lib/civicshield";
 import { isAssameseText } from "@/lib/utils";
 
 /**
@@ -622,6 +623,7 @@ export async function getComplaintDetail(
       confidence: num(meta.confidence),
       priority_reason_en: str(meta.priority_reason_en),
       auto_routed: typeof meta.auto_routed === "boolean" ? meta.auto_routed : null,
+      civicshield: (meta.civicshield as CivicShieldReport | null) ?? null,
     };
   }
   return ComplaintDetailSchema.parse(detail);

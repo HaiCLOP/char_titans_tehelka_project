@@ -26,6 +26,7 @@ import { ResolveDrawer } from "@/components/staff/resolve-drawer";
 import { TicketChat } from "@/components/chat/ticket-chat";
 import { ReplyDraftPanel } from "@/components/assist/reply-draft-panel";
 import { ResolutionCheckPanel } from "@/components/assist/resolution-check-panel";
+import { CivicShieldCard } from "./civicshield-card";
 
 const KNOWN_EVENTS = ["created", "status", "assigned", "note", "metoo", "ai"];
 const isOpen = (s: Status) => (OPEN_STATUSES as readonly Status[]).includes(s);
@@ -499,6 +500,7 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
           <PhotoCarousel photos={d.photos} />
           <SummaryCard d={d} />
           <AiCard d={d} />
+          <CivicShieldCard data={d.ai?.civicshield} hasPhotos={d.photos.length > 0} />
 
           {d.resolution && (
             <Card>

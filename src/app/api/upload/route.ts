@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES, type UploadResult } from "@/lib/domain";
 import { fail, ok, requireUser } from "@/lib/api";
+import { inspectImageProvenance } from "@/lib/civicshield";
 
 const EXT: Record<(typeof ALLOWED_IMAGE_TYPES)[number], string> = {
   "image/jpeg": "jpg",
@@ -17,31 +18,19 @@ function sniff(b: Uint8Array): (typeof ALLOWED_IMAGE_TYPES)[number] | null {
   return null;
 }
 
-/** Sniffs metadata in PNG/JPEG/WebP headers to detect AI generator signatures. */
-function isAIGeneratedMetadata(b: Uint8Array): boolean {
-  const sampleSize = Math.min(b.length, 65536);
-  // Check the head (where PNG text chunks and JPEG EXIF usually live) and tail
-  const head = String.fromCharCode(...b.subarray(0, sampleSize));
-  const tail = b.length > sampleSize ? String.fromCharCode(...b.subarray(b.length - Math.min(b.length - sampleSize, 16384))) : "";
-  const text = head + " " + tail;
-
-  const patterns = [
-    /parameters\s*:\s*[^\x00]{10,}/i,
-    /Negative\s+prompt\s*:/i,
-    /Steps\s*:\s*\d+,\s*Sampler\s*:/i,
-    /Software[\x00-\x20]+(Stable\s*Diffusion|Midjourney|NovelAI|DALL[-·]?E)/i,
-    /comfyui|civitai\.com|dreamstudio|invokeai/i,
-    /prompt[\x00-\x20]*:\s*\{"class_type"/i,
-  ];
-
-  return patterns.some((p) => p.test(text));
-}
-
 // Complaint photo → complaint-photos/{uid}/{uuid}.{ext}, written with the user's client (storage RLS: folder = uid).
 export async function POST(req: Request) {
   const auth = await requireUser();
   if (auth instanceof Response) return auth;
   const { user, supabase } = auth;
+
+  // Rate limit uploads to prevent DoS (20 uploads per hour per user)
+  const { data: allowed, error: rlError } = await supabase.rpc("check_rate_limit", { max_per_hour: 20 });
+  if (rlError) {
+    console.warn("[upload] rate limit check warning:", rlError.message);
+  } else if (allowed === false) {
+    return fail("RATE_LIMITED", "Upload rate limit reached. Please wait before uploading more photos.");
+  }
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
@@ -55,8 +44,9 @@ export async function POST(req: Request) {
     return fail("VALIDATION_ERROR", "Only JPEG, PNG or WebP images are allowed");
   }
 
-  // Reject AI-generated images with generator metadata
-  if (isAIGeneratedMetadata(bytes)) {
+  // CivicShield evidence provenance inspection
+  const provenance = inspectImageProvenance(bytes);
+  if (provenance.has_ai_metadata || provenance.c2pa === "present_ai") {
     return fail("VALIDATION_ERROR", "AI-generated or synthetic images are not permitted. Please upload an authentic photo of the campus issue.");
   }
 
@@ -68,5 +58,9 @@ export async function POST(req: Request) {
     console.error("[upload] storage error", error.message);
     return fail("INTERNAL", "Could not store the image");
   }
-  return ok<UploadResult>({ path });
+  return ok<UploadResult>({
+    path,
+    sha256: provenance.sha256,
+    received_at: provenance.received_at,
+  });
 }

@@ -144,6 +144,12 @@ func ParseIntake(raw string) (Intake, error) {
 	if m.Confidence != nil {
 		out.Confidence = math.Max(0, math.Min(1, *m.Confidence))
 	}
+	missingSafety := m.IsAbusive == nil || m.IsUrgent == nil || m.IsSensitiveSuggested == nil || m.IsRelevant == nil
+	if missingSafety {
+		// Missing safety fields must trigger manual review (Item 2)
+		out.IsSensitiveSuggested = true
+		out.Confidence = 0.5
+	}
 	if out.IsUrgent {
 		out.Priority = 1 // PRD rule 5
 	}

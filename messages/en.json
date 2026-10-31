@@ -840,6 +840,38 @@
         "fallback": "Keyword fallback"
       }
     },
+    "civicshield": {
+      "title": "CivicShield Evidence Integrity",
+      "subtitle": "AI provenance, watermark verification & image analysis",
+      "status": "Integrity status",
+      "c2pa": "C2PA credentials",
+      "watermark": "Supported watermark",
+      "visual": "Visual AI classifier",
+      "manipulation": "Image manipulation",
+      "match": "Complaint-image match",
+      "recommendation": "Administrator recommendation",
+      "sha256": "SHA-256 evidence hash",
+      "receivedAt": "Server receipt",
+      "badge": {
+        "verified_signals": "Verified signals",
+        "no_ai_signals": "No AI signal detected",
+        "needs_review": "Needs review",
+        "ai_detected": "AI provenance detected"
+      },
+      "val": {
+        "present_ai": "Signed AI generation",
+        "present_verified": "Verified camera signature",
+        "not_present": "Not present",
+        "detected": "Detected",
+        "not_detected": "Not detected",
+        "authentic_indicators": "Consistent scene",
+        "inconclusive": "Inconclusive",
+        "suspect": "Suspect synthetic",
+        "clean": "Clean",
+        "match": "Consistent with report",
+        "discrepancy": "Discrepancy"
+      }
+    },
     "notes": {
       "title": "Internal notes",
       "body": "Only admins and the assigned staff see these.",

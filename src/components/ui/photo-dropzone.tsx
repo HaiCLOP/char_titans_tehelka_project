@@ -2,7 +2,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, Camera, ImagePlus, Loader2, RefreshCw, ShieldAlert, X } from "lucide-react";
-import { compressImage } from "@/lib/image";
 import { cn, toLocaleDigits } from "@/lib/utils";
 import { Dialog } from "./dialog";
 import { Field } from "./form";
@@ -47,7 +46,7 @@ export function PhotoDropzone({ value, onChange, max = 3, label, hint, error, di
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const [busy, setBusy] = useState(0);
+  const busy = 0;
   const [drag, setDrag] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -159,21 +158,13 @@ export function PhotoDropzone({ value, onChange, max = 3, label, hint, error, di
     const take = images.slice(0, Math.max(0, room));
     if (images.length > take.length) setLocalError(t("tooMany", { max: toLocaleDigits(max, locale) }));
     if (take.length === 0) return;
-    setBusy((b) => b + take.length);
-    const results = await Promise.all(
-      take.map(async (file) => {
-        try {
-          const blob = await compressImage(file);
-          return { id: newId(), blob, url: URL.createObjectURL(blob), name: file.name } satisfies PhotoItem;
-        } catch {
-          return null;
-        } finally {
-          setBusy((b) => b - 1);
-        }
-      }),
-    );
-    const ok = results.filter((r): r is PhotoItem => r !== null);
-    if (ok.length < take.length) setLocalError(t("invalid"));
+    // Preserve untouched original file as primary evidence to maintain C2PA / EXIF / SHA-256 provenance (Item 5)
+    const ok: PhotoItem[] = take.map((file) => ({
+      id: newId(),
+      blob: file,
+      url: URL.createObjectURL(file),
+      name: file.name,
+    }));
     onChange([...latest.current, ...ok].slice(0, max));
   }
 

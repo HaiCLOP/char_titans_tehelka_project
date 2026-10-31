@@ -7,7 +7,7 @@ import { useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import {
   AlertTriangle, ArrowDown, CheckCircle2, CloudUpload, EyeOff, Globe2, Lock, MapPin, Pencil, RotateCw, Send,
-  ShieldAlert, ScanText, Undo2, Users,
+  ShieldAlert, ScanText, Sparkles, Undo2, Users,
 } from "lucide-react";
 import {
   CATEGORIES, COMPLAINTS_PER_HOUR, MAX_PHOTOS, type Category, type Intake, type LocationItem, type SimilarItem, type SubmitComplaintInput,
@@ -541,7 +541,63 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+            {/* Mobile: compact single-row horizontal scrolling chips (saves ~400px vertical space on phones) */}
+            <div className="sm:hidden -mx-1 px-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserCategory("auto");
+                    setOverrides((o) => {
+                      const next = { ...o };
+                      delete next.category;
+                      return next;
+                    });
+                  }}
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                    userCategory === "auto"
+                      ? "border-primary bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "border-border bg-surface text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Sparkles className="size-3" aria-hidden />
+                  <span>{t("category.autoOption")}</span>
+                </button>
+                {CATEGORIES.map((c) => {
+                  const Icon = CATEGORY_ICON[c];
+                  const isSelected = effectiveCategory === c;
+                  const isManual = userCategory === c;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        setUserCategory(c);
+                        setOverrides((o) => ({ ...o, category: c }));
+                      }}
+                      className={cn(
+                        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground font-semibold shadow-xs"
+                          : "border-border bg-surface text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <Icon className="size-3.5" strokeWidth={2} aria-hidden />
+                      <span>{tc(c)}</span>
+                      {isSelected && !isManual && (
+                        <span className="rounded-full bg-primary-foreground/20 px-1 py-0.2 text-[9px] font-bold">
+                          AI
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tablet & Desktop: clean responsive grid */}
+            <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-4 gap-2">
               {CATEGORIES.map((c) => {
                 const Icon = CATEGORY_ICON[c];
                 const isSelected = effectiveCategory === c;

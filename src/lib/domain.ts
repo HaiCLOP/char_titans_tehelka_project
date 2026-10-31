@@ -93,7 +93,11 @@ export const MAX_PHOTOS = 3;
 export const COMPLAINTS_PER_HOUR = 5;
 
 /** `POST /api/upload` (multipart, field `file`) → */
-export const UploadResultSchema = z.object({ path: z.string() });
+export const UploadResultSchema = z.object({
+  path: z.string(),
+  sha256: z.string().optional(),
+  received_at: z.string().optional(),
+});
 export type UploadResult = z.infer<typeof UploadResultSchema>;
 
 /** Storage path returned by /api/upload: `<uid>/<uuid>.<ext>` inside the complaint-photos bucket. */
@@ -339,6 +343,20 @@ export const ComplaintDetailSchema = ComplaintListItemSchema.extend({
       confidence: z.number().nullable(),
       priority_reason_en: z.string().nullable(),
       auto_routed: z.boolean().nullable(),
+      civicshield: z
+        .object({
+          status: z.enum(["verified_signals", "no_ai_signals", "needs_review", "ai_detected"]),
+          c2pa: z.enum(["present_ai", "present_verified", "not_present"]),
+          watermark: z.enum(["detected", "not_detected"]),
+          visual_classifier: z.enum(["authentic_indicators", "inconclusive", "suspect"]),
+          manipulation: z.enum(["clean", "needs_review"]),
+          context_match: z.enum(["match", "discrepancy", "inconclusive"]),
+          recommendation_en: z.string(),
+          recommendation_as: z.string(),
+          hashes: z.array(z.object({ path: z.string(), sha256: z.string(), received_at: z.string() })).default([]),
+        })
+        .nullable()
+        .optional(),
     })
     .nullable()
     .optional(),
