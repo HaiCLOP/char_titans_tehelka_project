@@ -56,6 +56,10 @@ export const GetComplaintInput = z.object({
   code: z.string().trim().regex(/^CS-[A-Z0-9]{6}$/i, "Ticket codes look like CS-AB12CD").describe("Ticket code, e.g. CS-AB12CD"),
 });
 
+export const SearchTicketsInput = z.object({
+  query: z.string().trim().min(3).max(300).describe("What to look for, in any language, e.g. \"water leak in the library\" or \"how was the hostel Wi-Fi fixed\""),
+});
+
 // ---------- tool outputs (validated before the model sees them) ----------
 
 const count = z.number().int().nonnegative();
@@ -122,8 +126,27 @@ export const GetComplaintOutput = z.object({
   }).nullable(),
 });
 
+/** Past tickets found by meaning (RAG, src/lib/rag.ts), with how they were resolved. */
+export const SearchTicketsOutput = z.object({
+  rows: z.array(z.object({
+    code: z.string(),
+    title_en: z.string().nullable(),
+    title_as: z.string().nullable(),
+    summary_en: z.string().nullable(),
+    category: z.enum(CATEGORIES),
+    status: z.enum(STATUSES),
+    location_en: z.string().nullable(),
+    location_as: z.string().nullable(),
+    resolution_note_en: z.string().nullable(),
+    resolution_note_as: z.string().nullable(),
+    created_at: z.string(),
+    resolved_at: z.string().nullable(),
+    match: z.number(),
+  })),
+});
+
 export const TOOL_NAMES = [
-  "stats", "trend", "top_locations", "by_category", "department_load", "list_complaints", "get_complaint",
+  "stats", "trend", "top_locations", "by_category", "department_load", "list_complaints", "get_complaint", "search_tickets",
 ] as const;
 export type ToolName = (typeof TOOL_NAMES)[number];
 

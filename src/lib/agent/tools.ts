@@ -7,10 +7,12 @@ import en from "../../../messages/en.json";
 import as from "../../../messages/as.json";
 import {
   ByCategoryInput, ByCategoryOutput, DepartmentLoadInput, DepartmentLoadOutput, GetComplaintInput, GetComplaintOutput,
-  ListComplaintsInput, ListComplaintsOutput, StatsInput, StatsOutput, TopLocationsInput, TopLocationsOutput,
+  ListComplaintsInput, ListComplaintsOutput, SearchTicketsInput, SearchTicketsOutput, StatsInput, StatsOutput,
+  TopLocationsInput, TopLocationsOutput,
   TrendInput, TrendOutput, type AgentTrace, type ToolName,
 } from "./schema";
 import { canCompareDepartments, type AgentScope } from "./scope";
+import { retrieveTickets } from "@/lib/rag";
 
 /*
  * Read-only agent tools (PRD section 9). Every query is scoped here, on the server, from `scope`:
@@ -253,6 +255,24 @@ export function buildAgentTools(db: SupabaseClient, scope: AgentScope, sink: Too
     (o) => ({ rows: o.found ? 1 : 0, top: null }),
   );
 
+  const searchTickets = traced(
+    "search_tickets",
+    "Find past complaints similar in meaning to a description (works across English and Assamese), with their status and how they were resolved. Use it for \"has this happened before\", \"how was X fixed\", or questions about a kind of problem rather than counts.",
+    SearchTicketsInput, SearchTicketsOutput,
+    async ({ query }) => {
+      const rows = await retrieveTickets(db, query, dept);
+      return {
+        rows: rows.map((r) => ({
+          code: r.code, title_en: r.title_en, title_as: r.title_as, summary_en: r.summary_en,
+          category: r.category, status: r.status, location_en: r.location_en, location_as: r.location_as,
+          resolution_note_en: r.resolution_note_en, resolution_note_as: r.resolution_note_as,
+          created_at: r.created_at, resolved_at: r.resolved_at, match: Math.round(r.similarity * 100) / 100,
+        })),
+      };
+    },
+    (o) => ({ rows: o.rows.length, top: null }),
+  );
+
   return {
     stats,
     trend,
@@ -260,6 +280,7 @@ export function buildAgentTools(db: SupabaseClient, scope: AgentScope, sink: Too
     by_category: byCategory,
     list_complaints: listComplaints,
     get_complaint: getComplaint,
+    search_tickets: searchTickets,
     // Not even offered to the model unless the caller may compare departments.
     ...(canCompareDepartments(scope) ? { department_load: departmentLoad } : {}),
   };

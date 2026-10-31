@@ -1323,7 +1323,8 @@
       "by_category": "শ্ৰেণী অনুসৰি",
       "department_load": "বিভাগসমূহৰ তুলনা",
       "list_complaints": "অভিযোগৰ তালিকা",
-      "get_complaint": "এটা অভিযোগ"
+      "get_complaint": "এটা অভিযোগ",
+      "search_tickets": "একে ধৰণৰ পুৰণি অভিযোগ"
     },
     "chart": {
       "reported": "জমা পৰা",

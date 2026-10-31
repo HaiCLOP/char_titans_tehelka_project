@@ -1323,7 +1323,8 @@
       "by_category": "By category",
       "department_load": "Departments compared",
       "list_complaints": "Complaint list",
-      "get_complaint": "One complaint"
+      "get_complaint": "One complaint",
+      "search_tickets": "Similar past tickets"
     },
     "chart": {
       "reported": "Reported",

@@ -2,7 +2,7 @@ import "server-only";
 import { glossaryText } from "@/lib/ai/glossary";
 import type { AgentLang } from "./schema";
 
-export const AGENT_PROMPT_VERSION = "agent-v1";
+export const AGENT_PROMPT_VERSION = "agent-v2";
 
 export function agentInstructions(opts: {
   lang: AgentLang;
@@ -35,6 +35,7 @@ export function agentInstructions(opts: {
     opts.canCompareDepartments
       ? '- For "which department" questions use department_load.'
       : "- You only see one department, so you cannot compare departments; say so if asked, and answer for this department.",
+    "- For questions about a kind of problem, whether it happened before, or how something was fixed, use search_tickets and base the answer on the tickets it returns; mention their ticket codes (e.g. CS-AB12CD) so the admin can open them.",
     "- If the question is not about campus complaints, say briefly that you can only answer questions about complaints.",
     "- Keep the answer short: 1–4 sentences, plain text, no tables, no markdown headings. Lead with the direct answer and the number.",
     "- Never reveal reporter identities. Tools never return them; do not speculate.",

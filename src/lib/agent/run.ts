@@ -10,6 +10,7 @@ import {
 } from "./schema";
 import { canCompareDepartments, type AgentScope } from "./scope";
 import { buildAgentTools, type ToolSink } from "./tools";
+import { cacheGet, cacheSet } from "@/lib/redis";
 
 type ToolName = ToolSink["outputs"][number]["tool"];
 
@@ -110,8 +111,14 @@ export async function askAgent(db: SupabaseClient, scope: AgentScope, req: Pick<
   const cacheKey = req.history.length ? null : `${scope.departmentId ?? "all"}|${req.question.trim().toLowerCase().replace(/\s+/g, " ")}`;
   const hit = cacheKey ? answers.get(cacheKey) : undefined;
   if (hit && Date.now() - hit.at < ANSWER_TTL_MS) return { ...hit.value, ms: Date.now() - started };
+  // Shared across server processes through Redis (same one-minute window).
+  const redisKey = cacheKey ? `cs:agent:v2:${cacheKey}` : null;
+  const shared = redisKey ? await cacheGet<AgentAnswer>(redisKey) : null;
+  const sharedOk = shared ? AgentAnswerSchema.safeParse(shared) : null;
+  if (sharedOk?.success) return { ...sharedOk.data, ms: Date.now() - started };
 
   const result = await answerQuestion(db, scope, req, lang, started);
+  if (redisKey) await cacheSet(redisKey, result, ANSWER_TTL_MS / 1000);
   if (cacheKey) {
     answers.set(cacheKey, { at: Date.now(), value: result });
     if (answers.size > 200) answers.delete(answers.keys().next().value as string);
@@ -208,6 +215,8 @@ async function tryFastPath(
       ...(category ? [call(tools, "top_locations", { days, category })] : []),
       ...(compare ? [call(tools, "department_load", { days })] : []),
       call(tools, "trend", { days: Math.max(days, 14) }),
+      // RAG: past tickets closest in meaning to the question (embedding cached in Redis).
+      call(tools, "search_tickets", { query: question.slice(0, 300) }),
     ]);
   } catch {
     return null; // any data error → the regular tool loop decides what to do
