@@ -8,6 +8,7 @@
     "report": "Report Issue",
     "myReports": "My Reports",
     "map": "Campus Map",
+    "pulse": "Campus Pulse",
     "notifications": "Notifications",
     "community": "Community",
     "guidelines": "Guidelines",
@@ -20,6 +21,7 @@
     "reportShort": "Report",
     "myReportsShort": "My reports",
     "mapShort": "Map",
+    "pulseShort": "Pulse",
     "admin": {
       "title": "Admin",
       "subtitle": "CivicSense admin",
@@ -1303,5 +1305,28 @@
       "forbidden": "You don't have access to the assistant.",
       "validation": "Ask a question of 2 to 500 characters."
     }
+  },
+  "pulse": {
+    "title": "Campus Pulse",
+    "eyebrow": "Live Campus Velocity",
+    "subtitle": "How quickly campus problems are being fixed, from live numbers. Counts include every report; only public issues are listed.",
+    "fixedWeek": "Fixed this week",
+    "fixedWeekDesc": "Marked fixed in the last 7 days",
+    "avgTime": "Average time to fix",
+    "avgTimeDesc": "From report to fix, all issues so far",
+    "openNow": "Open now",
+    "openNowDesc": "{count, plural, one {{n} being worked on} other {{n} being worked on}}",
+    "trendTitle": "Reported and fixed",
+    "trendSubtitle": "Last 14 days",
+    "legendReported": "Reported",
+    "legendFixed": "Fixed",
+    "categoriesTitle": "What gets reported",
+    "categoriesSubtitle": "Last 30 days",
+    "categoriesEmpty": "No issues reported in the last 30 days.",
+    "recentFixedTitle": "Recently fixed",
+    "recentFixedSubtitle": "Public issues, newest fix first.",
+    "seeAll": "See all",
+    "emptyRecentTitle": "Nothing fixed yet",
+    "emptyRecentBody": "Fixed public issues will appear here as soon as staff close them."
   }
 }

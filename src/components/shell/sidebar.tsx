@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Bell, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
+import { Activity, Bell, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { BrandMark } from "./brand-mark";
 import { NavLink } from "./nav-link";
 
 const MAIN = [
   { href: "/", key: "home", icon: House, exact: true },
+  { href: "/pulse", key: "pulse", icon: Activity },
   { href: "/report", key: "report", icon: Plus, isCta: true },
   { href: "/my", key: "myReports", icon: ClipboardList },
   { href: "/map", key: "map", icon: Map },
