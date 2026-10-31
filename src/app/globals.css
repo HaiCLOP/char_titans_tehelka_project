@@ -167,13 +167,83 @@ a { text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
-html[lang="as"] .text-display,
-html[lang="as"] .text-title { letter-spacing: 0; line-height: 1.3; }
-html[lang="as"] .eyebrow { letter-spacing: 0.02em; text-transform: none; font-size: 0.75rem; }
+/* ---------- Assamese (অসমীয়া) UI Typography Optimisations ----------
+   Indic scripts with matras and conjuncts (যুক্তাক্ষৰ) must never get negative tracking (which crushes
+   glyphs into cursive-looking knots) or tight leading (which collides top/bottom diacritics).
+   Font-family prioritises Noto Sans Bengali so punctuation, digits, and words share the same baseline. */
+html[lang="as"] {
+  --font-sans: var(--font-assamese), var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-assamese), var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "liga" 1, "clig" 1, "kern" 1;
+}
 
-/* Assamese conjuncts need more room */
-html[lang="as"] body { line-height: 1.6; }
-html[lang="as"] .text-sm { font-size: 0.9375rem; }
+html[lang="as"] body {
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+}
+
+/* Neutralise all negative tracking on Assamese text across Tailwind classes and elements */
+html[lang="as"] [class*="tracking-"],
+[lang="as"][class*="tracking-"],
+[lang="as"] [class*="tracking-"] {
+  letter-spacing: 0.015em !important;
+}
+
+/* Open up tight leading so upper/lower matras (ি, ী, ু, ূ, ৰেফ, চান্দবিন্দু) have vertical breathing room */
+html[lang="as"] [class*="leading-none"],
+html[lang="as"] [class*="leading-tight"],
+html[lang="as"] [class*="leading-snug"],
+[lang="as"][class*="leading-none"],
+[lang="as"][class*="leading-tight"],
+[lang="as"][class*="leading-snug"] {
+  line-height: 1.45 !important;
+}
+
+/* Headings in Assamese: relaxed line height and clean neutral letter spacing */
+html[lang="as"] h1,
+html[lang="as"] h2,
+html[lang="as"] h3,
+html[lang="as"] h4,
+[lang="as"] h1,
+[lang="as"] h2,
+[lang="as"] h3 {
+  letter-spacing: 0.01em !important;
+  line-height: 1.35 !important;
+}
+
+html[lang="as"] .text-display,
+html[lang="as"] .text-title {
+  letter-spacing: 0.01em !important;
+  line-height: 1.35 !important;
+}
+
+html[lang="as"] .eyebrow {
+  letter-spacing: 0.04em !important;
+  text-transform: none;
+  font-size: 0.75rem !important;
+}
+
+/* Optical font size tuning: Assamese x-height is optically smaller due to diacritics;
+   bumping 12px → 13px and 14px → 15px makes small text instantly crisp, clean and legible */
+html[lang="as"] .text-xs,
+[lang="as"] .text-xs {
+  font-size: 0.8125rem !important; /* 13px */
+  line-height: 1.5 !important;
+}
+
+html[lang="as"] .text-sm,
+[lang="as"] .text-sm {
+  font-size: 0.9375rem !important; /* 15px */
+  line-height: 1.6 !important;
+}
+
+html[lang="as"] .text-\[10px\],
+html[lang="as"] .text-\[10\.5px\],
+[lang="as"] .text-\[10px\],
+[lang="as"] .text-\[10\.5px\] {
+  font-size: 0.75rem !important; /* 12px minimum threshold for complex conjuncts */
+  line-height: 1.35 !important;
+}
 
 /* Scrollbars carry the palette too */
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
