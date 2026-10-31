@@ -80,7 +80,7 @@ function TraceList({ trace, model, ms, lang }: { trace: AgentTrace[]; model: str
               <span className="font-medium">
                 {t(`tools.${step.tool}`)} <code className="ml-1 text-xs text-muted-foreground">{step.tool}</code>
               </span>
-              <span className="tabular text-xs text-muted-foreground">{n(step.ms)} ms</span>
+              <span className="tabular text-xs text-muted-foreground">{t("trace.ms", { n: n(step.ms) })}</span>
             </div>
             {Object.keys(step.input).length > 0 && (
               <p className="mt-1 font-mono text-xs break-words text-muted-foreground">
@@ -104,7 +104,7 @@ function TraceList({ trace, model, ms, lang }: { trace: AgentTrace[]; model: str
             </p>
           </div>
         ))}
-        <p className="text-xs text-subtle-foreground">{t("trace.meta", { model, seconds: n((ms / 1000).toFixed(1)) })}</p>
+        <p className="text-xs text-muted-foreground">{t("trace.meta", { model, seconds: n((ms / 1000).toFixed(1)) })}</p>
       </div>
     </details>
   );
@@ -211,7 +211,7 @@ export function AgentChat({ role, departments }: { role: "dept_admin" | "super_a
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               disabled={busy}
-              className="h-9 max-w-[14rem] rounded-full border border-border bg-surface px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="h-10 max-w-[14rem] rounded-full border border-border bg-surface px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <option value="">{t("scopeAll")}</option>
               {departments.map((d) => (
@@ -317,7 +317,7 @@ export function AgentChat({ role, departments }: { role: "dept_admin" | "super_a
             <ArrowUp strokeWidth={1.75} aria-hidden />
           </Button>
         </div>
-        <p className="mt-2 px-1 text-xs text-subtle-foreground">{t("disclaimer")}</p>
+        <p className="mt-2 px-1 text-xs text-muted-foreground">{t("disclaimer")}</p>
       </form>
     </div>
   );

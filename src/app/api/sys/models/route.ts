@@ -4,6 +4,7 @@ import { fail, failFrom, ok, parseJson } from "@/lib/api";
 import { AI_PURPOSES } from "@/lib/ai/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { invalidateRouters, listChains, requireSysApi } from "@/lib/sys";
+import { audit } from "@/lib/audit";
 
 // S22: model chain per purpose (ai_providers). OpenRouter is free models only: ids ending ":free" or "auto:free".
 
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
     const priority = Math.max(0, ...(rows ?? []).map((r) => r.priority as number)) + 10;
     const { error } = await db.from("ai_providers").insert({ ...body, caps, priority, enabled: true });
     if (error) throw new Error(error.message);
+    await audit(auth.user.id, "model.create", "ai_providers", { purpose: body.purpose, provider: body.provider, model: body.model });
     return await after();
   } catch (e) {
     return failFrom(e, "add the model");
@@ -83,7 +85,8 @@ export async function PATCH(req: Request) {
     if ("enabled" in body) {
       const { error } = await db.from("ai_providers").update({ enabled: body.enabled }).eq("id", body.id);
       if (error) throw new Error(error.message);
-      return await after();
+      await audit(auth.user.id, "model.update", `ai_providers:${body.id}`, { changes: body });
+    return await after();
     }
     // Reorder: renumber the purpose's whole chain 10, 20, 30… so equal priorities never make the order ambiguous.
     const { data: chain, error: readErr } = await db.from("ai_providers").select("id").eq("purpose", row.purpose).order("priority").order("id");
@@ -96,6 +99,7 @@ export async function PATCH(req: Request) {
     const results = await Promise.all(ids.map((id, n) => db.from("ai_providers").update({ priority: (n + 1) * 10 }).eq("id", id)));
     const failed = results.find((r) => r.error);
     if (failed?.error) throw new Error(failed.error.message);
+    await audit(auth.user.id, "model.update", `ai_providers:${body.id}`, { changes: body });
     return await after();
   } catch (e) {
     return failFrom(e, "update the model");
@@ -111,6 +115,7 @@ export async function DELETE(req: NextRequest) {
     const { data, error } = await createAdminClient().from("ai_providers").delete().eq("id", id.data).select("id");
     if (error) throw new Error(error.message);
     if (!data?.length) return fail("NOT_FOUND", "Model not found");
+    await audit(auth.user.id, "model.delete", `ai_providers:${id.data}`);
     return await after();
   } catch (e) {
     return failFrom(e, "remove the model");

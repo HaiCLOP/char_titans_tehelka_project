@@ -39,6 +39,8 @@ func (f *fakeREST) handler(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, `[{"id":"u1"},{"id":"u2"}]`)
 	case "POST /rest/v1/notifications", "PATCH /rest/v1/complaints":
 		w.WriteHeader(204)
+	case "POST /rest/v1/rpc/sla_alert_complaint":
+		_, _ = io.WriteString(w, `1`)
 	default:
 		w.WriteHeader(404)
 	}
@@ -53,27 +55,25 @@ func TestSLAAlerts(t *testing.T) {
 	if err != nil || n != 2 {
 		t.Fatalf("n=%d err=%v reqs=%v", n, err, f.reqs)
 	}
-	var notes []map[string]string
-	if err := json.Unmarshal(f.body["POST /rest/v1/notifications"], &notes); err != nil {
-		t.Fatal(err)
-	}
-	if len(notes) != 2 || notes[0]["user_id"] != "u1" || notes[0]["title_en"] != "CS-AAAAAA is overdue" {
-		t.Fatalf("notes %+v", notes)
-	}
-	if strings.Contains(notes[0]["title_as"], "র") || !strings.Contains(notes[0]["title_as"], "ৰ") {
-		t.Fatalf("title_as must use ৰ not র: %q", notes[0]["title_as"])
-	}
-	var patch string
+	rpcs := 0
 	for _, r := range f.reqs {
-		if strings.HasPrefix(r, "PATCH") {
-			patch = r
-		}
 		if strings.HasPrefix(r, "GET /rest/v1/complaints") && !strings.Contains(r, "sla_alerted_at=is.null") {
 			t.Fatalf("query must filter sla_alerted_at: %s", r)
 		}
+		if strings.HasPrefix(r, "POST /rest/v1/rpc/sla_alert_complaint") {
+			rpcs++
+		}
+		// Notifications and the marker are written inside the RPC, never as separate requests.
+		if strings.HasPrefix(r, "POST /rest/v1/notifications") || strings.HasPrefix(r, "PATCH /rest/v1/complaints") {
+			t.Fatalf("SLA alerts must go through the atomic RPC, got %s", r)
+		}
 	}
-	if !strings.Contains(patch, "id=in.%28c1%2Cc2%29") {
-		t.Fatalf("patch %q", patch)
+	if rpcs != 2 {
+		t.Fatalf("want one RPC per overdue complaint, got %d (%v)", rpcs, f.reqs)
+	}
+	var body map[string]string
+	if err := json.Unmarshal(f.body["POST /rest/v1/rpc/sla_alert_complaint"], &body); err != nil || body["cid"] != "c2" {
+		t.Fatalf("rpc body %s", f.body["POST /rest/v1/rpc/sla_alert_complaint"])
 	}
 }
 

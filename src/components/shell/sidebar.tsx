@@ -7,22 +7,22 @@ import { NavLink } from "./nav-link";
 
 const MAIN = [
   { href: "/", key: "home", icon: House, exact: true },
-  { href: "/pulse", key: "pulse", icon: Activity },
-  { href: "/report", key: "report", icon: Plus, isCta: true },
+  { href: "/report", key: "report", icon: Plus },
   { href: "/my", key: "myReports", icon: ClipboardList },
   { href: "/map", key: "map", icon: Map },
+  { href: "/pulse", key: "pulse", icon: Activity },
   { href: "/notifications", key: "notifications", icon: Bell },
 ] as const;
 
 const ITEM =
-  "group relative grid size-11 place-items-center rounded-full transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-const ON = "bg-primary text-primary-foreground shadow-md ring-1 ring-primary/40";
+  "group relative grid size-11 place-items-center rounded-full transition-[background-color,color,box-shadow] duration-200 ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const ON = "bg-surface text-foreground shadow-md ring-1 ring-border dark:bg-surface-muted";
 const OFF = "text-muted-foreground hover:bg-surface-muted hover:text-foreground";
 
-/** Desktop (lg+) sleek floating capsule dock on the left edge. */
+/** Desktop (lg+) floating icon rail. Labels show as tooltips and stay available to screen readers. */
 export async function Sidebar() {
   const [t, profile] = await Promise.all([getTranslations(), getProfile()]);
-  const role = profile?.role ?? "guest";
+  const role = profile?.role;
   const main =
     role === "field_staff"
       ? [{ href: "/staff", key: "work", icon: Wrench }, ...MAIN]
@@ -30,21 +30,13 @@ export async function Sidebar() {
         ? [{ href: "/admin", key: "adminPanel", icon: LayoutDashboard }, ...MAIN]
         : MAIN;
 
-  const renderItem = (i: { href: string; key: string; icon: typeof House; exact?: boolean; isCta?: boolean }) => (
+  const item = (i: { href: string; key: string; icon: typeof House; exact?: boolean }) => (
     <li key={i.href}>
-      <NavLink
-        href={i.href}
-        exact={i.exact}
-        aria-label={t(`nav.${i.key}`)}
-        className={ITEM}
-        activeClassName={ON}
-        inactiveClassName={i.isCta ? "bg-primary/10 text-primary hover:bg-primary/20" : OFF}
-      >
-        <i.icon className="size-5" strokeWidth={1.8} aria-hidden />
-        {/* Sleek popout hover tooltip */}
+      <NavLink href={i.href} exact={i.exact} aria-label={t(`nav.${i.key}`)} className={ITEM} activeClassName={ON} inactiveClassName={OFF}>
+        <i.icon className="size-[19px]" strokeWidth={1.75} aria-hidden />
         <span
           aria-hidden
-          className="pointer-events-none absolute left-full ml-3.5 hidden rounded-lg border border-border/80 bg-surface px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-foreground opacity-0 shadow-lg transition-all duration-150 group-hover:block group-hover:opacity-100 group-focus-visible:block group-focus-visible:opacity-100"
+          className="pointer-events-none absolute left-full ml-3 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium whitespace-nowrap text-primary-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
         >
           {t(`nav.${i.key}`)}
         </span>
@@ -53,27 +45,16 @@ export async function Sidebar() {
   );
 
   return (
-    <aside className="fixed top-1/2 left-5 z-40 hidden -translate-y-1/2 lg:block">
-      <div className="flex w-16 flex-col items-center gap-2 rounded-full border border-border/80 bg-surface/90 p-2.5 shadow-2xl backdrop-blur-xl ring-1 ring-border/40">
-        <Link
-          href="/"
-          aria-label={t("shell.home")}
-          className="mb-1 rounded-full p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-transform hover:scale-105 active:scale-95"
-        >
-          <BrandMark className="size-11 rounded-full shadow-xs" />
+    <aside className="fixed top-1/2 left-5 z-30 hidden -translate-y-1/2 lg:block">
+      <div className="flex w-[4.25rem] flex-col items-center gap-2 rounded-full border border-border bg-surface px-2 py-3 shadow-rail">
+        <Link href="/" aria-label={t("shell.home")} className="mb-2 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <BrandMark className="size-12" />
         </Link>
-
         <nav aria-label={t("nav.main")}>
-          <ul className="flex flex-col items-center gap-2">
-            {main.map(renderItem)}
-          </ul>
+          <ul className="flex flex-col items-center gap-2">{main.map(item)}</ul>
         </nav>
-
-        <span className="my-1.5 h-px w-6 bg-border/80" aria-hidden />
-
-        <ul>
-          {renderItem({ href: "/profile", key: "profile", icon: UserRound })}
-        </ul>
+        <span className="my-2 h-px w-8 bg-border" aria-hidden />
+        <ul>{item({ href: "/profile", key: "profile", icon: UserRound })}</ul>
       </div>
     </aside>
   );

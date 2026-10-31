@@ -13,27 +13,27 @@ import (
 
 // Intake mirrors IntakeSchema in src/lib/domain.ts plus is_urgent / is_sensitive_suggested.
 type Intake struct {
-	TitleEn              string  `json:"title_en"`
-	TitleAs              string  `json:"title_as"`
-	SummaryEn            string  `json:"summary_en"`
-	SummaryAs            string  `json:"summary_as"`
-	Category             string  `json:"category"`
-	Priority             int     `json:"priority"`
-	PriorityReasonEn     string  `json:"priority_reason_en"`
-	LocationHint         *string `json:"location_hint"`
-	IsAbusive            bool    `json:"is_abusive"`
-	AbusiveReasonEn      *string `json:"abusive_reason_en"`
-	AbusiveReasonAs      *string `json:"abusive_reason_as"`
-	HasPersonalData      bool    `json:"has_personal_data"`
-	Confidence           float64 `json:"confidence"`
-	IsUrgent             bool    `json:"is_urgent"`
-	IsSensitiveSuggested bool    `json:"is_sensitive_suggested"`
-	IsRelevant           bool    `json:"is_relevant"`
-	RejectionReasonEn    *string `json:"rejection_reason_en"`
-	RejectionReasonAs    *string `json:"rejection_reason_as"`
-	HasAbusiveImage      bool    `json:"has_abusive_image"`
-	HasExplicitImage     bool    `json:"has_explicit_image"`
-	HasAiImage           bool    `json:"has_ai_image"`
+	TitleEn                string  `json:"title_en"`
+	TitleAs                string  `json:"title_as"`
+	SummaryEn              string  `json:"summary_en"`
+	SummaryAs              string  `json:"summary_as"`
+	Category               string  `json:"category"`
+	Priority               int     `json:"priority"`
+	PriorityReasonEn       string  `json:"priority_reason_en"`
+	LocationHint           *string `json:"location_hint"`
+	IsAbusive              bool    `json:"is_abusive"`
+	AbusiveReasonEn        *string `json:"abusive_reason_en"`
+	AbusiveReasonAs        *string `json:"abusive_reason_as"`
+	HasPersonalData        bool    `json:"has_personal_data"`
+	Confidence             float64 `json:"confidence"`
+	IsUrgent               bool    `json:"is_urgent"`
+	IsSensitiveSuggested   bool    `json:"is_sensitive_suggested"`
+	IsRelevant             bool    `json:"is_relevant"`
+	RejectionReasonEn      *string `json:"rejection_reason_en"`
+	RejectionReasonAs      *string `json:"rejection_reason_as"`
+	HasAbusiveImage        bool    `json:"has_abusive_image"`
+	HasExplicitImage       bool    `json:"has_explicit_image"`
+	HasAiImage             bool    `json:"has_ai_image"`
 	ImageRejectionReasonEn *string `json:"image_rejection_reason_en"`
 	ImageRejectionReasonAs *string `json:"image_rejection_reason_as"`
 }
@@ -59,29 +59,29 @@ type IntakeInput struct {
 // or priority outside 1–4 → ErrInvalidOutput. Over-long strings are truncated.
 func ParseIntake(raw string) (Intake, error) {
 	var m struct {
-		TitleEn              *string  `json:"title_en"`
-		TitleAs              *string  `json:"title_as"`
-		SummaryEn            *string  `json:"summary_en"`
-		SummaryAs            *string  `json:"summary_as"`
-		Category             *string  `json:"category"`
-		Priority             *float64 `json:"priority"`
-		PriorityReasonEn     *string  `json:"priority_reason_en"`
-		LocationHint         *string  `json:"location_hint"`
-		IsAbusive            *bool    `json:"is_abusive"`
-		AbusiveReasonEn      *string  `json:"abusive_reason_en"`
-		AbusiveReasonAs      *string  `json:"abusive_reason_as"`
-		HasPersonalData      *bool    `json:"has_personal_data"`
-		Confidence           *float64 `json:"confidence"`
-		IsUrgent             *bool    `json:"is_urgent"`
-		IsSensitiveSuggested *bool    `json:"is_sensitive_suggested"`
-		IsRelevant           *bool    `json:"is_relevant"`
-		RejectionReasonEn    *string  `json:"rejection_reason_en"`
-		RejectionReasonAs    *string  `json:"rejection_reason_as"`
-		HasAbusiveImage      *bool    `json:"has_abusive_image"`
-		HasExplicitImage     *bool    `json:"has_explicit_image"`
-		HasAiImage           *bool    `json:"has_ai_image"`
-		ImageRejectionReasonEn *string `json:"image_rejection_reason_en"`
-		ImageRejectionReasonAs *string `json:"image_rejection_reason_as"`
+		TitleEn                *string  `json:"title_en"`
+		TitleAs                *string  `json:"title_as"`
+		SummaryEn              *string  `json:"summary_en"`
+		SummaryAs              *string  `json:"summary_as"`
+		Category               *string  `json:"category"`
+		Priority               *float64 `json:"priority"`
+		PriorityReasonEn       *string  `json:"priority_reason_en"`
+		LocationHint           *string  `json:"location_hint"`
+		IsAbusive              *bool    `json:"is_abusive"`
+		AbusiveReasonEn        *string  `json:"abusive_reason_en"`
+		AbusiveReasonAs        *string  `json:"abusive_reason_as"`
+		HasPersonalData        *bool    `json:"has_personal_data"`
+		Confidence             *float64 `json:"confidence"`
+		IsUrgent               *bool    `json:"is_urgent"`
+		IsSensitiveSuggested   *bool    `json:"is_sensitive_suggested"`
+		IsRelevant             *bool    `json:"is_relevant"`
+		RejectionReasonEn      *string  `json:"rejection_reason_en"`
+		RejectionReasonAs      *string  `json:"rejection_reason_as"`
+		HasAbusiveImage        *bool    `json:"has_abusive_image"`
+		HasExplicitImage       *bool    `json:"has_explicit_image"`
+		HasAiImage             *bool    `json:"has_ai_image"`
+		ImageRejectionReasonEn *string  `json:"image_rejection_reason_en"`
+		ImageRejectionReasonAs *string  `json:"image_rejection_reason_as"`
 	}
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
 		return Intake{}, invalidf("not JSON: %v", err)

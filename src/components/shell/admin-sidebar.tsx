@@ -17,7 +17,7 @@ const ITEMS = [
   { href: "/admin/queue", key: "queue", icon: ClipboardList, exact: false, superOnly: false },
   { href: "/admin/agent", key: "agent", icon: MessagesSquare, exact: false, superOnly: false },
   { href: "/staff", key: "fieldWork", icon: Wrench, exact: false, superOnly: false },
-  { href: "/map", key: "map", icon: Map, exact: false, superOnly: false },
+  { href: "/admin/map", key: "map", icon: Map, exact: false, superOnly: false },
   { href: "/admin/departments", key: "departments", icon: Building2, exact: false, superOnly: true },
 ] as const;
 

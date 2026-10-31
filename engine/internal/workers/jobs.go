@@ -198,12 +198,10 @@ type overdueRow struct {
 	DepartmentID *string `json:"department_id"`
 }
 
-// SLAAlertTitles returns the bilingual overdue notification (Assamese uses ৰ, never র).
-func SLAAlertTitles(code string) (string, string) {
-	return code + " is overdue", code + ": সমাধানৰ সময়সীমা পাৰ হৈছে"
-}
-
 // SLAAlerts notifies the department admins once per overdue open complaint.
+// Each complaint goes through rpc sla_alert_complaint (migration 11), which claims the complaint
+// (sla_alerted_at) and writes the bilingual notifications in ONE transaction: a crash or retry can
+// neither duplicate alerts nor lose the marker, and two engines running at once can't both alert.
 func (d *Deps) SLAAlerts(ctx context.Context) (int, error) {
 	var rows []overdueRow
 	err := d.DB.Select(ctx, "complaints", url.Values{
@@ -217,46 +215,15 @@ func (d *Deps) SLAAlerts(ctx context.Context) (int, error) {
 	if err != nil || len(rows) == 0 {
 		return 0, err
 	}
-	admins := map[string][]string{}
-	var notes []map[string]any
-	var ids []string
+	done := 0
 	for _, c := range rows {
-		ids = append(ids, c.ID)
-		if c.DepartmentID == nil {
-			continue
+		var sent int
+		if err := d.DB.RPC(ctx, "sla_alert_complaint", map[string]any{"cid": c.ID}, &sent); err != nil {
+			return done, fmt.Errorf("sla_alert_complaint %s: %w", c.Code, err)
 		}
-		dept := *c.DepartmentID
-		list, ok := admins[dept]
-		if !ok {
-			var profs []struct {
-				ID string `json:"id"`
-			}
-			if err := d.DB.Select(ctx, "profiles", url.Values{
-				"select": {"id"}, "role": {"eq.dept_admin"}, "department_id": {"eq." + dept},
-			}, &profs); err != nil {
-				return 0, fmt.Errorf("load admins: %w", err)
-			}
-			for _, p := range profs {
-				list = append(list, p.ID)
-			}
-			admins[dept] = list
-		}
-		en, as := SLAAlertTitles(c.Code)
-		for _, uid := range list {
-			notes = append(notes, map[string]any{"user_id": uid, "complaint_id": c.ID, "title_en": en, "title_as": as})
-		}
+		done++
 	}
-	if len(notes) > 0 {
-		if err := d.DB.Insert(ctx, "notifications", notes, nil); err != nil {
-			return 0, fmt.Errorf("insert notifications: %w", err)
-		}
-	}
-	err = d.DB.Patch(ctx, "complaints", url.Values{"id": {"in.(" + strings.Join(ids, ",") + ")"}},
-		map[string]any{"sla_alerted_at": d.now().Format(time.RFC3339)}, nil)
-	if err != nil {
-		return 0, fmt.Errorf("mark alerted: %w", err)
-	}
-	return len(rows), nil
+	return done, nil
 }
 
 // ---------- 3. auto_close ----------

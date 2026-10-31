@@ -5,6 +5,7 @@ import { encryptKey } from "@/lib/ai/crypto";
 import { resetKeyState } from "@/lib/ai/router";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { invalidateRouters, listKeys, requireSysApi } from "@/lib/sys";
+import { audit } from "@/lib/audit";
 
 // S21: AI keys. Keys are stored AES-256-GCM encrypted and never returned (last 4 only).
 // Env keys (GEMINI_API_KEYS / OPENROUTER_API_KEYS) are listed read-only with source "env".
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
       key_encrypted: encryptKey(body.key), key_last4: body.key.slice(-4),
     }).select(COLUMNS).single();
     if (error) throw new Error(error.message);
+    await audit(auth.user.id, "key.create", `ai_keys:${data.id}`, { label: body.label, provider: body.provider, rpm_limit: body.rpm_limit });
     return ok({ key: data, ...(await invalidateRouters()) }, { status: 201 });
   } catch (e) {
     return failFrom(e, "add the key");
@@ -78,6 +80,7 @@ export async function PATCH(req: Request) {
     if (error) throw new Error(error.message);
     // Leaving a failover test or re-enabling a key: drop its local cooldown so it is used again at once.
     if (changes.simulate_failure === false || changes.enabled === true) resetKeyState(before.label as string);
+    await audit(auth.user.id, "key.update", `ai_keys:${id}`, { label: before.label, changes });
     return ok({ key: data, ...(await invalidateRouters()) });
   } catch (e) {
     return failFrom(e, "update the key");
@@ -93,6 +96,7 @@ export async function DELETE(req: NextRequest) {
     const { data, error } = await createAdminClient().from("ai_keys").delete().eq("id", id.data).select("id");
     if (error) throw new Error(error.message);
     if (!data?.length) return fail("NOT_FOUND", "Key not found");
+    await audit(auth.user.id, "key.delete", `ai_keys:${id.data}`);
     return ok({ deleted: id.data, ...(await invalidateRouters()) });
   } catch (e) {
     return failFrom(e, "delete the key");

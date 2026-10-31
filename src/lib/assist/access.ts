@@ -102,16 +102,3 @@ export async function withAssameseGuard<T>(
   return r;
 }
 
-/** In-memory sliding-window limiter (single server instance — good enough for the hackathon deployment). */
-const buckets: Map<string, number[]> = ((globalThis as { __assistRate?: Map<string, number[]> }).__assistRate ??= new Map());
-export function rateLimit(key: string, max: number, windowMs: number): boolean {
-  const now = Date.now();
-  const hits = (buckets.get(key) ?? []).filter((t: number) => now - t < windowMs);
-  if (hits.length >= max) {
-    buckets.set(key, hits);
-    return false;
-  }
-  hits.push(now);
-  buckets.set(key, hits);
-  return true;
-}

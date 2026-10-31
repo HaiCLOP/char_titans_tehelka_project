@@ -25,7 +25,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { CATEGORY_ICON, Card, Drawer, EmptyState, IssueCard, buttonVariants } from "@/components/ui";
+import { CATEGORY_ICON, Card, Chip, Drawer, EmptyState, IssueCard, buttonVariants } from "@/components/ui";
 import { CATEGORIES, type Category, type Status } from "@/lib/domain";
 import { cn, toLocaleDigits } from "@/lib/utils";
 
@@ -50,7 +50,13 @@ export type MapIssue = {
   metoo_count: number;
   created_at: string;
   resolved_at: string | null;
+  visibility?: "public" | "private";
+  is_sensitive?: boolean;
 };
+
+export type MapLabels = Partial<
+  Record<"legendSize" | "emptyTitle" | "emptyBody" | "drawerEmptyBody" | "private" | "sensitive", string>
+>;
 
 type Props = {
   locations: MapLocation[];
@@ -58,6 +64,11 @@ type Props = {
   issues: MapIssue[];
   category: Category | null;
   includeFixed: boolean;
+  filters?: React.ReactNode;
+  issueHrefBase?: string;
+  sizeBy?: "all" | "open";
+  reportCta?: boolean;
+  labels?: MapLabels;
 };
 
 type Place = {
@@ -127,11 +138,21 @@ function groupPlaces(locations: MapLocation[], issues: MapIssue[], category: Cat
 }
 
 /**
- * S11 — Modern campus map & building inspector.
+ * S11 & S17 — Modern campus map & building inspector.
  * Responsive for mobile phones (360px+) with zero pin collisions, tap inspection,
  * zoom controls, and a dedicated buildings directory.
  */
-export function CampusMap({ locations, issues, category, includeFixed }: Props) {
+export function CampusMap({
+  locations,
+  issues,
+  category,
+  includeFixed,
+  filters,
+  issueHrefBase = "/c/",
+  sizeBy = "all",
+  reportCta = true,
+  labels = {},
+}: Props) {
   const t = useTranslations("map");
   const tc = useTranslations("category");
   const tp = useTranslations("priority");
@@ -151,6 +172,8 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
   const handleZoomOut = () => setZoom((z) => Math.max(1, Number((z - 0.35).toFixed(2))));
   const handleResetZoom = () => setZoom(1);
 
+  const sized = (p: Place) => (sizeBy === "open" ? p.open.length : p.open.length + p.fixed.length);
+
   // Category counts ignore category filter so chips show totals
   const catCounts = useMemo(() => {
     const m = new Map<Category, number>();
@@ -161,9 +184,8 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
   const places = useMemo(() => groupPlaces(locations, issues, category), [locations, issues, category]);
 
   const total =
-    places.list.reduce((s, p) => s + p.open.length + p.fixed.length, 0) +
-    places.none.open.length +
-    places.none.fixed.length;
+    places.list.reduce((s, p) => s + sized(p), 0) +
+    (sizeBy === "open" ? places.none.open.length : places.none.open.length + places.none.fixed.length);
 
   const plotted = places.list.filter((p) => p.location?.map_x != null && p.location?.map_y != null);
 
@@ -175,11 +197,9 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
     const lo = Math.min(...vals);
     const span = Math.max(...vals) - lo;
     if (span <= 0) return 0.5;
-    // Map to safe 12%..88% zone inside the card canvas
     return 0.12 + 0.76 * ((v - lo) / span);
   };
 
-  // Precomputed fitted coordinates map for SVG pathways
   const posMap = useMemo(() => {
     const m = new Map<string, { x: number; y: number }>();
     for (const p of plotted) {
@@ -209,10 +229,10 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
     return rows.sort((a, b) =>
       sort === "name"
         ? coll.compare(name(a.location), name(b.location))
-        : b.open.length - a.open.length || b.fixed.length - a.fixed.length || coll.compare(name(a.location), name(b.location)),
+        : sized(b) - sized(a) || coll.compare(name(a.location), name(b.location)),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, sort, locale, searchQuery]);
+  }, [places, sort, locale, searchQuery, sizeBy]);
 
   const current = selected === NONE ? places.none : places.list.find((p) => p.id === selected) ?? null;
 
@@ -251,56 +271,58 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Category Filter Chips Bar */}
-      <div
-        className="flex items-center gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 [scrollbar-width:none]"
-        role="group"
-        aria-label={t("filterLabel")}
-      >
-        <Link
-          href={href(null, includeFixed)}
-          scroll={false}
-          aria-current={category === null ? "true" : undefined}
-          className={chip(category === null)}
+      {/* Category Filter Chips Bar or Custom Admin Filters */}
+      {filters ?? (
+        <div
+          className="flex items-center gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 [scrollbar-width:none]"
+          role="group"
+          aria-label={t("filterLabel")}
         >
-          {t("allCategories")}
-          <span className="tabular text-xs opacity-75">{n(issues.length)}</span>
-        </Link>
-        {presentCats.map((c) => {
-          const Icon = CATEGORY_ICON[c];
-          return (
-            <Link
-              key={c}
-              href={href(c, includeFixed)}
-              scroll={false}
-              aria-current={category === c ? "true" : undefined}
-              className={chip(category === c)}
-            >
-              <Icon className="size-3.5" {...ICON} />
-              {tc(c)}
-              <span className="tabular text-xs opacity-75">{n(catCounts.get(c) ?? 0)}</span>
-            </Link>
-          );
-        })}
-        <span className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
-        <Link
-          href={href(category, !includeFixed)}
-          scroll={false}
-          aria-current={includeFixed ? "true" : undefined}
-          className={chip(includeFixed)}
-        >
-          <span
-            className={cn(
-              "grid size-4 place-items-center rounded-[5px] border",
-              includeFixed ? "border-primary-foreground" : "border-border-strong",
-            )}
-            aria-hidden
+          <Link
+            href={href(null, includeFixed)}
+            scroll={false}
+            aria-current={category === null ? "true" : undefined}
+            className={chip(category === null)}
           >
-            {includeFixed && <Check className="size-3" strokeWidth={2.5} />}
-          </span>
-          {t("includeFixed")}
-        </Link>
-      </div>
+            {t("allCategories")}
+            <span className="tabular text-xs opacity-75">{n(issues.length)}</span>
+          </Link>
+          {presentCats.map((c) => {
+            const Icon = CATEGORY_ICON[c];
+            return (
+              <Link
+                key={c}
+                href={href(c, includeFixed)}
+                scroll={false}
+                aria-current={category === c ? "true" : undefined}
+                className={chip(category === c)}
+              >
+                <Icon className="size-3.5" {...ICON} />
+                {tc(c)}
+                <span className="tabular text-xs opacity-75">{n(catCounts.get(c) ?? 0)}</span>
+              </Link>
+            );
+          })}
+          <span className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
+          <Link
+            href={href(category, !includeFixed)}
+            scroll={false}
+            aria-current={includeFixed ? "true" : undefined}
+            className={chip(includeFixed)}
+          >
+            <span
+              className={cn(
+                "grid size-4 place-items-center rounded-[5px] border",
+                includeFixed ? "border-primary-foreground" : "border-border-strong",
+              )}
+              aria-hidden
+            >
+              {includeFixed && <Check className="size-3" strokeWidth={2.5} />}
+            </span>
+            {t("includeFixed")}
+          </Link>
+        </div>
+      )}
 
       {/* Mobile Segmented Switch: Map vs Buildings List */}
       <div
@@ -470,7 +492,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
               {/* Plotted Campus Pins */}
               <div className="absolute inset-0" role="group" aria-label={t("planLabel")}>
                 {plotted.map((p) => {
-                  const count = p.open.length + p.fixed.length;
+                  const count = sized(p);
                   const on = selected === p.id;
                   const LocIcon = getLocationIcon(p.location?.type ?? null, p.location?.name_en ?? "");
                   const hasCritical = p.open.some((i) => i.priority === 1);
@@ -578,17 +600,19 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <Link
-                      href={`/report?location=${encodeURIComponent(current.location.id)}`}
-                      className={buttonVariants({
-                        variant: "primary",
-                        size: "sm",
-                        className: "h-8 px-3 text-xs gap-1.5 rounded-lg font-semibold shadow-xs",
-                      })}
-                    >
-                      <MapPin className="size-3.5" aria-hidden />
-                      <span>{t("reportHere")}</span>
-                    </Link>
+                    {reportCta && (
+                      <Link
+                        href={`/report?location=${encodeURIComponent(current.location.id)}`}
+                        className={buttonVariants({
+                          variant: "primary",
+                          size: "sm",
+                          className: "h-8 px-3 text-xs gap-1.5 rounded-lg font-semibold shadow-xs",
+                        })}
+                      >
+                        <MapPin className="size-3.5" aria-hidden />
+                        <span>{t("reportHere")}</span>
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={() => setSelected(null)}
@@ -608,6 +632,14 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                         <li key={i.id}>
                           <IssueCard
                             compact
+                            href={`${issueHrefBase}${i.id}`}
+                            footer={
+                              i.is_sensitive || i.visibility === "private" ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {i.is_sensitive ? <Chip tone="danger">{labels.sensitive}</Chip> : <Chip>{labels.private}</Chip>}
+                                </div>
+                              ) : undefined
+                            }
                             issue={{
                               ...i,
                               photo_url: null,
@@ -622,7 +654,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                     </ul>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground pt-1.5">{t("drawerEmptyBody")}</p>
+                  <p className="text-xs text-muted-foreground pt-1.5">{labels.drawerEmptyBody ?? t("drawerEmptyBody")}</p>
                 )}
               </div>
             )}
@@ -651,7 +683,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
               <span>{t("legendNone")}</span>
             </span>
             <span className="w-full sm:ml-auto sm:w-auto text-[10px] sm:text-[11px] opacity-75">
-              {t("schematic")}
+              {labels.legendSize ?? t("legendSize")}
             </span>
           </div>
         </Card>
@@ -712,10 +744,10 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
             <EmptyState
               bare
               className="py-8"
-              title={category ? t("emptyFilteredTitle") : t("emptyTitle")}
-              body={category ? t("emptyFilteredBody") : t("emptyBody")}
+              title={labels.emptyTitle ?? (category ? t("emptyFilteredTitle") : t("emptyTitle"))}
+              body={labels.emptyBody ?? (category ? t("emptyFilteredBody") : t("emptyBody"))}
               action={
-                category ? (
+                !reportCta ? undefined : category ? (
                   <Link href={href(null, includeFixed)} className={buttonVariants({ variant: "secondary" })}>
                     {t("clearFilter")}
                   </Link>
@@ -735,7 +767,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
           ) : (
             <ul className="mt-3 divide-y divide-border border-t border-border">
               {sorted.map((p) => {
-                const count = p.open.length + p.fixed.length;
+                const count = sized(p);
                 const on = selected === p.id;
                 const LocIcon = getLocationIcon(p.location?.type ?? null, p.location?.name_en ?? "");
 
@@ -795,13 +827,15 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
               <p className="truncate text-xs font-semibold text-foreground">{name(drawerPlace.location)}</p>
               <p className="text-[11px] text-muted-foreground">{countLabel(drawerPlace)}</p>
             </div>
-            <Link
-              href={`/report?location=${encodeURIComponent(drawerPlace.location.id)}`}
-              className={cn(buttonVariants({ variant: "primary", size: "sm" }), "shrink-0 gap-1.5")}
-            >
-              <MapPin className="size-3.5" aria-hidden />
-              <span>{t("reportHere")}</span>
-            </Link>
+            {reportCta && (
+              <Link
+                href={`/report?location=${encodeURIComponent(drawerPlace.location.id)}`}
+                className={cn(buttonVariants({ variant: "primary", size: "sm" }), "shrink-0 gap-1.5")}
+              >
+                <MapPin className="size-3.5" aria-hidden />
+                <span>{t("reportHere")}</span>
+              </Link>
+            )}
           </div>
         )}
 
@@ -810,9 +844,9 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
             bare
             icon={Check}
             title={t("drawerEmptyTitle")}
-            body={t("drawerEmptyBody")}
+            body={labels.drawerEmptyBody ?? t("drawerEmptyBody")}
             action={
-              drawerPlace.location ? (
+              !reportCta ? undefined : drawerPlace.location ? (
                 <Link
                   href={`/report?location=${encodeURIComponent(drawerPlace.location.id)}`}
                   className={buttonVariants({ variant: "primary" })}
@@ -833,6 +867,14 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                 <li key={i.id}>
                   <IssueCard
                     compact
+                    href={`${issueHrefBase}${i.id}`}
+                    footer={
+                      i.is_sensitive || i.visibility === "private" ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {i.is_sensitive ? <Chip tone="danger">{labels.sensitive}</Chip> : <Chip>{labels.private}</Chip>}
+                        </div>
+                      ) : undefined
+                    }
                     issue={{
                       ...i,
                       photo_url: null,

@@ -41,7 +41,7 @@ export function LanguageSwitch({ className }: { className?: string }) {
           aria-pressed={currentLocale === l}
           lang={l}
           className={cn(
-            "h-7 sm:h-8 rounded-full px-2.5 sm:px-3 font-medium transition-[background-color,color,box-shadow] duration-200",
+            "relative h-7 sm:h-8 rounded-full px-2.5 sm:px-3 font-medium after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] transition-[background-color,color,box-shadow] duration-200",
             currentLocale === l ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
           )}
         >

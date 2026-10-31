@@ -3,6 +3,7 @@ import { z } from "zod";
 import { fail, failFrom, ok, parseJson, requireRole } from "@/lib/api";
 import { MemberAddSchema } from "@/lib/domain";
 import { addMember, listMembers } from "@/lib/org";
+import { audit } from "@/lib/audit";
 
 const Query = z.object({ department: z.guid().optional() });
 
@@ -27,7 +28,9 @@ export async function POST(req: Request) {
   const body = await parseJson(req, MemberAddSchema);
   if (body instanceof Response) return body;
   try {
-    return ok(await addMember(auth.supabase, { id: auth.user.id, profile: auth.profile }, body));
+    const member = await addMember(auth.supabase, { id: auth.user.id, profile: auth.profile }, body);
+    await audit(auth.user.id, "member.add", `profiles:${member.id}`, { role: body.role, department_id: body.department_id ?? null });
+    return ok(member);
   } catch (e) {
     return failFrom(e, "add the member");
   }

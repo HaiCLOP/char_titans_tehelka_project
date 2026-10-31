@@ -73,7 +73,7 @@ export function Tabs<V extends string>({ items, value, defaultValue, onValueChan
               onClick={() => select(item.value)}
               onKeyDown={(e) => onKey(e, i)}
               className={cn(
-                "inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-2.5 sm:px-4 text-xs sm:text-sm font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "relative inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-2.5 sm:px-4 after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-[''] text-xs sm:text-sm font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 fill && "flex-1",
                 on ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
               )}
