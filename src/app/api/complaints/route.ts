@@ -4,6 +4,7 @@ import { fail, ok, parseJson, requireUser } from "@/lib/api";
 import { PipelineError, submitComplaint } from "@/lib/complaints";
 import { listComplaints } from "@/lib/tracking";
 import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/auth";
 
 const SCOPE_ROLES: Record<"dept" | "assigned", Role[]> = {
   dept: ["dept_admin", "super_admin"],
@@ -19,9 +20,11 @@ export async function GET(req: NextRequest) {
 
   try {
     if (q.scope === "public") {
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return ok(await listComplaints(supabase, null, q));
+      const user = await getUser();
+      if (!user) {
+        const supabase = await createClient();
+        return ok(await listComplaints(supabase, null, q));
+      }
     }
     const auth = await requireUser();
     if (auth instanceof Response) return auth;

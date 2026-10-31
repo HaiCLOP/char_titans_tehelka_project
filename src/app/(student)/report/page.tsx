@@ -9,7 +9,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // S05 — Report an issue (PRD section 7). Signed-in students and staff only.
-export default async function ReportPage() {
+export default async function ReportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ location?: string; category?: string }>;
+}) {
   await requireUser();
-  return <ReportForm />;
+  const sp = await searchParams;
+  return <ReportForm initialLocationId={sp.location} initialCategory={sp.category} />;
 }

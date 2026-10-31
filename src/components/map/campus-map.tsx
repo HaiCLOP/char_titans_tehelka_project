@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, MapPinOff } from "lucide-react";
+import { Check, MapPin, MapPinOff, Search, X } from "lucide-react";
 import { CATEGORY_ICON, Card, Drawer, EmptyState, IssueCard, buttonVariants } from "@/components/ui";
 import { CATEGORIES, type Category, type Status } from "@/lib/domain";
 import { cn, toLocaleDigits } from "@/lib/utils";
@@ -97,6 +97,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
 
   const [selected, setSelected] = useState<string | null>(null);
   const [sort, setSort] = useState<"count" | "name">("count");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Category counts ignore the category filter so the chips always show what is there.
   const catCounts = useMemo(() => {
@@ -119,7 +120,16 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
   };
 
   const sorted = useMemo(() => {
-    const rows = [...places.list, ...(places.none.open.length + places.none.fixed.length ? [places.none] : [])];
+    let rows = [...places.list, ...(places.none.open.length + places.none.fixed.length ? [places.none] : [])];
+    const q = searchQuery.toLowerCase().trim();
+    if (q) {
+      rows = rows.filter((p) => {
+        const en = (p.location?.name_en ?? "").toLowerCase();
+        const as = (p.location?.name_as ?? "").toLowerCase();
+        const display = name(p.location).toLowerCase();
+        return en.includes(q) || as.includes(q) || display.includes(q);
+      });
+    }
     const coll = new Intl.Collator(locale === "as" ? "as" : "en");
     return rows.sort((a, b) =>
       sort === "name"
@@ -127,7 +137,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
         : b.open.length - a.open.length || b.fixed.length - a.fixed.length || coll.compare(name(a.location), name(b.location)),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `name` only depends on locale
-  }, [places, sort, locale]);
+  }, [places, sort, locale, searchQuery]);
 
   const current = selected === NONE ? places.none : places.list.find((p) => p.id === selected) ?? null;
   const ringColor = (p: Place) => (p.top !== null ? `var(--p${p.top})` : p.fixed.length ? "var(--success)" : "var(--border-strong)");
@@ -193,15 +203,16 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                     aria-haspopup="dialog"
                     style={{ left: `${fit(p.location!.map_x!, xs) * 100}%`, top: `${fit(p.location!.map_y!, ys) * 100}%`, ["--d" as string]: d }}
                     className={cn(
-                      "group absolute flex w-[5.5rem] -translate-x-1/2 sm:w-28 -translate-y-[calc(var(--d)*0.4px)] flex-col items-center rounded-2xl focus-visible:outline-none sm:-translate-y-[calc(var(--d)*0.5px)]",
+                      "group absolute flex w-[5.5rem] -translate-x-1/2 sm:w-28 -translate-y-[calc(var(--d)*0.4px)] flex-col items-center rounded-2xl transition-all focus-visible:outline-none sm:-translate-y-[calc(var(--d)*0.5px)]",
                       count > 0 ? "z-10" : "z-0",
+                      on && "z-30 scale-105",
                     )}
                   >
                     <span
                       className={cn(
-                        "grid size-[calc(var(--d)*0.8px)] place-items-center rounded-full bg-surface text-xs font-semibold tabular shadow-sm transition-transform duration-200 group-hover:scale-105 group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface sm:size-[calc(var(--d)*1px)] sm:text-sm",
+                        "relative grid size-[calc(var(--d)*0.8px)] place-items-center rounded-full bg-surface text-xs font-semibold tabular shadow-sm transition-all duration-200 group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface sm:size-[calc(var(--d)*1px)] sm:text-sm",
                         count > 0 ? "border-[3px]" : "border-2",
-                        on && "ring-2 ring-foreground ring-offset-2 ring-offset-surface",
+                        on ? "ring-4 ring-primary ring-offset-2 ring-offset-surface shadow-md" : "",
                       )}
                       style={{ borderColor: ringColor(p) }}
                     >
@@ -210,8 +221,8 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                     <span
                       lang={locale}
                       className={cn(
-                        "mt-1 line-clamp-2 max-w-full text-center text-[10px] leading-tight sm:text-xs",
-                        count > 0 ? "font-medium text-foreground" : "text-muted-foreground",
+                        "mt-1 line-clamp-2 max-w-full text-center text-[10px] leading-tight transition-colors sm:text-xs",
+                        on ? "font-bold text-primary underline underline-offset-2" : count > 0 ? "font-medium text-foreground group-hover:text-primary" : "text-muted-foreground",
                       )}
                     >
                       {name(p.location)}
@@ -230,7 +241,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
               </span>
             ))}
             {includeFixed && (
-              <span className="inline-flex items-center gap-1.5">
+              <span key="fixed" className="inline-flex items-center gap-1.5">
                 <span className="size-3 rounded-full border-[2.5px] border-success bg-surface" aria-hidden />
                 {t("legendFixed")}
               </span>
@@ -264,6 +275,28 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
             </div>
           </div>
 
+          <div className="px-5 pt-3">
+            <div className="relative flex items-center">
+              <Search className="pointer-events-none absolute left-3 size-3.5 text-muted-foreground" aria-hidden />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t("searchPlaceholder")}
+                className="h-9 w-full rounded-full border border-border bg-surface-muted/60 pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground transition-colors focus:border-border-strong focus:bg-surface focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 grid size-4 place-items-center rounded-full text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3" aria-hidden />
+                </button>
+              )}
+            </div>
+          </div>
+
           {total === 0 && (
             <EmptyState
               bare
@@ -281,18 +314,22 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
           )}
 
           {sorted.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-muted-foreground">{t("noBuildings")}</p>
+            <p className="px-5 py-6 text-sm text-muted-foreground">{searchQuery ? t("searchEmpty") : t("noBuildings")}</p>
           ) : (
             <ul className="mt-3 divide-y divide-border border-t border-border">
               {sorted.map((p) => {
                 const count = p.open.length + p.fixed.length;
+                const on = selected === p.id;
                 return (
                   <li key={p.id}>
                     <button
                       type="button"
                       onClick={() => setSelected(p.id)}
                       aria-haspopup="dialog"
-                      className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none"
+                      className={cn(
+                        "flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none",
+                        on && "bg-surface-muted font-medium",
+                      )}
                     >
                       {p.location ? (
                         <span className="size-3 shrink-0 rounded-full border-[2.5px] bg-surface" style={{ borderColor: ringColor(p) }} aria-hidden />
@@ -319,13 +356,37 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
         title={current ? name(current.location) : ""}
         description={current ? countLabel(current) : undefined}
       >
+        {current && current.location && (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-card border border-border bg-surface p-3 shadow-xs">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-foreground">{name(current.location)}</p>
+              <p className="text-[11px] text-muted-foreground">{countLabel(current)}</p>
+            </div>
+            <Link
+              href={`/report?location=${encodeURIComponent(current.location.id)}`}
+              className={cn(buttonVariants({ variant: "primary", size: "sm" }), "shrink-0 gap-1.5")}
+            >
+              <MapPin className="size-3.5" aria-hidden />
+              {t("reportHere")}
+            </Link>
+          </div>
+        )}
+
         {current && current.open.length + current.fixed.length === 0 ? (
           <EmptyState
             bare
             icon={Check}
             title={t("drawerEmptyTitle")}
             body={t("drawerEmptyBody")}
-            action={<Link href="/report" className={buttonVariants({ variant: "primary" })}>{t("reportCta")}</Link>}
+            action={
+              current.location ? (
+                <Link href={`/report?location=${encodeURIComponent(current.location.id)}`} className={buttonVariants({ variant: "primary" })}>
+                  {t("reportHere")}
+                </Link>
+              ) : (
+                <Link href="/report" className={buttonVariants({ variant: "primary" })}>{t("reportCta")}</Link>
+              )
+            }
           />
         ) : (
           <ul className="space-y-3">

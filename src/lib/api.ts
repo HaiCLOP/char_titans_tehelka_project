@@ -4,7 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import type { z } from "zod";
 import { ERROR_STATUS, type ApiError, type ErrorCode, type Profile, type Role } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
-import { PROFILE_COLUMNS } from "@/lib/auth";
+import { PROFILE_COLUMNS, getUser } from "@/lib/auth";
 
 /**
  * Route handler helpers (PRD section 10).
@@ -30,9 +30,9 @@ export function fail(code: ErrorCode, message: string, init?: Omit<ResponseInit,
 
 /** Signed-in user + profile + an RLS-scoped Supabase client, or a 401/403 Response. */
 export async function requireUser(): Promise<ApiContext | Response> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return fail("UNAUTHENTICATED", "Sign in required");
+  const supabase = await createClient();
   const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", user.id).maybeSingle();
   if (!data) return fail("FORBIDDEN", "Profile not found");
   return { user, profile: data as Profile, supabase };

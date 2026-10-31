@@ -22,10 +22,20 @@ type Intake struct {
 	PriorityReasonEn     string  `json:"priority_reason_en"`
 	LocationHint         *string `json:"location_hint"`
 	IsAbusive            bool    `json:"is_abusive"`
+	AbusiveReasonEn      *string `json:"abusive_reason_en"`
+	AbusiveReasonAs      *string `json:"abusive_reason_as"`
 	HasPersonalData      bool    `json:"has_personal_data"`
 	Confidence           float64 `json:"confidence"`
 	IsUrgent             bool    `json:"is_urgent"`
 	IsSensitiveSuggested bool    `json:"is_sensitive_suggested"`
+	IsRelevant           bool    `json:"is_relevant"`
+	RejectionReasonEn    *string `json:"rejection_reason_en"`
+	RejectionReasonAs    *string `json:"rejection_reason_as"`
+	HasAbusiveImage      bool    `json:"has_abusive_image"`
+	HasExplicitImage     bool    `json:"has_explicit_image"`
+	HasAiImage           bool    `json:"has_ai_image"`
+	ImageRejectionReasonEn *string `json:"image_rejection_reason_en"`
+	ImageRejectionReasonAs *string `json:"image_rejection_reason_as"`
 }
 
 // IntakeResult mirrors IntakeResult in src/lib/ai/intake.ts. AssameseAutofixed is an
@@ -58,10 +68,20 @@ func ParseIntake(raw string) (Intake, error) {
 		PriorityReasonEn     *string  `json:"priority_reason_en"`
 		LocationHint         *string  `json:"location_hint"`
 		IsAbusive            *bool    `json:"is_abusive"`
+		AbusiveReasonEn      *string  `json:"abusive_reason_en"`
+		AbusiveReasonAs      *string  `json:"abusive_reason_as"`
 		HasPersonalData      *bool    `json:"has_personal_data"`
 		Confidence           *float64 `json:"confidence"`
 		IsUrgent             *bool    `json:"is_urgent"`
 		IsSensitiveSuggested *bool    `json:"is_sensitive_suggested"`
+		IsRelevant           *bool    `json:"is_relevant"`
+		RejectionReasonEn    *string  `json:"rejection_reason_en"`
+		RejectionReasonAs    *string  `json:"rejection_reason_as"`
+		HasAbusiveImage      *bool    `json:"has_abusive_image"`
+		HasExplicitImage     *bool    `json:"has_explicit_image"`
+		HasAiImage           *bool    `json:"has_ai_image"`
+		ImageRejectionReasonEn *string `json:"image_rejection_reason_en"`
+		ImageRejectionReasonAs *string `json:"image_rejection_reason_as"`
 	}
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
 		return Intake{}, invalidf("not JSON: %v", err)
@@ -109,7 +129,17 @@ func ParseIntake(raw string) (Intake, error) {
 	}
 	b := func(p *bool) bool { return p != nil && *p }
 	out.IsAbusive, out.HasPersonalData = b(m.IsAbusive), b(m.HasPersonalData)
+	out.AbusiveReasonEn = m.AbusiveReasonEn
+	out.AbusiveReasonAs = m.AbusiveReasonAs
 	out.IsUrgent, out.IsSensitiveSuggested = b(m.IsUrgent), b(m.IsSensitiveSuggested)
+	out.IsRelevant = m.IsRelevant == nil || *m.IsRelevant
+	out.RejectionReasonEn = m.RejectionReasonEn
+	out.RejectionReasonAs = m.RejectionReasonAs
+	out.HasAbusiveImage = b(m.HasAbusiveImage)
+	out.HasExplicitImage = b(m.HasExplicitImage)
+	out.HasAiImage = b(m.HasAiImage)
+	out.ImageRejectionReasonEn = m.ImageRejectionReasonEn
+	out.ImageRejectionReasonAs = m.ImageRejectionReasonAs
 	out.Confidence = 0.5
 	if m.Confidence != nil {
 		out.Confidence = math.Max(0, math.Min(1, *m.Confidence))

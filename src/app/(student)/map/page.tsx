@@ -8,11 +8,27 @@ const ISSUE_COLUMNS = "id, code, title_en, title_as, category, priority, status,
 const MAX_ROWS = 1000;
 const FIXED_DAYS = 7;
 
+// ponytail: cache static campus map locations in memory (5m TTL)
+let cachedMapLocations: { data: MapLocation[]; expiresAt: number } | null = null;
+const MAP_LOC_CACHE_TTL = 5 * 60 * 1000;
+
+async function getMapLocations(supabase: Awaited<ReturnType<typeof createClient>>): Promise<{ data: MapLocation[]; error: { code: string; message: string } | null }> {
+  const now = Date.now();
+  if (cachedMapLocations && cachedMapLocations.expiresAt > now) {
+    return { data: cachedMapLocations.data, error: null };
+  }
+  const res = await supabase.from("locations").select("id, name_en, name_as, type, map_x, map_y").order("name_en");
+  if (!res.error && res.data) {
+    cachedMapLocations = { data: res.data as MapLocation[], expiresAt: now + MAP_LOC_CACHE_TTL };
+  }
+  return res as { data: MapLocation[]; error: { code: string; message: string } | null };
+}
+
 async function loadMap(includeFixed: boolean) {
   const supabase = await createClient();
   const since = new Date(Date.now() - FIXED_DAYS * 864e5).toISOString();
   const [locs, open, fixed] = await Promise.all([
-    supabase.from("locations").select("id, name_en, name_as, type, map_x, map_y").order("name_en"),
+    getMapLocations(supabase),
     supabase.from("complaints_public").select(ISSUE_COLUMNS).in("status", [...OPEN_STATUSES]).order("priority").order("created_at", { ascending: false }).limit(MAX_ROWS),
     includeFixed
       ? supabase.from("complaints_public").select(ISSUE_COLUMNS).in("status", [...DONE_STATUSES]).gte("resolved_at", since).order("resolved_at", { ascending: false }).limit(MAX_ROWS)

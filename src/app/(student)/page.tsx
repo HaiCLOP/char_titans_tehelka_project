@@ -12,22 +12,44 @@ import { cn, toLocaleDigits } from "@/lib/utils";
 type Stats = { open: number; in_progress: number; resolved: number; overdue: number; avg_resolution_hours: number | null };
 type TrendRow = { day: string; created: number; resolved: number };
 
+// ponytail: cache public stats and 14-day trend in memory (30s TTL). Eliminates ~700ms duplicate RPC roundtrips.
+let cachedHomeStats: { stats: Stats | null; trend: TrendRow[]; expiresAt: number } | null = null;
+const HOME_STATS_CACHE_TTL = 30 * 1000;
+
+async function getHomeStatsAndTrend(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const now = Date.now();
+  if (cachedHomeStats && cachedHomeStats.expiresAt > now) {
+    return { stats: cachedHomeStats.stats, trend: cachedHomeStats.trend };
+  }
+  const [stats, trend] = await Promise.allSettled([
+    supabase.rpc("dashboard_stats"),
+    supabase.rpc("trend_by_day", { days: 14 }),
+  ]);
+  const s = stats.status === "fulfilled" ? ((stats.value.data as Stats | null) ?? null) : null;
+  const t = trend.status === "fulfilled" ? ((trend.value.data as TrendRow[] | null) ?? []) : [];
+  if (s !== null || t.length > 0) {
+    cachedHomeStats = { stats: s, trend: t, expiresAt: now + HOME_STATS_CACHE_TTL };
+  }
+  return { stats: s, trend: t };
+}
+
 async function loadHome(view: "open" | "resolved") {
   const supabase = await createClient();
   const [user, profile] = await Promise.all([getUser(), getProfile()]);
   const viewer = user && profile ? { id: user.id, profile } : null;
   const q = ComplaintListQuerySchema.parse({ scope: "public", status: view === "open" ? "active" : "resolved" });
 
-  const [issues, stats, trend] = await Promise.allSettled([
+  const [issues, statsTrend] = await Promise.allSettled([
     listComplaints(supabase, viewer, q),
-    supabase.rpc("dashboard_stats"),
-    supabase.rpc("trend_by_day", { days: 14 }),
+    getHomeStatsAndTrend(supabase),
   ]);
+  const statsAndTrend = statsTrend.status === "fulfilled" ? statsTrend.value : { stats: null, trend: [] };
+
   return {
     name: profile?.full_name ?? null,
     issues: issues.status === "fulfilled" ? issues.value.items.slice(0, 6) : null,
-    stats: stats.status === "fulfilled" ? ((stats.value.data as Stats | null) ?? null) : null,
-    trend: trend.status === "fulfilled" ? ((trend.value.data as TrendRow[] | null) ?? []) : [],
+    stats: statsAndTrend.stats,
+    trend: statsAndTrend.trend,
   };
 }
 

@@ -114,7 +114,7 @@ func TestParseIntakeRules(t *testing.T) {
 
 func TestPromptHasV2Rules(t *testing.T) {
 	p := IntakeSystem(false)
-	for _, want := range []string{"is_urgent: true only for immediate danger", "is_sensitive_suggested: true for harassment", `"is_urgent":false,"is_sensitive_suggested":false}`, "water_supply, plumbing"} {
+	for _, want := range []string{"is_urgent: true only for immediate danger", "is_sensitive_suggested: true for harassment", `"is_urgent":false`, `"is_sensitive_suggested":false`, "water_supply, plumbing"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("prompt missing %q", want)
 		}
