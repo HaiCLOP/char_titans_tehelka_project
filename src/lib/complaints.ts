@@ -15,6 +15,7 @@ import {
 import { analyzeComplaint, embedText, type IntakeResult } from "@/lib/ai/intake";
 import { fallbackIntake } from "@/lib/ai/fallback";
 import { INTAKE_PROMPT_VERSION } from "@/lib/ai/prompts/intake";
+import { autoAssign } from "@/lib/assign";
 import { engineFetch } from "@/lib/engine";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAssameseText } from "@/lib/utils";
@@ -245,7 +246,16 @@ export async function submitComplaint(
     .eq("id", row.id);
   if (metaErr) console.warn("[complaints] ai_meta/embedding update failed", metaErr.code);
 
-  const statusOut = z.enum(STATUSES).parse(row.status);
+  let statusOut = z.enum(STATUSES).parse(row.status);
+
+  // ---- auto-assign (same safety rule as auto-routing; best effort, never fails the submit) ----
+  // auto_assign_complaint re-checks the rule from the stored row + ai_meta, so it needs ai_meta first.
+  let assignee: { id: string; name: string | null } | null = null;
+  if (statusOut === "triaged" && autoRoute && !metaErr) {
+    assignee = await autoAssign(row.id as string);
+    if (assignee) statusOut = "assigned";
+  }
+
   return {
     id: row.id as string,
     code: row.code as string,
@@ -253,5 +263,6 @@ export async function submitComplaint(
     sla_due_at: (row.sla_due_at as string | null) ?? null,
     status: statusOut,
     is_urgent: Boolean(row.is_urgent),
+    assignee,
   };
 }

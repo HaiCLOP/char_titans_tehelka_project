@@ -444,6 +444,7 @@ export async function listStaff(supabase: Client, actor: Actor, department?: str
     .select("id, full_name, role")
     .eq("department_id", dept)
     .in("role", ["field_staff", "dept_admin"])
+    .eq("active", true)
     .order("role", { ascending: false })
     .order("full_name");
   if (error) throw dbError(error, "staff");

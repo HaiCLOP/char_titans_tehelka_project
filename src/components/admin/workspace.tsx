@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import {
   CATEGORIES, OPEN_STATUSES,
-  type AdminSimilarItem, type ComplaintDetail, type ComplaintPatch, type ComplaintUpdateResult, type InternalNote, type NamedRef,
+  type AdminSimilarItem, type AssigneeSuggestion, type ComplaintDetail, type ComplaintPatch, type ComplaintUpdateResult, type InternalNote, type NamedRef,
   type StaffMember, type Status, type TimelineEvent,
 } from "@/lib/domain";
 import { cn, toLocaleDigits } from "@/lib/utils";
@@ -23,6 +23,9 @@ import { useRealtime } from "@/components/use-realtime";
 import { PhotoCarousel } from "@/components/ticket/ticket-view";
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import { ResolveDrawer } from "@/components/staff/resolve-drawer";
+import { TicketChat } from "@/components/chat/ticket-chat";
+import { ReplyDraftPanel } from "@/components/assist/reply-draft-panel";
+import { ResolutionCheckPanel } from "@/components/assist/resolution-check-panel";
 
 const KNOWN_EVENTS = ["created", "status", "assigned", "note", "metoo", "ai"];
 const isOpen = (s: Status) => (OPEN_STATUSES as readonly Status[]).includes(s);
@@ -238,6 +241,75 @@ function SimilarCard({ d, onLink, onUnlink, busy }: { d: ComplaintDetail; onLink
   );
 }
 
+/** Ranked field staff (skills + buildings + load) with one-click Assign, plus the auto-assignment reason. */
+function AssigneeSuggestions({ d, enabled, busy, onAssign }: { d: ComplaintDetail; enabled: boolean; busy: boolean; onAssign: (id: string) => void }) {
+  const t = useTranslations("assign");
+  const tc = useTranslations("category");
+  const locale = useLocale();
+  const auto = d.admin?.auto_assign ?? null;
+  const currentId = d.admin?.assignee?.id ?? null;
+  const q = useQuery({
+    queryKey: ["assignees", d.id],
+    queryFn: ({ signal }) => apiFetch<AssigneeSuggestion[]>(`/api/complaints/${encodeURIComponent(d.id)}/assignees`, { signal }),
+    enabled,
+    staleTime: 30_000,
+  });
+  const place = d.location ? (locale === "as" ? d.location.name_as : d.location.name_en) : null;
+  const reasonText = (r: AssigneeSuggestion["reasons"]) =>
+    [
+      r.skill ? tc(d.category) : null,
+      r.covers && place ? t("covers", { place }) : null,
+      t("openJobs", { count: r.open_jobs, n: toLocaleDigits(r.open_jobs, locale) }),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+  return (
+    <div className="space-y-3">
+      {auto && (
+        <div className="rounded-xl bg-surface-muted px-3.5 py-2.5 text-sm">
+          <Chip tone="accent">{t("autoChip")}</Chip>
+          <LangText tag="p" en={auto.note_en} as={auto.note_as} className="mt-1.5 text-muted-foreground" />
+        </div>
+      )}
+      {enabled && (
+        <div>
+          <p className="text-sm font-medium">{t("suggestions")}</p>
+          <p className="text-xs text-muted-foreground">{t("suggestionsBody")}</p>
+          {q.isPending ? (
+            <ListSkeleton rows={2} />
+          ) : q.isError ? (
+            <ErrorState bare className="py-3" title={t("error")} onRetry={() => void q.refetch()} retrying={q.isFetching} />
+          ) : q.data.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">{t("none")}</p>
+          ) : (
+            <ul className="mt-1 divide-y divide-border">
+              {q.data.map((s, i) => (
+                <li key={s.id} className="flex items-center gap-3 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {s.name || t("noName")}
+                      {i === 0 && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{t("best")}</span>}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground tabular">{reasonText(s.reasons)}</p>
+                  </div>
+                  {s.id === currentId ? (
+                    <span className="text-xs text-muted-foreground">{t("current")}</span>
+                  ) : (
+                    <Button size="sm" variant={i === 0 ? "primary" : "secondary"} disabled={busy} onClick={() => onAssign(s.id)} aria-label={t("assignAria", { name: s.name || t("noName") })}>
+                      {t("assign")}
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** S15 — admin ticket workspace. Left: the ticket; right rail: actions. Every action → API → toast → refetch. */
 export function Workspace({ initial, departments, isSuper }: { initial: ComplaintDetail; departments: NamedRef[]; isSuper: boolean }) {
   const t = useTranslations("workspace");
@@ -281,6 +353,7 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
     void qc.invalidateQueries({ queryKey: key });
     void qc.invalidateQueries({ queryKey: ["complaints", "dept"] });
     void qc.invalidateQueries({ queryKey: ["similar", id] });
+    void qc.invalidateQueries({ queryKey: ["assignees", id] });
   };
 
   const patch = useMutation({
@@ -441,13 +514,15 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
 
           <NotesCard id={id} />
 
+          <TicketChat complaintId={d.id} />
+
           <Card>
             <CardHeader title={tt("timeline")} className="mb-4" />
             <Timeline items={timeline} />
           </Card>
         </div>
 
-        {/* Right rail: actions. P1 items (AI reply draft, resolution photo check) slot in as more cards here. */}
+        {/* Right rail: actions, then the AI assists (reply draft in the reporter's language, before/after photo check). */}
         <aside aria-label={t("actions")} className="min-w-0 space-y-5 lg:sticky lg:top-4">
           <Card>
             <CardHeader title={t("actions")} description={actions.length ? t("actionsBody") : t("noActions")} className="mb-4" />
@@ -491,6 +566,12 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
                 hint={staff.isError ? t("staffError") : staff.data && staff.data.length === 0 ? t("noStaff") : d.status === "in_progress" ? t("assigneeLocked") : undefined}
                 onChange={(e) => patch.mutate({ assignee_id: e.target.value || null })}
                 options={staffOptions}
+              />
+              <AssigneeSuggestions
+                d={d}
+                enabled={Boolean(departmentId) && !assignLocked}
+                busy={busy}
+                onAssign={(assignee_id) => patch.mutate({ assignee_id })}
               />
             </div>
           </Card>
@@ -556,6 +637,9 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
               </div>
             </form>
           </Card>
+
+          <ReplyDraftPanel complaintId={d.id} />
+          <ResolutionCheckPanel complaintId={d.id} version={d.status} />
         </aside>
       </div>
 

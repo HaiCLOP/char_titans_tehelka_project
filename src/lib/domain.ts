@@ -38,6 +38,8 @@ export const ERROR_STATUS = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   INVALID_TRANSITION: 409,
+  /** The change conflicts with existing data (e.g. deleting a department that still has complaints). */
+  CONFLICT: 409,
   RATE_LIMITED: 429,
   INTERNAL: 500,
   AI_UNAVAILABLE: 503,
@@ -131,6 +133,8 @@ export const SubmitResultSchema = z.object({
   sla_due_at: z.string().nullable(),
   status: z.enum(STATUSES),
   is_urgent: z.boolean(),
+  /** Set when the ticket was auto-assigned to field staff right away (safe tickets only, migration 10). */
+  assignee: z.object({ id: z.string(), name: z.string().nullable() }).nullable().optional(),
 });
 export type SubmitResult = z.infer<typeof SubmitResultSchema>;
 
@@ -240,6 +244,8 @@ export const ComplaintListItemSchema = z.object({
   /** dept scope only: current assignee's name (null = unassigned or no name). */
   assignee_name: z.string().nullable().optional(),
   assigned: z.boolean().optional(),
+  /** dept scope only: the current assignee was picked by auto-assignment. */
+  auto_assigned: z.boolean().optional(),
 });
 export type ComplaintListItem = z.infer<typeof ComplaintListItemSchema>;
 
@@ -276,6 +282,18 @@ export const ComplaintAdminInfoSchema = z.object({
   duplicates: z.array(z.object({ id: z.string(), code: z.string(), title_en: z.string().nullable(), title_as: z.string().nullable() })),
   is_sensitive: z.boolean(),
   anonymous: z.boolean(),
+  /** Present while the current assignee is the one auto-assignment picked (reasons for the workspace chip). */
+  auto_assign: z
+    .object({
+      note_en: z.string().nullable(),
+      note_as: z.string().nullable(),
+      skill: z.boolean(),
+      covers: z.boolean(),
+      open_jobs: z.number().int(),
+      at: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
 });
 export type ComplaintAdminInfo = z.infer<typeof ComplaintAdminInfoSchema>;
 
@@ -479,6 +497,120 @@ export const InternalNoteSchema = z.object({
 });
 export type InternalNote = z.infer<typeof InternalNoteSchema>;
 export const InternalNoteRequestSchema = z.object({ body: z.string().trim().min(1).max(1000) });
+
+// ---------- S18: departments, members, staff assignment (migration 10) ----------
+
+const BENGALI_RA = "র";
+const assameseName = z
+  .string()
+  .trim()
+  .min(2)
+  .max(80)
+  .refine((s) => !s.includes(BENGALI_RA), { message: "Use Assamese ৰ, not Bengali র" });
+
+const slaHours = z.number().int().min(1).max(2160);
+/** Hours to act per priority (keys "1".."4" = P1..P4), e.g. {"1":4,"2":24,"3":72,"4":168}. */
+export const SlaHoursSchema = z.strictObject({ "1": slaHours, "2": slaHours, "3": slaHours, "4": slaHours });
+export type SlaHours = z.infer<typeof SlaHoursSchema>;
+export const DEFAULT_SLA_HOURS: SlaHours = { "1": 4, "2": 24, "3": 72, "4": 168 };
+
+const categoryList = z
+  .array(z.enum(CATEGORIES))
+  .max(CATEGORIES.length)
+  .transform((a) => [...new Set(a)]);
+
+/** `POST /api/admin/departments`. */
+export const DepartmentInputSchema = z.strictObject({
+  name_en: z.string().trim().min(2).max(80),
+  name_as: assameseName,
+  categories: categoryList.default([]),
+  sla_hours: SlaHoursSchema.default(DEFAULT_SLA_HOURS),
+});
+export type DepartmentInput = z.input<typeof DepartmentInputSchema>;
+
+/** `PATCH /api/admin/departments/[id]`. */
+export const DepartmentPatchSchema = z
+  .strictObject({
+    name_en: z.string().trim().min(2).max(80).optional(),
+    name_as: assameseName.optional(),
+    categories: categoryList.optional(),
+    sla_hours: SlaHoursSchema.optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
+export type DepartmentPatch = z.infer<typeof DepartmentPatchSchema>;
+
+export const DepartmentSchema = z.object({
+  id: z.string(),
+  name_en: z.string(),
+  name_as: z.string(),
+  categories: z.array(z.enum(CATEGORIES)),
+  sla_hours: SlaHoursSchema,
+  created_at: z.string(),
+  member_count: z.number().int(),
+  open_count: z.number().int(),
+});
+export type Department = z.infer<typeof DepartmentSchema>;
+
+/** Roles a super admin can give from S18. super_admin itself is only set in the database. */
+export const MEMBER_ROLES = ["field_staff", "dept_admin", "staff", "student"] as const satisfies readonly Role[];
+export type MemberRole = (typeof MEMBER_ROLES)[number];
+
+export const MemberSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  role: z.enum(ROLES),
+  department_id: z.string().nullable(),
+  skills: z.array(z.enum(CATEGORIES)),
+  coverage_location_ids: z.array(z.string()),
+  active: z.boolean(),
+  /** Tickets assigned to this person that are assigned or in progress. */
+  open_jobs: z.number().int(),
+  last_assigned_at: z.string().nullable(),
+});
+export type Member = z.infer<typeof MemberSchema>;
+
+const coverageList = z
+  .array(z.guid())
+  .max(100)
+  .transform((a) => [...new Set(a)]);
+
+/** `POST /api/admin/members` — give an existing account (signed in at least once) a role. */
+export const MemberAddSchema = z.strictObject({
+  email: z.email().max(254),
+  role: z.enum(MEMBER_ROLES),
+  department_id: z.guid().nullish(),
+  skills: categoryList.optional(),
+  coverage_location_ids: coverageList.optional(),
+});
+export type MemberAdd = z.infer<typeof MemberAddSchema>;
+
+/** `PATCH /api/admin/members/[id]`. */
+export const MemberPatchSchema = z
+  .strictObject({
+    role: z.enum(MEMBER_ROLES).optional(),
+    department_id: z.guid().nullable().optional(),
+    skills: categoryList.optional(),
+    coverage_location_ids: coverageList.optional(),
+    active: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
+export type MemberPatch = z.infer<typeof MemberPatchSchema>;
+
+/** `GET /api/complaints/[id]/assignees` — ranked field staff for the workspace (best first). */
+export const AssigneeSuggestionSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  score: z.number().int(),
+  reasons: z.object({
+    /** The ticket's category is one of their skills. */
+    skill: z.boolean(),
+    /** They cover the ticket's building (or all buildings). */
+    covers: z.boolean(),
+    open_jobs: z.number().int(),
+  }),
+});
+export type AssigneeSuggestion = z.infer<typeof AssigneeSuggestionSchema>;
 
 export const ADMIN_STATS_DAYS = [7, 14, 30] as const;
 export const AdminStatsQuerySchema = z.object({

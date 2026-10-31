@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ChevronsLeft, ChevronsRight, ClipboardList, Home, LayoutDashboard, Map, Menu, Wrench } from "lucide-react";
+import { Building2, ChevronsLeft, ChevronsRight, ClipboardList, Home, LayoutDashboard, Map, Menu, MessagesSquare, Wrench } from "lucide-react";
 import type { Role } from "@/lib/domain";
 import { cn, setCookie } from "@/lib/utils";
 import { Drawer } from "@/components/ui/dialog";
@@ -11,16 +11,18 @@ import { NavLink } from "./nav-link";
 
 import { ADMIN_NAV_COOKIE } from "./admin-nav";
 
-// Only screens that exist. Agent (M7), departments and locations (P1) come back when their pages ship.
+// Only screens that exist. Locations (P1) comes back when its page ships.
 const ITEMS = [
-  { href: "/admin", key: "dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/queue", key: "queue", icon: ClipboardList, exact: false },
-  { href: "/staff", key: "fieldWork", icon: Wrench, exact: false },
-  { href: "/map", key: "map", icon: Map, exact: false },
+  { href: "/admin", key: "dashboard", icon: LayoutDashboard, exact: true, superOnly: false },
+  { href: "/admin/queue", key: "queue", icon: ClipboardList, exact: false, superOnly: false },
+  { href: "/admin/agent", key: "agent", icon: MessagesSquare, exact: false, superOnly: false },
+  { href: "/staff", key: "fieldWork", icon: Wrench, exact: false, superOnly: false },
+  { href: "/map", key: "map", icon: Map, exact: false, superOnly: false },
+  { href: "/admin/departments", key: "departments", icon: Building2, exact: false, superOnly: true },
 ] as const;
 
 type AdminSidebarProps = {
-  /** Kept for callers; every item is shown to both admin roles today. */
+  /** Super-admin-only items (Departments) are hidden for other roles. */
   role?: Role;
   /** From the `cs_admin_nav` cookie so the first paint matches. */
   defaultCollapsed?: boolean;
@@ -32,7 +34,7 @@ type AdminSidebarProps = {
  * Admin navigation. lg+: sticky sidebar that collapses to icons (state saved in a cookie).
  * < lg: a top bar with a menu button opening a bottom sheet.
  */
-export function AdminSidebar({ defaultCollapsed = false, toolbar }: AdminSidebarProps) {
+export function AdminSidebar({ role, defaultCollapsed = false, toolbar }: AdminSidebarProps) {
   const t = useTranslations("nav");
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -57,7 +59,7 @@ export function AdminSidebar({ defaultCollapsed = false, toolbar }: AdminSidebar
 
   const links = (compact: boolean, onNavigate?: () => void) => (
     <ul className="flex flex-col gap-1">
-      {ITEMS.map((i) => (
+      {ITEMS.filter((i) => !i.superOnly || role === "super_admin").map((i) => (
         <li key={i.href} onClick={onNavigate}>
           <NavLink
             href={i.href}

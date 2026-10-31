@@ -48,6 +48,7 @@ function LangFlag({ lang }: { lang: "en" | "as" | null }) {
 /** S14 — triage queue. Filters live in the URL; rows refresh live when tickets of the department change. */
 export function QueueView({ isSuper, departmentId, departments }: { isSuper: boolean; departmentId: string | null; departments: NamedRef[] }) {
   const t = useTranslations("queue");
+  const ta = useTranslations("assign");
   const ts = useTranslations("status");
   const tc = useTranslations("category");
   const tp = useTranslations("priority");
@@ -122,7 +123,21 @@ export function QueueView({ isSuper, departmentId, departments }: { isSuper: boo
   const reporter = (i: ComplaintListItem) =>
     i.anonymous ? <span className="text-muted-foreground italic">{t("anonymous")}</span> : (i.reporter_name ?? <span className="text-muted-foreground">—</span>);
   const assignee = (i: ComplaintListItem) =>
-    i.assigned ? (i.assignee_name ?? t("assignedNoName")) : <span className="text-muted-foreground">{t("unassigned")}</span>;
+    i.assigned ? (
+      <>
+        {i.assignee_name ?? t("assignedNoName")}
+        {i.auto_assigned && (
+          <span
+            title={ta("autoTitle")}
+            className="ml-1.5 inline-flex h-5 items-center rounded-full border border-border px-1.5 align-middle text-[0.6875rem] font-medium text-muted-foreground"
+          >
+            {ta("autoShort")}
+          </span>
+        )}
+      </>
+    ) : (
+      <span className="text-muted-foreground">{t("unassigned")}</span>
+    );
 
   return (
     <div className="mx-auto max-w-[84rem]">

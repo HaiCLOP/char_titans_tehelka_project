@@ -17,6 +17,7 @@ import {
 } from "@/components/ui";
 import { apiFetch, isApiError } from "@/components/api-client";
 import { useRealtime } from "@/components/use-realtime";
+import { TicketChat } from "@/components/chat/ticket-chat";
 import { SlaCountdown } from "./sla-countdown";
 
 const KNOWN_EVENTS = ["created", "status", "assigned", "note", "metoo", "ai"];
@@ -359,7 +360,8 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
             </Card>
           )}
 
-          {/* TODO(M8, P1): bilingual ticket chat (GET/POST /api/complaints/[id]/messages) goes here. */}
+          {/* S08 chat: the reporter and staff of this ticket (RLS hides it from everyone else). */}
+          {live && <TicketChat complaintId={d.id} />}
         </div>
 
         <Card className="min-w-0">

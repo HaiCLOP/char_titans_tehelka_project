@@ -166,6 +166,8 @@ type ListRow = {
   reporter_id?: string | null;
   assignee_id?: string | null;
   user_id?: string | null;
+  /** dept scope: ai_meta->>auto_assigned_to (who auto-assignment picked; stale once reassigned). */
+  auto_assigned_to?: string | null;
 };
 
 // ---------- GET /api/complaints ----------
@@ -186,7 +188,7 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
     : q.scope === "public"
       ? PUBLIC_LIST_COLUMNS
       : q.scope === "dept"
-        ? `${LIST_COLUMNS}, anonymous, user_id, assignee_id`
+        ? `${LIST_COLUMNS}, anonymous, user_id, assignee_id, auto_assigned_to:ai_meta->>auto_assigned_to`
         : LIST_COLUMNS;
 
   let query = supabase.from(table).select(columns);
@@ -301,6 +303,7 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
       item.reporter_name = r.reporter_id ? (reporters.get(r.reporter_id) ?? null) : null;
       item.assigned = Boolean(r.assignee_id);
       item.assignee_name = r.assignee_id ? (reporters.get(r.assignee_id) ?? null) : null;
+      item.auto_assigned = Boolean(r.assignee_id) && r.auto_assigned_to === r.assignee_id;
     }
     return item;
   });
@@ -613,7 +616,22 @@ async function loadAdminInfo(supabase: Client, row: DetailRow): Promise<NonNulla
     supabase.from("complaints").select("id, code, title_en, title_as").eq("parent_id", row.id).order("created_at").limit(20),
   ]);
   const a = assignee.data as { id: string; full_name: string | null } | null;
+  // Auto-assignment (migration 10) is shown only while the auto-picked person is still the assignee.
+  const meta = row.ai_meta ?? {};
+  const reason = (meta.assign_reason ?? null) as Record<string, unknown> | null;
+  const auto =
+    row.assignee_id && meta.auto_assigned === true && meta.auto_assigned_to === row.assignee_id && reason
+      ? {
+          note_en: typeof reason.note_en === "string" ? reason.note_en : null,
+          note_as: typeof reason.note_as === "string" ? reason.note_as : null,
+          skill: reason.skill === true,
+          covers: reason.covers === true,
+          open_jobs: typeof reason.open_jobs === "number" ? reason.open_jobs : 0,
+          at: typeof meta.auto_assigned_at === "string" ? meta.auto_assigned_at : null,
+        }
+      : null;
   return {
+    auto_assign: auto,
     department_id: row.department_id,
     assignee: row.assignee_id ? { id: row.assignee_id, name: a?.full_name ?? null } : null,
     parent: (parent.data as Ref | null) ?? null,
