@@ -114,13 +114,18 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
     let draft: string | null = null;
     try {
       draft = sessionStorage.getItem(REPORT_DRAFT_KEY);
-      sessionStorage.removeItem(REPORT_DRAFT_KEY);
     } catch {
       /* storage blocked: start empty */
     }
     if (!draft) return;
     const value = draft.slice(0, MAX_TEXT);
-    const id = setTimeout(() => setText((cur) => (cur.trim() ? cur : value)), 0);
+    // Removed only once applied: effects can run twice (Strict Mode), and the first timer is cancelled.
+    const id = setTimeout(() => {
+      setText((cur) => (cur.trim() ? cur : value));
+      try {
+        sessionStorage.removeItem(REPORT_DRAFT_KEY);
+      } catch {}
+    }, 0);
     return () => clearTimeout(id);
   }, []);
 
