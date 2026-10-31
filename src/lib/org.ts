@@ -17,6 +17,9 @@ import {
 } from "@/lib/domain";
 import { PipelineError } from "@/lib/complaints";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { emailEnabled, inviteEmail, sendEmail } from "@/lib/email";
+import en from "../../messages/en.json";
+import as from "../../messages/as.json";
 
 /**
  * S18 — departments and members (super admin only; the routes call requireRole("super_admin")).
@@ -288,7 +291,21 @@ export async function addMember(supabase: Client, actor: Actor, body: MemberAdd,
   }
   let uid = typeof found === "string" && found ? found : null;
   let invited = false;
-  if (!uid) {
+  if (!uid && emailEnabled) {
+    // Resend delivers the invite (Supabase's built-in mailer allows only a few emails per hour).
+    const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: "invite", email, options: { redirectTo } });
+    if (linkErr || !link.user) {
+      console.error("[org] invite link failed", linkErr?.status, linkErr?.message);
+      throw new PipelineError("INTERNAL", "Could not create the invite. Try again later.");
+    }
+    const mail = inviteEmail(link.properties.action_link, en.roles[body.role], as.roles[body.role]);
+    if (!(await sendEmail(email, mail.subject, mail.html, mail.text))) {
+      // The account exists now; adding the email again applies the role, and they can sign in with a magic link.
+      throw new PipelineError("INTERNAL", "The account was created but the invite email could not be sent. Add them again, then ask them to sign in with this email.");
+    }
+    uid = link.user.id;
+    invited = true;
+  } else if (!uid) {
     const { data: inv, error: invErr } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
     if (invErr || !inv.user) {
       console.error("[org] invite failed", invErr?.status, invErr?.message);
