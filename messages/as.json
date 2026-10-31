@@ -96,7 +96,18 @@
     "statOverdue": "সময়সীমা পাৰ",
     "statAvg": "সমাধানৰ গড় সময়",
     "hours": "{n} ঘণ্টা",
-    "noData": "এতিয়াও তথ্য নাই"
+    "noData": "এতিয়াও তথ্য নাই",
+    "sortBy": "সজাওক",
+    "sortSeverity": "গুৰুত্ব",
+    "sortNewest": "নতুন",
+    "sortSupported": "সৰ্বাধিক সমৰ্থিত",
+    "allCategories": "সকলো",
+    "allPriorities": "সকলো গুৰুত্ব",
+    "filterPriority": "গুৰুত্ব",
+    "clearFilters": "পূৰ্বৰ অৱস্থা",
+    "filteredCount": "{n}টা অভিযোগ",
+    "emptyFilteredTitle": "ফিল্টাৰ অনুসৰি কোনো অভিযোগ নাই",
+    "emptyFilteredBody": "আন এটা শ্ৰেণী বাছক বা ফিল্টাৰ আঁতৰাই চাওক।"
   },
   "status": {
     "submitted": "দাখিল কৰা হ'ল",

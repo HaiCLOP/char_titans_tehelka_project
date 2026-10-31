@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { CheckCircle2, Inbox, Map, Plus } from "lucide-react";
-import { AreaTrend, Card, EmptyState, IssueCard, LifecycleTrack, buttonVariants } from "@/components/ui";
+import { Map, Plus } from "lucide-react";
+import { AreaTrend, Card, buttonVariants } from "@/components/ui";
 import { getProfile, getUser } from "@/lib/auth";
 import { ComplaintListQuerySchema, type ComplaintListItem } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +9,7 @@ import { listComplaints } from "@/lib/tracking";
 import { cn, toLocaleDigits } from "@/lib/utils";
 import { getCampusDailyBrief } from "@/lib/ai/brief";
 import { AiDailyBriefCard } from "@/components/home/ai-daily-brief";
+import { IssueFeed } from "@/components/home/issue-feed";
 
 type Stats = { open: number; in_progress: number; resolved: number; overdue: number; avg_resolution_hours: number | null };
 type TrendRow = { day: string; created: number; resolved: number };
@@ -42,7 +43,7 @@ async function getHomeIssues(
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
-  const items = sorted.slice(0, 8);
+  const items = sorted.slice(0, 24);
   cachedHomeIssues[view] = { items, expiresAt: now + HOME_ISSUES_CACHE_TTL };
   return items;
 }
@@ -205,29 +206,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
 
         {data.issues === null ? (
           <Card className="border-danger-border bg-danger-soft text-sm text-danger">{t("home.loadError")}</Card>
-        ) : data.issues.length === 0 ? (
-          <Card className="py-14">
-            <EmptyState
-              bare
-              icon={view === "open" ? Inbox : CheckCircle2}
-              title={view === "open" ? t("home.emptyOpenTitle") : t("home.emptyResolvedTitle")}
-              body={view === "open" ? t("home.emptyOpenBody") : t("home.emptyResolvedBody")}
-              action={view === "open" ? <Link href="/report" className={buttonVariants({ variant: "primary" })}>{t("hero.cta")}</Link> : undefined}
-            />
-          </Card>
         ) : (
-          <ul className="grid gap-3.5 sm:grid-cols-2">
-            {data.issues.map((i: ComplaintListItem) => (
-              <li key={i.id}>
-                <IssueCard
-                  compact
-                  issue={{ ...i, photo_url: i.thumb }}
-                  showCategory
-                  footer={<LifecycleTrack status={i.status} showLabel={false} className="pt-1" />}
-                />
-              </li>
-            ))}
-          </ul>
+          <IssueFeed issues={data.issues} view={view} />
         )}
       </section>
 

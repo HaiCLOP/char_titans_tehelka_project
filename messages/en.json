@@ -96,7 +96,18 @@
     "statOverdue": "Past deadline",
     "statAvg": "Average time to fix",
     "hours": "{n} h",
-    "noData": "No data yet"
+    "noData": "No data yet",
+    "sortBy": "Sort by",
+    "sortSeverity": "Severity",
+    "sortNewest": "Newest",
+    "sortSupported": "Most Supported",
+    "allCategories": "All",
+    "allPriorities": "All Severities",
+    "filterPriority": "Priority",
+    "clearFilters": "Reset",
+    "filteredCount": "{count, plural, one {{n} issue} other {{n} issues}}",
+    "emptyFilteredTitle": "No issues match your filters",
+    "emptyFilteredBody": "Try changing the category or clearing the active filters."
   },
   "status": {
     "submitted": "Submitted",
