@@ -45,6 +45,37 @@
 
   --radius: 1.5rem;
   --radius-sm: 0.875rem;
+
+  /* Campus atlas (src/components/map/campus-atlas.tsx) — the one place natural colours are allowed:
+     a printed-atlas look matching the Dibrugarh University map kit. Read by the canvas renderer. */
+  --map-outside: #e0e5c4;
+  --map-surround: #d5dfb4;
+  --map-ground: #dde7bb;
+  --map-land: #d2dcb5;
+  --map-forest: #9dbb82;
+  --map-field: #bdd48c;
+  --map-sand: #ddcd90;
+  --map-water: #86c3cf;
+  --map-water-edge: #559fae;
+  --map-road: #f8f0d6;
+  --map-road-edge: #b4b18f;
+  --map-road-line: #d9c99a;
+  --map-building: #e3aa84;
+  --map-building-osm: #d39070;
+  --map-building-side: #ad6d4e;
+  --map-building-edge: #93604a;
+  --map-shadow: rgb(72 88 58 / 0.26);
+  --map-tree: #5c9f4e;
+  --map-tree-light: #86c467;
+  --map-tree-edge: #346f37;
+  --map-campus-edge: #d66643;
+  --map-outer-edge: #4f96ae;
+  --map-label: rgb(255 254 238 / 0.95);
+  --map-label-text: #21432f;
+  --map-label-muted: #4b6455;
+  --map-marker: #255c43;
+  --map-marker-text: #ffffff;
+  --map-select: #17321f;
 }
 
 .dark {
@@ -74,6 +105,36 @@
 
   --chart-line: #f2f2f0;
   --chart-fill: rgb(242 242 240 / 0.08);
+
+  /* Campus atlas at night: same hues, low luminance. */
+  --map-outside: #131814;
+  --map-surround: #171e18;
+  --map-ground: #1c251d;
+  --map-land: #1f2a20;
+  --map-forest: #213824;
+  --map-field: #283c24;
+  --map-sand: #372f20;
+  --map-water: #1e4753;
+  --map-water-edge: #2f6c7c;
+  --map-road: #3a3c33;
+  --map-road-edge: #0f130f;
+  --map-road-line: #50503f;
+  --map-building: #8b5c46;
+  --map-building-osm: #7c4f3a;
+  --map-building-side: #4b2f23;
+  --map-building-edge: #2c1c14;
+  --map-shadow: rgb(0 0 0 / 0.42);
+  --map-tree: #2e6533;
+  --map-tree-light: #437f45;
+  --map-tree-edge: #14361a;
+  --map-campus-edge: #e07a58;
+  --map-outer-edge: #5aa6c0;
+  --map-label: rgb(26 32 27 / 0.94);
+  --map-label-text: #eef1e4;
+  --map-label-muted: #b3bcad;
+  --map-marker: #2f7552;
+  --map-marker-text: #ffffff;
+  --map-select: #eef1e4;
 
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.6);
