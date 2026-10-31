@@ -18,8 +18,10 @@ function useDuration() {
     const n = (v: number) => ({ count: v, n: toLocaleDigits(v, locale) });
     if (ms >= 2 * DAY) return t("days", n(Math.round(ms / DAY)));
     if (ms >= HOUR) {
-      const h = Math.floor(ms / HOUR);
-      const m = Math.round((ms % HOUR) / MIN);
+      // Round to whole minutes first, so 2 h 59.6 min reads "3 h", never "2 h 60 min".
+      const total = Math.round(ms / MIN);
+      const h = Math.floor(total / 60);
+      const m = total % 60;
       return m > 0 && h < 10 ? `${t("hours", n(h))} ${t("minutes", n(m))}` : t("hours", n(h));
     }
     return t("minutes", n(Math.max(1, Math.round(ms / MIN))));
