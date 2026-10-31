@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Map, Plus } from "lucide-react";
-import { Card, buttonVariants } from "@/components/ui";
+import { Activity, Map } from "lucide-react";
+import { Card } from "@/components/ui";
 import { getProfile, getUser } from "@/lib/auth";
 import { ComplaintListQuerySchema, type ComplaintListItem } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { listComplaints } from "@/lib/tracking";
 import { cn, toLocaleDigits } from "@/lib/utils";
 import { getCampusDailyBrief } from "@/lib/ai/brief";
+import { HomeComposer } from "@/components/home/composer";
 import { AiDailyBriefCard } from "@/components/home/ai-daily-brief";
 import { IssueFeed } from "@/components/home/issue-feed";
 
@@ -94,123 +95,177 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
   const s = data.stats;
 
   return (
-    <div className="space-y-6 sm:space-y-7">
-      {/* Executive Hero Banner with Integrated 4-Tile KPI Matrix */}
-      <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-surface via-surface to-surface-muted/60 p-5 sm:p-7 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          {/* Left: Branding & Core CTA */}
-          <div className="max-w-xl space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-primary shadow-2xs">
-              <span className="size-2 rounded-full bg-primary animate-pulse" aria-hidden />
-              {t("hero.eyebrow")} · {t("shell.university")}
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px] items-start">
+      {/* ============================================================ */}
+      {/* LEFT COLUMN (BIG): Quick Report Composer + All Issues Feed   */}
+      {/* ============================================================ */}
+      <div className="space-y-6 min-w-0">
+        {/* 1. Quick Report Composer ("What needs fixing? like this but better") */}
+        <HomeComposer name={data.name} />
+
+        {/* Mobile-only 4-Stat Metric Strip (< lg) */}
+        <div className="lg:hidden">
+          <div className="rounded-2xl border border-border bg-surface p-3.5 shadow-xs space-y-2.5">
+            <div className="flex items-center justify-between border-b border-border/60 pb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                {t("home.weekTitle")}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
+                {t("home.live")}
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground">
-              {t("hero.title")}
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              {t("hero.subtitle")}
-            </p>
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <Link
-                href="/report"
-                className={buttonVariants({
-                  variant: "primary",
-                  size: "md",
-                  className: "rounded-xl px-5 gap-2 shadow-sm font-semibold",
-                })}
-              >
-                <Plus className="size-4" strokeWidth={2.5} aria-hidden />
-                {t("hero.cta")}
-              </Link>
-              <Link
-                href="/map"
-                className={buttonVariants({
-                  variant: "secondary",
-                  size: "md",
-                  className: "rounded-xl px-5 gap-2 font-medium",
-                })}
-              >
-                <Map className="size-4 text-muted-foreground" aria-hidden />
-                {t("home.map")}
-              </Link>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-2">
+                <span className="text-xl font-black text-warning tabular-nums">
+                  {toLocaleDigits(s?.open ?? 0, locale)}
+                </span>
+                <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground truncate">{t("home.statOpen")}</span>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-2">
+                <span className="text-xl font-black text-primary tabular-nums">
+                  {toLocaleDigits(s?.in_progress ?? 0, locale)}
+                </span>
+                <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground truncate">{t("home.statWorking")}</span>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-2">
+                <span className="text-xl font-black text-success tabular-nums">
+                  {toLocaleDigits(s?.resolved ?? 0, locale)}
+                </span>
+                <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground truncate">{t("home.statFixed")}</span>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-2">
+                <span className="text-xl font-black text-foreground tabular-nums">
+                  {s?.avg_resolution_hours != null ? `${toLocaleDigits(Number(s.avg_resolution_hours.toFixed(1)), locale)}h` : `${toLocaleDigits(0, locale)}h`}
+                </span>
+                <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground truncate">{t("home.statAvg")}</span>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Right: Integrated 4-Tile KPI Matrix (2x2 layout, zero text truncation) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5 sm:gap-3 w-full lg:w-80 shrink-0">
-            <div className="rounded-xl border border-border/80 bg-surface p-3 sm:p-3.5 shadow-2xs text-center transition-all hover:border-warning/50">
+        {/* 2. All Issues Section */}
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-foreground">
+                {view === "open" ? t("home.tabOpen") : t("home.tabResolved")}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {t("home.slogan")}
+              </p>
+            </div>
+
+            <nav aria-label={t("home.title")} className="inline-flex self-start sm:self-auto rounded-full bg-surface-muted/80 p-1 border border-border/60">
+              {(["open", "resolved"] as const).map((v) => (
+                <Link
+                  key={v}
+                  href={v === "open" ? "/" : "/?view=resolved"}
+                  scroll={false}
+                  aria-current={view === v ? "page" : undefined}
+                  className={cn(
+                    "rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200",
+                    view === v
+                      ? "bg-surface text-foreground shadow-xs ring-1 ring-border font-semibold"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {v === "open" ? t("home.tabOpen") : t("home.tabResolved")}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          {data.issues === null ? (
+            <Card className="border-danger-border bg-danger-soft text-sm text-danger">{t("home.loadError")}</Card>
+          ) : (
+            <IssueFeed issues={data.issues} view={view} />
+          )}
+        </section>
+      </div>
+
+      {/* ============================================================ */}
+      {/* RIGHT COLUMN (SMALL): 4 KPIs + AI Campus Daily Brief         */}
+      {/* ============================================================ */}
+      <aside className="space-y-5 lg:sticky lg:top-20">
+        {/* 1. Desktop 4-Metric Tile Card: Open, Being fixed, Fixed, Avg Fix Time */}
+        <div className="hidden lg:block rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-xs space-y-3.5">
+          <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {t("home.weekTitle")}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
+              {t("home.live")}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* 1 Open */}
+            <div className="rounded-xl border border-border/80 bg-surface-muted/30 p-3 text-center transition-all hover:border-warning/50">
               <span className="text-2xl sm:text-3xl font-extrabold text-warning tabular-nums">
                 {toLocaleDigits(s?.open ?? 0, locale)}
               </span>
               <span className="mt-1 block text-xs font-medium text-muted-foreground">{t("home.statOpen")}</span>
             </div>
-            <div className="rounded-xl border border-border/80 bg-surface p-3 sm:p-3.5 shadow-2xs text-center transition-all hover:border-primary/50">
+
+            {/* 2 Being fixed */}
+            <div className="rounded-xl border border-border/80 bg-surface-muted/30 p-3 text-center transition-all hover:border-primary/50">
               <span className="text-2xl sm:text-3xl font-extrabold text-primary tabular-nums">
                 {toLocaleDigits(s?.in_progress ?? 0, locale)}
               </span>
               <span className="mt-1 block text-xs font-medium text-muted-foreground">{t("home.statWorking")}</span>
             </div>
-            <div className="rounded-xl border border-border/80 bg-surface p-3 sm:p-3.5 shadow-2xs text-center transition-all hover:border-success/50">
+
+            {/* 0 Fixed */}
+            <div className="rounded-xl border border-border/80 bg-surface-muted/30 p-3 text-center transition-all hover:border-success/50">
               <span className="text-2xl sm:text-3xl font-extrabold text-success tabular-nums">
                 {toLocaleDigits(s?.resolved ?? 0, locale)}
               </span>
               <span className="mt-1 block text-xs font-medium text-muted-foreground">{t("home.statFixed")}</span>
             </div>
-            <div className="rounded-xl border border-border/80 bg-surface p-3 sm:p-3.5 shadow-2xs text-center transition-all hover:border-border-strong">
+
+            {/* 0h Avg Fix Time */}
+            <div className="rounded-xl border border-border/80 bg-surface-muted/30 p-3 text-center transition-all hover:border-border-strong">
               <span className="text-2xl sm:text-3xl font-extrabold text-foreground tabular-nums">
-                {s?.avg_resolution_hours != null ? `${toLocaleDigits(Number(s.avg_resolution_hours.toFixed(1)), locale)}h` : "—"}
+                {s?.avg_resolution_hours != null ? `${toLocaleDigits(Number(s.avg_resolution_hours.toFixed(1)), locale)}h` : `${toLocaleDigits(0, locale)}h`}
               </span>
               <span className="mt-1 block text-xs font-medium text-muted-foreground">{t("home.statAvg")}</span>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* AI Campus Daily Brief (Sleek Horizontal 3-Column Strip) */}
-      <AiDailyBriefCard
-        bullets={locale === "as" ? data.brief.bullets_as : data.brief.bullets_en}
-        title={locale === "as" ? "দৈনিক এআই চৌহদ সাৰাংশ" : "AI Campus Daily Brief"}
-        badge={locale === "as" ? "এআই লাইভ" : "AI Live"}
-      />
+        {/* 2. AI Campus Daily Brief (Vertical stack on right rail) */}
+        <AiDailyBriefCard
+          vertical
+          bullets={locale === "as" ? data.brief.bullets_as : data.brief.bullets_en}
+          title={locale === "as" ? "দৈনিক এআই চৌহদ সাৰাংশ" : "AI Campus Daily Brief"}
+          badge={locale === "as" ? "এআই লাইভ" : "AI Live"}
+        />
 
-      {/* Main Content: Issues Section */}
-      <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-foreground">
-              {view === "open" ? t("home.tabOpen") : t("home.tabResolved")}
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              {t("home.slogan")}
-            </p>
+        {/* 3. Helpful Navigation Shortcuts */}
+        <div className="rounded-2xl border border-border/70 bg-surface/50 p-4 space-y-2.5">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {locale === "as" ? "দ্ৰুত সংযোগ" : "Quick Actions"}
           </div>
-
-          <nav aria-label={t("home.title")} className="inline-flex self-start sm:self-auto rounded-full bg-surface-muted/80 p-1 border border-border/60">
-            {(["open", "resolved"] as const).map((v) => (
-              <Link
-                key={v}
-                href={v === "open" ? "/" : "/?view=resolved"}
-                scroll={false}
-                aria-current={view === v ? "page" : undefined}
-                className={cn(
-                  "rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200",
-                  view === v
-                    ? "bg-surface text-foreground shadow-xs ring-1 ring-border font-semibold"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {v === "open" ? t("home.tabOpen") : t("home.tabResolved")}
-              </Link>
-            ))}
-          </nav>
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href="/map"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted hover:border-primary/40 transition-colors shadow-2xs"
+            >
+              <Map className="size-3.5 text-primary" aria-hidden />
+              <span>{t("home.map")}</span>
+            </Link>
+            <Link
+              href="/pulse"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted hover:border-warning/40 transition-colors shadow-2xs"
+            >
+              <Activity className="size-3.5 text-warning" aria-hidden />
+              <span>{locale === "as" ? "চৌহদ স্পন্দন" : "Campus Pulse"}</span>
+            </Link>
+          </div>
         </div>
-
-        {data.issues === null ? (
-          <Card className="border-danger-border bg-danger-soft text-sm text-danger">{t("home.loadError")}</Card>
-        ) : (
-          <IssueFeed issues={data.issues} view={view} />
-        )}
-      </section>
+      </aside>
     </div>
   );
 }

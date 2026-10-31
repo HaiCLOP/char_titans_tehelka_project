@@ -22,7 +22,7 @@ import {
   Skeleton, SkeletonText, StatusChip, Switch, Tabs, Textarea, type PhotoItem,
 } from "@/components/ui";
 import { ApiError, apiFetch, isApiError, uploadWithProgress } from "@/components/api-client";
-import { REPORT_DRAFT_KEY } from "@/components/home/composer";
+import { REPORT_DRAFT_KEY, REPORT_PHOTO_DRAFT_KEY } from "@/components/home/composer";
 import { containsAbuse, filterAbusiveText } from "@/lib/moderation";
 import { EmergencyBanner } from "./emergency-banner";
 
@@ -112,16 +112,30 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
   // Prefill from the home-page composer (sessionStorage, never the URL).
   useEffect(() => {
     let draft: string | null = null;
+    let photoDraft: string | null = null;
     try {
       draft = sessionStorage.getItem(REPORT_DRAFT_KEY);
+      photoDraft = sessionStorage.getItem(REPORT_PHOTO_DRAFT_KEY);
       sessionStorage.removeItem(REPORT_DRAFT_KEY);
+      sessionStorage.removeItem(REPORT_PHOTO_DRAFT_KEY);
     } catch {
       /* storage blocked: start empty */
     }
-    if (!draft) return;
-    const value = draft.slice(0, MAX_TEXT);
-    const id = setTimeout(() => setText((cur) => (cur.trim() ? cur : value)), 0);
-    return () => clearTimeout(id);
+    if (draft) {
+      const value = draft.slice(0, MAX_TEXT);
+      setTimeout(() => setText((cur) => (cur.trim() ? cur : value)), 0);
+    }
+    if (photoDraft) {
+      fetch(photoDraft)
+        .then((r) => r.blob())
+        .then((blob) => {
+          const id = Math.random().toString(36).slice(2, 9);
+          const url = URL.createObjectURL(blob);
+          const item: PhotoItem = { id, blob, url, name: "photo.jpg" };
+          setPhotos((cur) => (cur.length === 0 ? [item] : cur));
+        })
+        .catch(() => {});
+    }
   }, []);
 
   // Prefill location from the URL (e.g. from the campus map).
