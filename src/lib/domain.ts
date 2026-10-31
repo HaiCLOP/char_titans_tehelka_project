@@ -573,8 +573,8 @@ export const DepartmentSchema = z.object({
 });
 export type Department = z.infer<typeof DepartmentSchema>;
 
-/** Roles a super admin can give from S18. super_admin itself is only set in the database. */
-export const MEMBER_ROLES = ["field_staff", "dept_admin", "staff", "student"] as const satisfies readonly Role[];
+/** Roles a super admin can give from S18 (a super admin can't change their own role). */
+export const MEMBER_ROLES = ["field_staff", "dept_admin", "super_admin", "staff", "student"] as const satisfies readonly Role[];
 export type MemberRole = (typeof MEMBER_ROLES)[number];
 
 export const MemberSchema = z.object({
@@ -589,6 +589,8 @@ export const MemberSchema = z.object({
   /** Tickets assigned to this person that are assigned or in progress. */
   open_jobs: z.number().int(),
   last_assigned_at: z.string().nullable(),
+  /** Set by POST /api/admin/members when the email had no account and an invite was sent. */
+  invited: z.boolean().optional(),
 });
 export type Member = z.infer<typeof MemberSchema>;
 
@@ -597,7 +599,7 @@ const coverageList = z
   .max(100)
   .transform((a) => [...new Set(a)]);
 
-/** `POST /api/admin/members` — give an existing account (signed in at least once) a role. */
+/** `POST /api/admin/members` — give an account a role; an email without an account gets an invite first. */
 export const MemberAddSchema = z.strictObject({
   email: z.email().max(254),
   role: z.enum(MEMBER_ROLES),

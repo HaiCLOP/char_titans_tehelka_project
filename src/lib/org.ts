@@ -214,11 +214,22 @@ async function applyMember(supabase: Client, actor: Actor, targetId: string, cha
   const before = cur as ProfileRow;
 
   if (before.id === actor.id) throw new PipelineError("FORBIDDEN", "You cannot change your own role here");
-  if (before.role === "super_admin") throw new PipelineError("FORBIDDEN", "Super admins are managed in the database");
 
   const role = change.role ?? before.role;
   let department = change.department_id !== undefined ? change.department_id : before.department_id;
-  if (role === "student") department = null; // students never belong to a fixing department
+  // Students never belong to a fixing department; super admins see every department.
+  if (role === "student" || role === "super_admin") department = null;
+  // Never leave the system without an active super admin (the caller is one, but keep the rule explicit).
+  if (before.role === "super_admin" && (role !== "super_admin" || change.active === false)) {
+    const { count, error: cErr } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "super_admin")
+      .eq("active", true)
+      .neq("id", before.id);
+    if (cErr) throw dbError(cErr, "count super admins");
+    if (!count) throw new PipelineError("CONFLICT", "This is the last active super admin");
+  }
   if (ASSIGNABLE.includes(role) && !department) {
     throw new PipelineError("VALIDATION_ERROR", "Choose a department for field staff and department admins");
   }
@@ -263,22 +274,37 @@ async function applyMember(supabase: Client, actor: Actor, targetId: string, cha
   return m;
 }
 
-export async function addMember(supabase: Client, actor: Actor, body: MemberAdd): Promise<Member> {
-  const { data: uid, error } = await createAdminClient().rpc("admin_find_user", { p_email: body.email });
+/**
+ * Gives an account a role. If nobody has signed up with that email yet, Supabase sends them an invite
+ * (a sign-in link to `redirectTo`); the auth trigger creates their profile, which gets the role right away.
+ */
+export async function addMember(supabase: Client, actor: Actor, body: MemberAdd, redirectTo: string): Promise<Member> {
+  const admin = createAdminClient();
+  const email = body.email.trim().toLowerCase();
+  const { data: found, error } = await admin.rpc("admin_find_user", { p_email: email });
   if (error) {
     console.error("[org] user lookup failed", error.code, error.message);
     throw new PipelineError("INTERNAL", "Could not look up that email");
   }
-  if (typeof uid !== "string" || !uid) {
-    throw new PipelineError("NOT_FOUND", "No account with that email yet. Ask them to sign in once first.");
+  let uid = typeof found === "string" && found ? found : null;
+  let invited = false;
+  if (!uid) {
+    const { data: inv, error: invErr } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
+    if (invErr || !inv.user) {
+      console.error("[org] invite failed", invErr?.status, invErr?.message);
+      throw new PipelineError(invErr?.status === 429 ? "RATE_LIMITED" : "INTERNAL", "Could not send the invite. Try again later.");
+    }
+    uid = inv.user.id;
+    invited = true;
   }
-  return applyMember(supabase, actor, uid, {
+  const member = await applyMember(supabase, actor, uid, {
     role: body.role,
     department_id: body.department_id ?? null,
     skills: body.skills,
     coverage_location_ids: body.coverage_location_ids,
     active: true,
   });
+  return invited ? { ...member, invited } : member;
 }
 
 export async function updateMember(supabase: Client, actor: Actor, id: string, body: MemberPatch): Promise<Member> {

@@ -21,15 +21,16 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Give an existing account (signed in at least once) a role in a department. Found by email.
+// Give an account a role (and a department for staff roles). Found by email; unknown emails get an invite.
 export async function POST(req: Request) {
   const auth = await requireRole("super_admin");
   if (auth instanceof Response) return auth;
   const body = await parseJson(req, MemberAddSchema);
   if (body instanceof Response) return body;
   try {
-    const member = await addMember(auth.supabase, { id: auth.user.id, profile: auth.profile }, body);
-    await audit(auth.user.id, "member.add", `profiles:${member.id}`, { role: body.role, department_id: body.department_id ?? null });
+    const base = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
+    const member = await addMember(auth.supabase, { id: auth.user.id, profile: auth.profile }, body, new URL("/auth/callback", base).toString());
+    await audit(auth.user.id, "member.add", `profiles:${member.id}`, { role: body.role, department_id: body.department_id ?? null, invited: Boolean(member.invited) });
     return ok(member);
   } catch (e) {
     return failFrom(e, "add the member");

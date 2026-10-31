@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Building2, Pencil, Plus, Trash2, UserPlus, Users } from "lucide-react";
+import { Building2, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from "lucide-react";
 import {
   CATEGORIES, DEFAULT_SLA_HOURS, MEMBER_ROLES,
   type AdminSettings, type Category, type Department, type Member, type MemberRole, type NamedRef, type SlaHours,
@@ -165,14 +165,15 @@ function DepartmentDialog({ open, onOpenChange, editing }: { open: boolean; onOp
 type MemberForm = { email: string; role: MemberRole; department_id: string; skills: Category[]; coverage: string[]; active: boolean };
 
 function MemberDialog({
-  open, onOpenChange, department, departments, locations, editing,
+  open, onOpenChange, department, departments, locations, editing, initialRole = "field_staff",
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  department: Department;
+  department: Department | null;
   departments: Department[];
   locations: NamedRef[];
   editing: Member | null;
+  initialRole?: MemberRole;
 }) {
   const t = useTranslations("members");
   const tr = useTranslations("roles");
@@ -181,8 +182,8 @@ function MemberDialog({
   const qc = useQueryClient();
   const [form, setForm] = useState<MemberForm>(() => ({
     email: editing?.email ?? "",
-    role: editing && (MEMBER_ROLES as readonly string[]).includes(editing.role) ? (editing.role as MemberRole) : "field_staff",
-    department_id: editing?.department_id ?? department.id,
+    role: editing && (MEMBER_ROLES as readonly string[]).includes(editing.role) ? (editing.role as MemberRole) : initialRole,
+    department_id: editing?.department_id ?? department?.id ?? departments[0]?.id ?? "",
     skills: editing?.skills ?? [],
     coverage: editing?.coverage_location_ids ?? [],
     active: editing?.active ?? true,
@@ -193,7 +194,7 @@ function MemberDialog({
 
   const save = useMutation({
     mutationFn: () => {
-      const dept = form.role === "student" ? null : form.department_id || null;
+      const dept = form.role === "student" || form.role === "super_admin" ? null : form.department_id || null;
       const common = {
         role: form.role,
         department_id: dept,
@@ -203,8 +204,8 @@ function MemberDialog({
         ? apiFetch<Member>(`/api/admin/members/${editing.id}`, { method: "PATCH", json: { ...common, active: form.active } })
         : apiFetch<Member>("/api/admin/members", { method: "POST", json: { email: form.email.trim(), ...common } });
     },
-    onSuccess: () => {
-      toast.success(editing ? t("toast.saved") : t("toast.added"));
+    onSuccess: (m) => {
+      toast.success(editing ? t("toast.saved") : m.invited ? t("toast.invited", { email: form.email.trim() }) : t("toast.added"));
       void qc.invalidateQueries({ queryKey: ["members"] });
       void qc.invalidateQueries({ queryKey: ["departments"] });
       onOpenChange(false);
@@ -212,7 +213,8 @@ function MemberDialog({
     onError: (e) =>
       setError(
         isApiError(e, "NOT_FOUND") ? t("errors.notFound")
-        : isApiError(e, "CONFLICT") ? t("errors.openJobs")
+        : isApiError(e, "CONFLICT") ? (editing?.role === "super_admin" ? t("errors.lastSuper") : t("errors.openJobs"))
+        : isApiError(e, "RATE_LIMITED") ? t("errors.inviteLimit")
         : isApiError(e, "FORBIDDEN") ? t("errors.forbidden")
         : isApiError(e, "VALIDATION_ERROR") ? t("errors.invalid")
         : t("errors.generic"),
@@ -406,6 +408,69 @@ function MembersPanel({ department, departments, locations }: { department: Depa
 }
 
 // ---------------------------------------------------------------------------------------------------
+// Super admins (no department: they see and manage everything)
+// ---------------------------------------------------------------------------------------------------
+
+function SuperAdminsPanel({ departments, locations }: { departments: Department[]; locations: NamedRef[] }) {
+  const t = useTranslations("members");
+  const [dialog, setDialog] = useState<{ open: boolean; editing: Member | null; key: number }>({ open: false, editing: null, key: 0 });
+  const members = useQuery({
+    queryKey: ["members", "all"],
+    queryFn: ({ signal }) => apiFetch<Member[]>("/api/admin/members", { signal }),
+  });
+  const supers = (members.data ?? []).filter((m) => m.role === "super_admin");
+  const open = (editing: Member | null) => setDialog((d) => ({ open: true, editing, key: d.key + 1 }));
+
+  return (
+    <Card className="mt-5">
+      <CardHeader
+        icon={<ShieldCheck className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />}
+        title={t("supers.title")}
+        description={t("supers.body")}
+        action={
+          <Button size="sm" onClick={() => open(null)}>
+            <UserPlus aria-hidden />
+            {t("supers.add")}
+          </Button>
+        }
+        className="mb-4"
+      />
+      {members.isPending ? (
+        <ListSkeleton rows={2} />
+      ) : members.isError ? (
+        <ErrorState bare className="py-6" onRetry={() => void members.refetch()} retrying={members.isFetching} />
+      ) : (
+        <ul className="divide-y divide-border">
+          {supers.map((m) => (
+            <li key={m.id} className={cn("flex items-center gap-3 py-3", !m.active && "opacity-60")}>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{m.name || t("noName")}</p>
+                {m.email && <p className="truncate text-xs text-muted-foreground">{m.email}</p>}
+              </div>
+              <Button size="icon-sm" variant="ghost" onClick={() => open(m)} aria-label={t("editAria", { name: m.name || m.email || t("noName") })}>
+                <Pencil strokeWidth={1.75} aria-hidden />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {dialog.open && (
+        <MemberDialog
+          key={dialog.key}
+          open={dialog.open}
+          onOpenChange={(o) => setDialog((d) => ({ ...d, open: o }))}
+          department={null}
+          departments={departments}
+          locations={locations}
+          editing={dialog.editing}
+          initialRole="super_admin"
+        />
+      )}
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------------------------------
 
@@ -562,6 +627,7 @@ export function DepartmentsView({ locations }: { locations: NamedRef[] }) {
           ) : depts.isPending ? (
             <Card><ListSkeleton rows={3} /></Card>
           ) : null}
+          <SuperAdminsPanel departments={list} locations={locations} />
         </section>
       </div>
 
