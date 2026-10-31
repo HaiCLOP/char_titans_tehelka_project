@@ -3,10 +3,10 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Building2, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from "lucide-react";
+import { Building2, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users, Workflow } from "lucide-react";
 import {
-  CATEGORIES, DEFAULT_SLA_HOURS, MEMBER_ROLES,
-  type AdminSettings, type Category, type Department, type Member, type MemberRole, type NamedRef, type SlaHours,
+  ASSIGN_MODES, CATEGORIES, DEFAULT_SLA_HOURS, DEPT_ADMIN_MEMBER_ROLES, MEMBER_ROLES,
+  type AdminSettings, type StaffExperience, type Category, type Department, type Member, type MemberRole, type NamedRef, type SlaHours,
 } from "@/lib/domain";
 import { cn, toLocaleDigits } from "@/lib/utils";
 import {
@@ -165,7 +165,7 @@ function DepartmentDialog({ open, onOpenChange, editing }: { open: boolean; onOp
 type MemberForm = { email: string; role: MemberRole; department_id: string; skills: Category[]; coverage: string[]; active: boolean };
 
 function MemberDialog({
-  open, onOpenChange, department, departments, locations, editing, initialRole = "field_staff",
+  open, onOpenChange, department, departments, locations, editing, initialRole = "field_staff", limited = false,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -174,6 +174,8 @@ function MemberDialog({
   locations: NamedRef[];
   editing: Member | null;
   initialRole?: MemberRole;
+  /** Department admins: limited roles, their own department only. */
+  limited?: boolean;
 }) {
   const t = useTranslations("members");
   const tr = useTranslations("roles");
@@ -257,9 +259,9 @@ function MemberDialog({
             label={t("dialog.role")}
             value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value as MemberRole })}
-            options={MEMBER_ROLES.map((r) => ({ value: r, label: tr(r) }))}
+            options={(limited ? DEPT_ADMIN_MEMBER_ROLES : MEMBER_ROLES).map((r) => ({ value: r, label: tr(r) }))}
           />
-          {needsDept && (
+          {needsDept && !limited && (
             <Select
               id="member-dept"
               label={t("dialog.department")}
@@ -303,7 +305,23 @@ function MemberDialog({
 // Members panel
 // ---------------------------------------------------------------------------------------------------
 
-function MembersPanel({ department, departments, locations }: { department: Department; departments: Department[]; locations: NamedRef[] }) {
+/** Hidden experience: level name and the work behind it (super admins, the dept's admins and the person only). */
+export function ExperienceLine({ exp }: { exp: StaffExperience }) {
+  const t = useTranslations("members.experience");
+  const locale = useLocale();
+  const n = (v: number) => toLocaleDigits(v, locale);
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular">
+      <Chip tone={exp.level >= 3 ? "primary" : "neutral"}>{t(`level.${exp.level}`)}</Chip>
+      <span>{t("jobs", { count: exp.jobs_done, n: n(exp.jobs_done) })}</span>
+      <span>{t("points", { n: n(exp.points) })}</span>
+      {exp.avg_rating != null && <span>{t("rating", { n: toLocaleDigits(Math.round(exp.avg_rating * 10) / 10, locale) })}</span>}
+      {exp.on_time_pct != null && <span>{t("onTime", { n: n(exp.on_time_pct) })}</span>}
+    </p>
+  );
+}
+
+export function MembersPanel({ department, departments, locations, limited = false }: { department: Department; departments: Department[]; locations: NamedRef[]; limited?: boolean }) {
   const t = useTranslations("members");
   const tr = useTranslations("roles");
   const tc = useTranslations("category");
@@ -359,10 +377,11 @@ function MembersPanel({ department, departments, locations }: { department: Depa
                     {!m.active && <Chip tone="muted">{t("inactive")}</Chip>}
                   </p>
                   {m.email && <p className="truncate text-xs text-muted-foreground">{m.email}</p>}
+                  {m.experience && <ExperienceLine exp={m.experience} />}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <span className="mr-2 text-xs text-muted-foreground tabular">{t("openJobs", { count: m.open_jobs, n: n(m.open_jobs) })}</span>
-                  {m.role !== "super_admin" && (
+                  {m.role !== "super_admin" && (!limited || m.role !== "dept_admin") && (
                     <>
                       <Button size="sm" variant="ghost" loading={toggle.isPending && toggle.variables?.id === m.id} onClick={() => toggle.mutate(m)}>
                         {m.active ? t("deactivate") : t("activate")}
@@ -401,6 +420,7 @@ function MembersPanel({ department, departments, locations }: { department: Depa
           departments={departments}
           locations={locations}
           editing={dialog.editing}
+          limited={limited}
         />
       )}
     </Card>
@@ -475,35 +495,85 @@ function SuperAdminsPanel({ departments, locations }: { departments: Department[
 // ---------------------------------------------------------------------------------------------------
 
 /** S18 — departments (bilingual names, categories, SLA) and their members (super admin). */
-/** Super admin switch: auto-assign emergencies (urgent reports) to the routed department (migration 16). */
-function EmergencyAutoAssign() {
-  const t = useTranslations("departments.emergency");
+/** Super admin: how safe tickets get assigned (off / approval / automatic) and emergency auto-assignment. */
+function AssignmentWorkflow() {
+  const t = useTranslations("departments.workflow");
+  const te = useTranslations("departments.emergency");
+  const locale = useLocale();
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["admin-settings"],
     queryFn: ({ signal }) => apiFetch<AdminSettings>("/api/admin/settings", { signal }),
   });
   const save = useMutation({
-    mutationFn: (body: AdminSettings) => apiFetch<AdminSettings>("/api/admin/settings", { method: "PATCH", json: body }),
+    mutationFn: (body: Partial<AdminSettings>) => apiFetch<AdminSettings>("/api/admin/settings", { method: "PATCH", json: body }),
     onSuccess: (r) => {
       qc.setQueryData(["admin-settings"], r);
-      toast.success(r.auto_assign_emergency ? t("on") : t("off"));
+      toast.success(t("saved"));
     },
-    onError: () => toast.error(t("error")),
+    onError: () => toast.error(te("error")),
   });
+  const cur = q.data ? { ...q.data, ...(save.isPending ? save.variables : {}) } : null;
+  const busy = q.isPending || save.isPending;
+
   return (
     <Card className="mt-6">
+      <CardHeader
+        icon={<Workflow className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />}
+        title={t("title")}
+        description={t("body")}
+        className="mb-4"
+      />
       {q.isError ? (
-        <ErrorState bare className="py-2" title={t("loadError")} onRetry={() => void q.refetch()} retrying={q.isFetching} />
+        <ErrorState bare className="py-2" title={te("loadError")} onRetry={() => void q.refetch()} retrying={q.isFetching} />
       ) : (
-        <Switch
-          id="emergency-auto-assign"
-          checked={save.isPending ? Boolean(save.variables?.auto_assign_emergency) : Boolean(q.data?.auto_assign_emergency)}
-          onCheckedChange={(v) => save.mutate({ auto_assign_emergency: v })}
-          disabled={q.isPending || save.isPending}
-          label={t("label")}
-          description={t("description")}
-        />
+        <div className="space-y-5">
+          <div>
+            <p className="text-sm font-medium" id="assign-mode-label">{t("modeLabel")}</p>
+            <div role="radiogroup" aria-labelledby="assign-mode-label" className="mt-2 inline-flex flex-wrap rounded-full bg-surface-sunken/70 p-1">
+              {ASSIGN_MODES.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="radio"
+                  aria-checked={cur?.assign_mode === m}
+                  disabled={busy}
+                  onClick={() => save.mutate({ assign_mode: m })}
+                  className={cn(
+                    "h-10 rounded-full px-4 text-sm font-medium transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
+                    cur?.assign_mode === m ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {t(`mode.${m}`)}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">{cur ? t(`modeHint.${cur.assign_mode}`) : ""}</p>
+          </div>
+          <div className="border-t border-border pt-5">
+            <Switch
+              id="emergency-auto-assign"
+              checked={Boolean(cur?.auto_assign_emergency)}
+              onCheckedChange={(v) => save.mutate({ auto_assign_emergency: v })}
+              disabled={busy}
+              label={te("label")}
+              description={te("description")}
+            />
+            {cur?.auto_assign_emergency && (
+              <div className="mt-4 max-w-xs">
+                <Select
+                  id="emergency-team"
+                  label={t("teamSize")}
+                  hint={t("teamSizeHint")}
+                  value={String(cur.emergency_team_size)}
+                  disabled={busy}
+                  onChange={(e) => save.mutate({ emergency_team_size: Number(e.target.value) })}
+                  options={[1, 2, 3, 4].map((n) => ({ value: String(n), label: t("people", { count: n, n: toLocaleDigits(n, locale) }) }))}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </Card>
   );
@@ -555,7 +625,7 @@ export function DepartmentsView({ locations }: { locations: NamedRef[] }) {
         </Button>
       </header>
 
-      <EmergencyAutoAssign />
+      <AssignmentWorkflow />
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
         <section aria-label={t("listLabel")} className="min-w-0">

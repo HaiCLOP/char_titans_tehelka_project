@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Building2, ChevronsLeft, ChevronsRight, ClipboardList, Home, LayoutDashboard, Map, Menu, MessagesSquare, Wrench } from "lucide-react";
+import { Building2, ChevronsLeft, ChevronsRight, ClipboardList, Home, LayoutDashboard, Map, Menu, MessagesSquare, Users, Wrench } from "lucide-react";
 import type { Role } from "@/lib/domain";
 import { cn, setCookie } from "@/lib/utils";
 import { Drawer } from "@/components/ui/dialog";
@@ -13,12 +13,13 @@ import { ADMIN_NAV_COOKIE } from "./admin-nav";
 
 // Only screens that exist. Locations (P1) comes back when its page ships.
 const ITEMS = [
-  { href: "/admin", key: "dashboard", icon: LayoutDashboard, exact: true, superOnly: false },
-  { href: "/admin/queue", key: "queue", icon: ClipboardList, exact: false, superOnly: false },
-  { href: "/admin/agent", key: "agent", icon: MessagesSquare, exact: false, superOnly: false },
-  { href: "/staff", key: "fieldWork", icon: Wrench, exact: false, superOnly: false },
-  { href: "/admin/map", key: "map", icon: Map, exact: false, superOnly: false },
-  { href: "/admin/departments", key: "departments", icon: Building2, exact: false, superOnly: true },
+  { href: "/admin", key: "dashboard", icon: LayoutDashboard, exact: true, superOnly: false, deptOnly: false },
+  { href: "/admin/queue", key: "queue", icon: ClipboardList, exact: false, superOnly: false, deptOnly: false },
+  { href: "/admin/agent", key: "agent", icon: MessagesSquare, exact: false, superOnly: false, deptOnly: false },
+  { href: "/staff", key: "fieldWork", icon: Wrench, exact: false, superOnly: false, deptOnly: false },
+  { href: "/admin/map", key: "map", icon: Map, exact: false, superOnly: false, deptOnly: false },
+  { href: "/admin/departments", key: "departments", icon: Building2, exact: false, superOnly: true, deptOnly: false },
+  { href: "/admin/team", key: "team", icon: Users, exact: false, superOnly: false, deptOnly: true },
 ] as const;
 
 type AdminSidebarProps = {
@@ -59,7 +60,7 @@ export function AdminSidebar({ role, defaultCollapsed = false, toolbar }: AdminS
 
   const links = (compact: boolean, onNavigate?: () => void) => (
     <ul className="flex flex-col gap-1">
-      {ITEMS.filter((i) => !i.superOnly || role === "super_admin").map((i) => (
+      {ITEMS.filter((i) => (!i.superOnly || role === "super_admin") && (!i.deptOnly || role === "dept_admin")).map((i) => (
         <li key={i.href} onClick={onNavigate}>
           <NavLink
             href={i.href}

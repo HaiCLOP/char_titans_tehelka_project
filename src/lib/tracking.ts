@@ -237,9 +237,13 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
         : query.eq("user_id", viewer!.id);
       break;
     }
-    case "assigned":
-      query = query.eq("assignee_id", viewer!.id);
+    case "assigned": {
+      // Lead on the job, or a helper on its team (migration 18).
+      const { data: helping } = await supabase.from("complaint_helpers").select("complaint_id").eq("user_id", viewer!.id).limit(200);
+      const ids = (helping ?? []).map((h) => h.complaint_id as string);
+      query = ids.length ? query.or(`assignee_id.eq.${viewer!.id},id.in.(${ids.join(",")})`) : query.eq("assignee_id", viewer!.id);
       break;
+    }
     case "public":
       // complaints_public already filters public / not sensitive / not merged.
       break;
@@ -649,7 +653,7 @@ export async function getComplaintDetail(
 /** Workspace extras for admins of the ticket: assignee name, linked parent, merged duplicates. */
 async function loadAdminInfo(supabase: Client, row: DetailRow): Promise<NonNullable<ComplaintDetail["admin"]>> {
   type Ref = { id: string; code: string; title_en: string | null; title_as: string | null };
-  const [assignee, parent, children] = await Promise.all([
+  const [assignee, parent, children, helperRows] = await Promise.all([
     row.assignee_id
       ? supabase.from("profiles").select("id, full_name").eq("id", row.assignee_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -658,7 +662,13 @@ async function loadAdminInfo(supabase: Client, row: DetailRow): Promise<NonNulla
       ? createAdminClient().from("complaints").select("id, code, title_en, title_as").eq("id", row.parent_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from("complaints").select("id, code, title_en, title_as").eq("parent_id", row.id).order("created_at").limit(20),
+    supabase.from("complaint_helpers").select("user_id").eq("complaint_id", row.id),
   ]);
+  const helperIds = ((helperRows.data ?? []) as { user_id: string }[]).map((h) => h.user_id);
+  const { data: helperPeople } = helperIds.length
+    ? await createAdminClient().from("profiles").select("id, full_name").in("id", helperIds)
+    : { data: [] };
+  const helperName = new Map(((helperPeople ?? []) as { id: string; full_name: string | null }[]).map((p) => [p.id, p.full_name]));
   const a = assignee.data as { id: string; full_name: string | null } | null;
   // Auto-assignment (migration 10) is shown only while the auto-picked person is still the assignee.
   const meta = row.ai_meta ?? {};
@@ -674,7 +684,23 @@ async function loadAdminInfo(supabase: Client, row: DetailRow): Promise<NonNulla
           at: typeof meta.auto_assigned_at === "string" ? meta.auto_assigned_at : null,
         }
       : null;
+  // Workflow suggestion (assign_mode "approval"): only while nobody is assigned yet.
+  const prop = (meta.assign_proposal ?? null) as Record<string, unknown> | null;
+  const proposal =
+    !row.assignee_id && prop && typeof prop.id === "string"
+      ? {
+          id: prop.id,
+          name: typeof prop.name === "string" ? prop.name : null,
+          confidence: typeof prop.confidence === "number" ? prop.confidence : 0,
+          level: typeof prop.level === "number" ? Math.min(4, Math.max(1, Math.round(prop.level))) : 1,
+          note_en: typeof prop.note_en === "string" ? prop.note_en : null,
+          note_as: typeof prop.note_as === "string" ? prop.note_as : null,
+          at: typeof prop.at === "string" ? prop.at : null,
+        }
+      : null;
   return {
+    proposal,
+    helpers: helperIds.map((id) => ({ id, name: helperName.get(id) ?? null })),
     auto_assign: auto,
     department_id: row.department_id,
     assignee: row.assignee_id ? { id: row.assignee_id, name: a?.full_name ?? null } : null,

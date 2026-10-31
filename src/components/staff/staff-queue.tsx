@@ -1,18 +1,37 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CheckCircle2, ClipboardCheck, MapPin, Play } from "lucide-react";
-import type { ComplaintListItem, ComplaintListPage, ComplaintUpdateResult } from "@/lib/domain";
+import type { ComplaintListItem, ComplaintListPage, ComplaintUpdateResult, StaffExperience } from "@/lib/domain";
 import {
-  Button, CategoryChip, EmptyState, ErrorState, LangText, LifecycleTrack, PriorityChip, Skeleton, StatusChip, Tabs,
+  Button, Card, CategoryChip, EmptyState, ErrorState, LangText, LifecycleTrack, PriorityChip, Skeleton, StatusChip, Tabs,
 } from "@/components/ui";
 import { apiFetch, isApiError } from "@/components/api-client";
 import { useRealtime } from "@/components/use-realtime";
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import { ResolveDrawer } from "./resolve-drawer";
+import { ExperienceLine } from "@/components/admin/departments";
+
+/** Own hidden experience (only they, their dept admins and super admins see it). Quietly absent on error. */
+function MyExperience() {
+  const t = useTranslations("members.experience");
+  const q = useQuery({
+    queryKey: ["my-experience"],
+    queryFn: ({ signal }) => apiFetch<StaffExperience>("/api/staff/experience", { signal }),
+    staleTime: 60_000,
+  });
+  if (!q.data) return null;
+  return (
+    <Card className="mt-5">
+      <p className="text-sm font-medium">{t("title")}</p>
+      <ExperienceLine exp={q.data} />
+      <p className="mt-2 text-xs text-muted-foreground">{t("body")}</p>
+    </Card>
+  );
+}
 
 type Tab = "todo" | "done";
 const TAB_STATUS: Record<Tab, string> = { todo: "assigned,in_progress", done: "resolved,closed" };
@@ -80,6 +99,8 @@ export function StaffQueue({ userId, isAdmin }: { userId: string; isAdmin: boole
         <h1 className="text-display text-[2.25rem] sm:text-[2.75rem]">{t("title")}</h1>
         <p className="mt-2 text-muted-foreground">{t("subtitle")}</p>
       </header>
+
+      {!isAdmin && <MyExperience />}
 
       <Tabs<Tab>
         className="mt-6"

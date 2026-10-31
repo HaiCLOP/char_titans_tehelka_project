@@ -177,7 +177,17 @@ export const PublicConfigSchema = z.object({
 export type PublicConfig = z.infer<typeof PublicConfigSchema>;
 
 /** `GET/PATCH /api/admin/settings` — super admin switches stored in app_config. */
-export const AdminSettingsSchema = z.object({ auto_assign_emergency: z.boolean() });
+export const ASSIGN_MODES = ["off", "approval", "auto"] as const;
+export type AssignMode = (typeof ASSIGN_MODES)[number];
+
+export const AdminSettingsSchema = z.object({
+  /** Urgent reports are assigned straight away (to a team of `emergency_team_size`). */
+  auto_assign_emergency: z.boolean(),
+  emergency_team_size: z.number().int().min(1).max(4),
+  /** Safe tickets: off · approval (suggest, an admin approves) · auto (assign straight away). */
+  assign_mode: z.enum(ASSIGN_MODES),
+});
+export const AdminSettingsPatchSchema = AdminSettingsSchema.partial().refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 export type AdminSettings = z.infer<typeof AdminSettingsSchema>;
 
 // ---------- M4: tracking API contracts (PRD section 10, screens S07–S10) ----------
@@ -314,6 +324,21 @@ export const ComplaintAdminInfoSchema = z.object({
     })
     .nullable()
     .optional(),
+  /** Assignment suggested by the workflow (assign_mode "approval"), waiting for an admin; null once assigned. */
+  proposal: z
+    .object({
+      id: z.string(),
+      name: z.string().nullable(),
+      confidence: z.number(),
+      level: z.number().int(),
+      note_en: z.string().nullable(),
+      note_as: z.string().nullable(),
+      at: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
+  /** Team members besides the lead assignee (migration 18). */
+  helpers: z.array(z.object({ id: z.string(), name: z.string().nullable() })).optional(),
 });
 export type ComplaintAdminInfo = z.infer<typeof ComplaintAdminInfoSchema>;
 
@@ -574,8 +599,22 @@ export const DepartmentSchema = z.object({
 export type Department = z.infer<typeof DepartmentSchema>;
 
 /** Roles a super admin can give from S18 (a super admin can't change their own role). */
+/** Roles a department admin can give, inside their own department only. */
+export const DEPT_ADMIN_MEMBER_ROLES = ["field_staff", "staff"] as const satisfies readonly Role[];
 export const MEMBER_ROLES = ["field_staff", "dept_admin", "super_admin", "staff", "student"] as const satisfies readonly Role[];
 export type MemberRole = (typeof MEMBER_ROLES)[number];
+
+/** Hidden staff experience (staff_experience, migration 18): super admins, their dept admins and themselves. */
+export const StaffExperienceSchema = z.object({
+  user_id: z.string(),
+  jobs_done: z.number().int(),
+  points: z.number().int(),
+  level: z.number().int().min(1).max(4),
+  avg_rating: z.number().nullable(),
+  on_time_pct: z.number().int().nullable(),
+  open_jobs: z.number().int(),
+});
+export type StaffExperience = z.infer<typeof StaffExperienceSchema>;
 
 export const MemberSchema = z.object({
   id: z.string(),
@@ -589,6 +628,8 @@ export const MemberSchema = z.object({
   /** Tickets assigned to this person that are assigned or in progress. */
   open_jobs: z.number().int(),
   last_assigned_at: z.string().nullable(),
+  /** Field staff and dept admins only, and only for callers allowed to see it. */
+  experience: StaffExperienceSchema.nullable().optional(),
   /** Set by POST /api/admin/members when the email had no account and an invite was sent. */
   invited: z.boolean().optional(),
 });
@@ -632,9 +673,22 @@ export const AssigneeSuggestionSchema = z.object({
     /** They cover the ticket's building (or all buildings). */
     covers: z.boolean(),
     open_jobs: z.number().int(),
+    /** Hidden experience level 1 newbie … 4 expert (admins and the person only). */
+    level: z.number().int().min(1).max(4),
+    jobs_done: z.number().int(),
+    /** Their experience suits this ticket's severity (senior for urgent/P1, newer staff for P3–P4). */
+    fit: z.boolean(),
   }),
 });
 export type AssigneeSuggestion = z.infer<typeof AssigneeSuggestionSchema>;
+
+
+
+/** `POST /api/complaints/[id]/proposal` — approve or dismiss the suggested assignee. */
+export const ProposalDecisionSchema = z.strictObject({ approve: z.boolean() });
+
+/** `POST /api/complaints/[id]/helpers` / `DELETE ?user=`. */
+export const HelperAddSchema = z.strictObject({ user_id: z.guid() });
 
 export const ADMIN_STATS_DAYS = [7, 14, 30] as const;
 export const AdminStatsQuerySchema = z.object({

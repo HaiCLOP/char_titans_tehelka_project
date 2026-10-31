@@ -5,6 +5,9 @@ import {
   DepartmentSchema,
   MemberSchema,
   SlaHoursSchema,
+  StaffExperienceSchema,
+  DEPT_ADMIN_MEMBER_ROLES,
+  type StaffExperience,
   DEFAULT_SLA_HOURS,
   type Department,
   DepartmentInputSchema,
@@ -173,9 +176,21 @@ async function emails(ids: string[]): Promise<Map<string, string>> {
   return new Map(((data ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email ?? ""]));
 }
 
+async function experience(supabase: Client, ids: string[]): Promise<Map<string, StaffExperience>> {
+  if (ids.length === 0) return new Map();
+  const { data, error } = await supabase.rpc("staff_experience", { uids: ids });
+  if (error) {
+    console.warn("[org] experience failed", error.code, error.message);
+    return new Map();
+  }
+  const parsed = StaffExperienceSchema.array().safeParse(data ?? []);
+  return new Map((parsed.success ? parsed.data : []).map((e) => [e.user_id, e]));
+}
+
 async function toMembers(supabase: Client, rows: ProfileRow[]): Promise<Member[]> {
   const ids = rows.map((r) => r.id);
-  const [jobs, mails] = await Promise.all([openJobs(supabase, ids), emails(ids)]);
+  const workers = rows.filter((r) => ASSIGNABLE.includes(r.role)).map((r) => r.id);
+  const [jobs, mails, exp] = await Promise.all([openJobs(supabase, ids), emails(ids), experience(supabase, workers)]);
   return rows.map((r) =>
     MemberSchema.parse({
       id: r.id,
@@ -188,6 +203,7 @@ async function toMembers(supabase: Client, rows: ProfileRow[]): Promise<Member[]
       active: r.active,
       open_jobs: jobs.get(r.id) ?? 0,
       last_assigned_at: r.last_assigned_at,
+      experience: exp.get(r.id) ?? null,
     }),
   );
 }
@@ -211,12 +227,28 @@ type MemberChange = {
 
 /** Validates and applies a membership change to an existing profile. */
 async function applyMember(supabase: Client, actor: Actor, targetId: string, change: MemberChange): Promise<Member> {
-  const { data: cur, error } = await supabase.from("profiles").select(MEMBER_COLUMNS).eq("id", targetId).maybeSingle();
+  // Dept admins can't read profiles outside their department through RLS; access is checked below.
+  const reader = actor.profile.role === "dept_admin" ? createAdminClient() : supabase;
+  const { data: cur, error } = await reader.from("profiles").select(MEMBER_COLUMNS).eq("id", targetId).maybeSingle();
   if (error) throw dbError(error, "load the member");
   if (!cur) throw new PipelineError("NOT_FOUND", "No profile for that person yet. Ask them to sign in once first.");
   const before = cur as ProfileRow;
 
   if (before.id === actor.id) throw new PipelineError("FORBIDDEN", "You cannot change your own role here");
+  // Department admins manage field staff and staff of their own department only.
+  const deptAdmin = actor.profile.role === "dept_admin";
+  if (deptAdmin) {
+    const own = actor.profile.department_id;
+    const manageable = before.role === "student" || before.role === "staff" || before.role === "field_staff";
+    const inReach = !before.department_id || before.department_id === own || before.role === "student";
+    if (!own || !manageable || !inReach) throw new PipelineError("FORBIDDEN", "You can only manage staff of your own department");
+    if (change.role && !(DEPT_ADMIN_MEMBER_ROLES as readonly string[]).includes(change.role) && change.role !== before.role) {
+      throw new PipelineError("FORBIDDEN", "Only super admins can give that role");
+    }
+    if (change.department_id !== undefined && change.department_id !== own && change.department_id !== null) {
+      throw new PipelineError("FORBIDDEN", "You can only add people to your own department");
+    }
+  }
 
   const role = change.role ?? before.role;
   let department = change.department_id !== undefined ? change.department_id : before.department_id;
@@ -268,7 +300,9 @@ async function applyMember(supabase: Client, actor: Actor, targetId: string, cha
 
   let row = before;
   if (Object.keys(patch).length > 0) {
-    const { data, error: upErr } = await supabase.from("profiles").update(patch).eq("id", before.id).select(MEMBER_COLUMNS).maybeSingle();
+    // profiles RLS lets only super admins change roles; a dept admin's change was checked above.
+    const db = deptAdmin ? createAdminClient() : supabase;
+    const { data, error: upErr } = await db.from("profiles").update(patch).eq("id", before.id).select(MEMBER_COLUMNS).maybeSingle();
     if (upErr) throw dbError(upErr, "update the member");
     if (!data) throw new PipelineError("FORBIDDEN", "You cannot change this person");
     row = data as ProfileRow;
@@ -282,6 +316,14 @@ async function applyMember(supabase: Client, actor: Actor, targetId: string, cha
  * (a sign-in link to `redirectTo`); the auth trigger creates their profile, which gets the role right away.
  */
 export async function addMember(supabase: Client, actor: Actor, body: MemberAdd, redirectTo: string): Promise<Member> {
+  if (actor.profile.role === "dept_admin") {
+    // Checked before any invite is sent; applyMember re-checks the person.
+    if (!(DEPT_ADMIN_MEMBER_ROLES as readonly string[]).includes(body.role)) throw new PipelineError("FORBIDDEN", "Only super admins can give that role");
+    if (!actor.profile.department_id || (body.department_id && body.department_id !== actor.profile.department_id)) {
+      throw new PipelineError("FORBIDDEN", "You can only add people to your own department");
+    }
+    body = { ...body, department_id: actor.profile.department_id };
+  }
   const admin = createAdminClient();
   const email = body.email.trim().toLowerCase();
   const { data: found, error } = await admin.rpc("admin_find_user", { p_email: email });

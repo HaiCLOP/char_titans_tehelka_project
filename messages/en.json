@@ -33,7 +33,8 @@
       "expand": "Expand menu",
       "menu": "Menu",
       "backToSite": "Back to site",
-      "fieldWork": "Field work"
+      "fieldWork": "Field work",
+      "team": "My team"
     },
     "work": "My work",
     "workShort": "My work",
@@ -990,6 +991,25 @@
       "invalid": "Some values are not valid. Check and try again.",
       "inUse": "This department still has complaints or members. Move them to another department first.",
       "generic": "Something went wrong. Please try again."
+    },
+    "workflow": {
+      "title": "Assignment workflow",
+      "body": "How new tickets reach staff. Matching uses skills, buildings, current load and hidden experience: severe work goes to experienced staff, routine work to newer staff so they learn.",
+      "modeLabel": "Safe tickets (not urgent, not sensitive, AI confident)",
+      "mode": {
+        "off": "Manual",
+        "approval": "Suggest + approve",
+        "auto": "Automatic"
+      },
+      "modeHint": {
+        "off": "Admins pick staff themselves; suggestions still show in each ticket.",
+        "approval": "The best match is suggested with a confidence score; an admin approves it in one click.",
+        "auto": "The best match is assigned straight away."
+      },
+      "teamSize": "Emergency team size",
+      "teamSizeHint": "The most experienced people are sent together.",
+      "people": "{count, plural, one {{n} person} other {{n} people}}",
+      "saved": "Workflow saved"
     }
   },
   "members": {
@@ -1048,7 +1068,23 @@
       "title": "Super admins",
       "body": "They see every department and manage people, departments and settings.",
       "add": "Add super admin"
-    }
+    },
+    "experience": {
+      "level": {
+        "1": "Newcomer",
+        "2": "Regular",
+        "3": "Experienced",
+        "4": "Expert"
+      },
+      "jobs": "{count, plural, one {{n} job done} other {{n} jobs done}}",
+      "points": "{n} pts",
+      "rating": "★ {n}",
+      "onTime": "{n}% on time",
+      "title": "Your experience",
+      "body": "Only you, your department admins and super admins see this. Severe jobs go to more experienced staff."
+    },
+    "noDepartmentTitle": "No department yet",
+    "noDepartmentBody": "Ask a super admin to add you to a department."
   },
   "assign": {
     "autoShort": "Auto",
@@ -1064,7 +1100,27 @@
     "current": "Assigned",
     "noName": "Unnamed",
     "none": "No field staff match this ticket. Pick someone from the list above.",
-    "error": "Could not rank staff."
+    "error": "Could not rank staff.",
+    "fit": "fits this severity",
+    "proposal": {
+      "title": "Suggested by the workflow",
+      "noName": "Unnamed",
+      "confidence": "{n}% confident",
+      "approve": "Approve",
+      "dismiss": "Dismiss",
+      "approved": "Assigned",
+      "dismissed": "Suggestion dismissed"
+    },
+    "team": {
+      "title": "Team",
+      "body": "Send more people with the lead, e.g. for fights or big repairs.",
+      "add": "Add a helper",
+      "pick": "Choose a person",
+      "remove": "Remove",
+      "noName": "Unnamed",
+      "added": "Added to the team",
+      "removed": "Removed from the team"
+    }
   },
   "sys": {
     "meta": "System",
