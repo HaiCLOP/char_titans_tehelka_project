@@ -176,6 +176,10 @@ export const PublicConfigSchema = z.object({
 });
 export type PublicConfig = z.infer<typeof PublicConfigSchema>;
 
+/** `GET/PATCH /api/admin/settings` — super admin switches stored in app_config. */
+export const AdminSettingsSchema = z.object({ auto_assign_emergency: z.boolean() });
+export type AdminSettings = z.infer<typeof AdminSettingsSchema>;
+
 // ---------- M4: tracking API contracts (PRD section 10, screens S07–S10) ----------
 
 /** Statuses that still need work. `status=active` in list queries. */

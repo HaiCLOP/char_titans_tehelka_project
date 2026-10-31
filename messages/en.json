@@ -861,6 +861,8 @@
     "unassigned": "Unassigned",
     "staffError": "Could not load staff.",
     "noStaff": "No field staff in this department yet.",
+    "sensitiveAdminsOnly": "Sensitive report: only department admins can be assigned.",
+    "noAdminsSensitive": "Sensitive report: this department has no admin to assign yet. Add one under Departments.",
     "assigneeLocked": "Work is in progress — to hand over, move it back to Assigned first.",
     "noName": "Unnamed",
     "roleAdmin": "admin",
@@ -936,6 +938,14 @@
     }
   },
   "departments": {
+    "emergency": {
+      "label": "Auto-assign emergencies",
+      "description": "Urgent reports (fights, harassment, injuries) go straight to someone in the routed department: field staff, or a department admin when the report is sensitive. Off: they wait for an admin.",
+      "on": "Emergencies will be auto-assigned",
+      "off": "Emergencies wait for an admin",
+      "error": "Could not save the setting",
+      "loadError": "Could not load the setting"
+    },
     "title": "Departments",
     "subtitle": "Fixing units, what they handle, how fast, and who works in them.",
     "new": "New department",

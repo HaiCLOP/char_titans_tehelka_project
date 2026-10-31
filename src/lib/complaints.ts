@@ -15,7 +15,7 @@ import {
 import { analyzeComplaint, embedText, type IntakeResult } from "@/lib/ai/intake";
 import { fallbackIntake } from "@/lib/ai/fallback";
 import { INTAKE_PROMPT_VERSION } from "@/lib/ai/prompts/intake";
-import { autoAssign } from "@/lib/assign";
+import { autoAssign, autoAssignEmergency } from "@/lib/assign";
 import { engineFetch } from "@/lib/engine";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAssameseText } from "@/lib/utils";
@@ -318,6 +318,11 @@ export async function submitComplaint(
   let assignee: { id: string; name: string | null } | null = null;
   if (statusOut === "triaged" && autoRoute && !metaErr) {
     assignee = await autoAssign(row.id as string);
+    if (assignee) statusOut = "assigned";
+  }
+  // Emergencies (fights, harassment, injuries) skip the safe rule, but only when an admin turned it on.
+  if (!assignee && row.is_urgent) {
+    assignee = await autoAssignEmergency(row.id as string);
     if (assignee) statusOut = "assigned";
   }
 

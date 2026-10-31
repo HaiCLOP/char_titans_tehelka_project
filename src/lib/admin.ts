@@ -181,6 +181,10 @@ export async function patchComplaint(supabase: Client, actor: Actor, idOrCode: s
       if (!p || !["field_staff", "dept_admin"].includes(p.role) || !row.department_id || p.department_id !== row.department_id) {
         throw new PipelineError("VALIDATION_ERROR", "Pick field staff of this complaint's department");
       }
+      // Checked here as well as by the DB trigger, so a needs_review ticket is not half-moved to triaged first.
+      if ((body.is_sensitive ?? row.is_sensitive) && p.role !== "dept_admin") {
+        throw new PipelineError("FORBIDDEN", "Sensitive reports can only be handled by department admins — assign an admin instead of field staff");
+      }
       patch.assignee_id = p.id;
       assigneeChanged = true;
       if (!targetStatus && ["submitted", "needs_review", "triaged", "in_progress"].includes(row.status)) targetStatus = "assigned";

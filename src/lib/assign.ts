@@ -52,6 +52,26 @@ export async function autoAssign(complaintId: string): Promise<{ id: string; nam
   }
 }
 
+/**
+ * Emergency auto-assignment (migration 16), only when a super admin turned on `auto_assign_emergency`.
+ * Urgent reports go to field staff of the routed department, or a department admin when sensitive.
+ * Never throws: returns null when the setting is off or nobody could be picked.
+ */
+export async function autoAssignEmergency(complaintId: string): Promise<{ id: string; name: string | null } | null> {
+  try {
+    const { data, error } = await createAdminClient().rpc("auto_assign_emergency", { cid: complaintId });
+    if (error) {
+      console.warn("[assign] emergency auto-assign failed", error.code, error.message);
+      return null;
+    }
+    const parsed = AutoResult.safeParse(data ?? null);
+    return parsed.success ? parsed.data : null;
+  } catch (e) {
+    console.warn("[assign] emergency auto-assign failed", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 /** Ranked suggestions for the workspace rail. Admins of the ticket's department / super admin only. */
 export async function suggestAssignees(
   supabase: SupabaseClient,

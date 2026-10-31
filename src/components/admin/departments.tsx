@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Building2, Pencil, Plus, Trash2, UserPlus, Users } from "lucide-react";
 import {
   CATEGORIES, DEFAULT_SLA_HOURS, MEMBER_ROLES,
-  type Category, type Department, type Member, type MemberRole, type NamedRef, type SlaHours,
+  type AdminSettings, type Category, type Department, type Member, type MemberRole, type NamedRef, type SlaHours,
 } from "@/lib/domain";
 import { cn, toLocaleDigits } from "@/lib/utils";
 import {
@@ -410,6 +410,40 @@ function MembersPanel({ department, departments, locations }: { department: Depa
 // ---------------------------------------------------------------------------------------------------
 
 /** S18 — departments (bilingual names, categories, SLA) and their members (super admin). */
+/** Super admin switch: auto-assign emergencies (urgent reports) to the routed department (migration 16). */
+function EmergencyAutoAssign() {
+  const t = useTranslations("departments.emergency");
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: ({ signal }) => apiFetch<AdminSettings>("/api/admin/settings", { signal }),
+  });
+  const save = useMutation({
+    mutationFn: (body: AdminSettings) => apiFetch<AdminSettings>("/api/admin/settings", { method: "PATCH", json: body }),
+    onSuccess: (r) => {
+      qc.setQueryData(["admin-settings"], r);
+      toast.success(r.auto_assign_emergency ? t("on") : t("off"));
+    },
+    onError: () => toast.error(t("error")),
+  });
+  return (
+    <Card className="mt-6">
+      {q.isError ? (
+        <ErrorState bare className="py-2" title={t("loadError")} onRetry={() => void q.refetch()} retrying={q.isFetching} />
+      ) : (
+        <Switch
+          id="emergency-auto-assign"
+          checked={save.isPending ? Boolean(save.variables?.auto_assign_emergency) : Boolean(q.data?.auto_assign_emergency)}
+          onCheckedChange={(v) => save.mutate({ auto_assign_emergency: v })}
+          disabled={q.isPending || save.isPending}
+          label={t("label")}
+          description={t("description")}
+        />
+      )}
+    </Card>
+  );
+}
+
 export function DepartmentsView({ locations }: { locations: NamedRef[] }) {
   const t = useTranslations("departments");
   const tc = useTranslations("category");
@@ -455,6 +489,8 @@ export function DepartmentsView({ locations }: { locations: NamedRef[] }) {
           {t("new")}
         </Button>
       </header>
+
+      <EmergencyAutoAssign />
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
         <section aria-label={t("listLabel")} className="min-w-0">

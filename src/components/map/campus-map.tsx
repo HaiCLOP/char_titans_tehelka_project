@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Check, Languages, MapPin, MapPinOff, Search, X } from "lucide-react";
@@ -67,6 +67,29 @@ type Place = {
 
 const NONE = "__none__";
 const ICON = { strokeWidth: 1.75, "aria-hidden": true } as const;
+const NAME_LANG_KEY = "cs_map_names";
+const nameLangListeners = new Set<() => void>();
+function readNameLang(): "en" | "as" {
+  try {
+    return localStorage.getItem(NAME_LANG_KEY) === "as" ? "as" : "en";
+  } catch {
+    return "en";
+  }
+}
+function subscribeNameLang(cb: () => void) {
+  nameLangListeners.add(cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    nameLangListeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+function setNameLang(l: "en" | "as") {
+  try {
+    localStorage.setItem(NAME_LANG_KEY, l);
+  } catch {}
+  nameLangListeners.forEach((cb) => cb());
+}
 const isFixed = (s: Status) => s === "resolved" || s === "closed";
 
 function href(category: Category | null, fixed: boolean) {
@@ -107,7 +130,8 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
   const locale = useLocale();
   const n = (v: number) => toLocaleDigits(v, locale);
   // Building names on the map and in the list: English by default, switchable to Assamese.
-  const [nameLang, setNameLang] = useState<"en" | "as">("en");
+  // Remembered per browser; the server and first render use English.
+  const nameLang = useSyncExternalStore(subscribeNameLang, readNameLang, () => "en" as const);
   const name = (l: MapLocation | null) => (l ? (nameLang === "as" ? l.name_as || l.name_en : l.name_en) : t("noBuilding"));
 
   const [selected, setSelected] = useState<string | null>(null);

@@ -399,7 +399,9 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
   // Status buttons come only from allowed_next (= status_transitions, PRD 8.2). Duplicate is the Link action.
   const actions = d.allowed_next.filter((s) => s !== "duplicate");
   const assignee = d.admin?.assignee ?? null;
-  const staffOptions = (staff.data ?? []).map((m) => ({
+  // Sensitive reports can only go to department admins (DB trigger); don't offer field staff for them.
+  const sensitive = Boolean(d.admin?.is_sensitive);
+  const staffOptions = (staff.data ?? []).filter((m) => !sensitive || m.role === "dept_admin").map((m) => ({
     value: m.id,
     label: `${m.full_name || t("noName")}${m.role === "dept_admin" ? ` · ${t("roleAdmin")}` : ""}`,
   }));
@@ -563,13 +565,19 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
                 value={assignee?.id ?? ""}
                 placeholder={t("unassigned")}
                 disabled={busy || assignLocked || !departmentId || staff.isPending}
-                hint={staff.isError ? t("staffError") : staff.data && staff.data.length === 0 ? t("noStaff") : d.status === "in_progress" ? t("assigneeLocked") : undefined}
+                hint={
+                  staff.isError ? t("staffError")
+                  : d.status === "in_progress" ? t("assigneeLocked")
+                  : sensitive ? (staffOptions.length === 0 ? t("noAdminsSensitive") : t("sensitiveAdminsOnly"))
+                  : staff.data && staff.data.length === 0 ? t("noStaff")
+                  : undefined
+                }
                 onChange={(e) => patch.mutate({ assignee_id: e.target.value || null })}
                 options={staffOptions}
               />
               <AssigneeSuggestions
                 d={d}
-                enabled={Boolean(departmentId) && !assignLocked}
+                enabled={Boolean(departmentId) && !assignLocked && !sensitive}
                 busy={busy}
                 onAssign={(assignee_id) => patch.mutate({ assignee_id })}
               />
