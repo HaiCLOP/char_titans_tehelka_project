@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import type { Profile, Role } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
-import { PATH_HEADER, loginUrl, roleHome, safeNext } from "@/lib/paths";
+import { INTERNAL_AUTH_HEADER, INTERNAL_AUTH_SECRET, PATH_HEADER, loginUrl, roleHome, safeNext } from "@/lib/paths";
 
 export { roleHome, safeNext } from "@/lib/paths";
 
@@ -20,8 +20,9 @@ export const getUser = cache(async (): Promise<User | null> => {
 
   try {
     const hdrs = await headers();
+    const verifiedSecret = hdrs.get(INTERNAL_AUTH_HEADER);
     const verifiedId = hdrs.get("x-cs-user-id");
-    if (verifiedId) {
+    if (verifiedSecret && verifiedSecret === INTERNAL_AUTH_SECRET && verifiedId) {
       const verifiedEmail = hdrs.get("x-cs-user-email") ?? undefined;
       return {
         id: verifiedId,

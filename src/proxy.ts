@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { PATH_HEADER } from "@/lib/paths";
+import { INTERNAL_AUTH_HEADER, INTERNAL_AUTH_SECRET, PATH_HEADER } from "@/lib/paths";
 import { SYS_HEADER, sysPanelSegment } from "@/lib/sys-path";
 
 // Next 16: `middleware` is now `proxy` (Node runtime). Refreshes the Supabase session cookie and
@@ -23,10 +23,12 @@ export async function proxy(request: NextRequest) {
   const makeHeaders = () => {
     const headers = new Headers(request.headers);
     headers.delete(SYS_HEADER);
+    headers.delete(INTERNAL_AUTH_HEADER);
     headers.delete("x-cs-user-id");
     headers.delete("x-cs-user-email");
     headers.set(PATH_HEADER, path);
     if (verifiedUserId) {
+      headers.set(INTERNAL_AUTH_HEADER, INTERNAL_AUTH_SECRET);
       headers.set("x-cs-user-id", verifiedUserId);
       if (verifiedUserEmail) headers.set("x-cs-user-email", verifiedUserEmail);
     }

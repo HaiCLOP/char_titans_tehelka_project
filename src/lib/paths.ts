@@ -3,6 +3,18 @@ import type { Role } from "@/lib/domain";
 /** Request header set by src/proxy.ts with the current path + query. */
 export const PATH_HEADER = "x-cs-path";
 
+/** Request header set by src/proxy.ts to verify the user identity is genuine and not client-spoofed. */
+export const INTERNAL_AUTH_HEADER = "x-cs-internal-auth";
+
+// Process-internal random token generated on startup; impossible for external callers to forge.
+const globalForAuth = globalThis as unknown as { __cs_internal_auth_secret?: string };
+export const INTERNAL_AUTH_SECRET =
+  globalForAuth.__cs_internal_auth_secret ??
+  (globalForAuth.__cs_internal_auth_secret =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2));
+
 /** Where each role lands after sign-in. */
 export function roleHome(role: Role): string {
   switch (role) {
