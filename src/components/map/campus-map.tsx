@@ -5,7 +5,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { Check, MapPin, MapPinOff, Search, X } from "lucide-react";
 import { CATEGORY_ICON, Card, Chip, Drawer, EmptyState, IssueCard, buttonVariants } from "@/components/ui";
 import { CATEGORIES, type Category, type Status } from "@/lib/domain";
+import { locationMetres } from "@/lib/campus";
 import { cn, toLocaleDigits } from "@/lib/utils";
+import { CampusAtlas, type AtlasMarker } from "./campus-atlas";
 
 export type MapLocation = {
   id: string;
@@ -67,11 +69,6 @@ const NONE = "__none__";
 const ICON = { strokeWidth: 1.75, "aria-hidden": true } as const;
 const isFixed = (s: Status) => s === "resolved" || s === "closed";
 
-/** Circle diameter in px at sm+ (mobile renders at 80 %). */
-function diameter(n: number) {
-  return n === 0 ? 12 : Math.min(64, Math.round(26 + 8 * Math.sqrt(n)));
-}
-
 function href(category: Category | null, fixed: boolean) {
   const q = new URLSearchParams();
   if (category) q.set("category", category);
@@ -99,7 +96,8 @@ function groupPlaces(locations: MapLocation[], issues: MapIssue[], category: Cat
 }
 
 /**
- * S11 — schematic campus plan (not to scale) drawn from `locations.map_x/map_y`, plus an accessible,
+ * S11 — real campus map (OpenStreetMap / Overture geometry) with one marker per building from
+ * `locations.map_x/map_y`, plus an accessible (keyboard / screen reader alternative to the canvas),
  * sortable building list. Tapping a building opens its issues in a Drawer (bottom sheet on mobile).
  */
 export function CampusMap({ locations, issues, category, includeFixed, filters, issueHrefBase = "/c/", sizeBy = "all", reportCta = true, labels = {} }: Props) {
@@ -124,15 +122,21 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
   const places = useMemo(() => groupPlaces(locations, issues, category), [locations, issues, category]);
 
   const total = places.list.reduce((s, p) => s + p.open.length + p.fixed.length, 0) + places.none.open.length + places.none.fixed.length;
-  const plotted = places.list.filter((p) => p.location?.map_x != null && p.location?.map_y != null);
-  // Stretch the plotted positions to the plan's bounding box so the schematic uses the whole sheet.
-  const xs = plotted.map((p) => p.location!.map_x!);
-  const ys = plotted.map((p) => p.location!.map_y!);
-  const fit = (v: number, vals: number[]) => {
-    const lo = Math.min(...vals);
-    const span = Math.max(...vals) - lo;
-    return span > 0 ? (v - lo) / span : 0.5;
-  };
+  // One marker per building with a map position (locations.map_x/map_y → local metres on the real map).
+  const markers = useMemo<AtlasMarker[]>(
+    () =>
+      places.list.flatMap((p) => {
+        const at = p.location ? locationMetres(p.location) : null;
+        if (!at || !p.location) return [];
+        const count = sizeBy === "open" ? p.open.length : p.open.length + p.fixed.length;
+        return [{
+          id: p.id, x: at.x, y: at.y, count, countText: toLocaleDigits(count, locale), topPriority: p.top,
+          fixedOnly: p.top === null && p.fixed.length > 0,
+          label: locale === "as" ? p.location.name_as || p.location.name_en : p.location.name_en,
+        }];
+      }),
+    [places, sizeBy, locale],
+  );
 
   const sorted = useMemo(() => {
     let rows = [...places.list, ...(places.none.open.length + places.none.fixed.length ? [places.none] : [])];
@@ -145,7 +149,10 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
         return en.includes(q) || as.includes(q) || display.includes(q);
       });
     }
-    const coll = new Intl.Collator(locale === "as" ? "as" : "en");
+    // Server (Node ICU) and browser collate Assamese differently, which broke hydration; code-point order
+    // follows the Assamese alphabet closely and is identical everywhere.
+    const en = new Intl.Collator("en");
+    const coll = { compare: (x: string, y: string) => (locale === "as" ? (x < y ? -1 : x > y ? 1 : 0) : en.compare(x, y)) };
     return rows.sort((a, b) =>
       sort === "name"
         ? coll.compare(name(a.location), name(b.location))
@@ -198,59 +205,13 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <Card className="min-w-0 overflow-hidden p-0">
-          <div className="relative aspect-[3/4] bg-surface-muted/40 sm:aspect-[4/3] lg:aspect-[16/11]">
-            <svg className="absolute inset-0 size-full text-border" aria-hidden>
-              <defs>
-                <pattern id="cs-campus-grid" width="32" height="32" patternUnits="userSpaceOnUse">
-                  <path d="M32 0H0V32" fill="none" stroke="currentColor" strokeWidth="1" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#cs-campus-grid)" />
-            </svg>
-            <div className="absolute inset-x-12 top-8 bottom-20 sm:inset-x-20 sm:top-12 sm:bottom-20" role="group" aria-label={t("planLabel")}>
-              {plotted.map((p) => {
-                const count = sized(p);
-                const d = diameter(count);
-                const on = selected === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setSelected(p.id)}
-                    aria-label={`${name(p.location)}: ${countLabel(p)}`}
-                    aria-haspopup="dialog"
-                    style={{ left: `${fit(p.location!.map_x!, xs) * 100}%`, top: `${fit(p.location!.map_y!, ys) * 100}%`, ["--d" as string]: d }}
-                    className={cn(
-                      "group absolute flex w-[5.5rem] -translate-x-1/2 after:absolute after:-inset-x-1 after:-inset-y-2 after:content-[''] sm:w-28 -translate-y-[calc(var(--d)*0.4px)] flex-col items-center rounded-2xl transition-all focus-visible:outline-none sm:-translate-y-[calc(var(--d)*0.5px)]",
-                      count > 0 ? "z-10" : "z-0",
-                      on && "z-30 scale-105",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "relative grid size-[calc(var(--d)*0.8px)] place-items-center rounded-full bg-surface text-xs font-semibold tabular shadow-sm transition-all duration-200 group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface sm:size-[calc(var(--d)*1px)] sm:text-sm",
-                        count > 0 ? "border-[3px]" : "border-2",
-                        on ? "ring-4 ring-primary ring-offset-2 ring-offset-surface shadow-md" : "",
-                      )}
-                      style={{ borderColor: ringColor(p) }}
-                    >
-                      {count > 0 && n(count)}
-                    </span>
-                    <span
-                      lang={locale}
-                      className={cn(
-                        "mt-1 line-clamp-2 max-w-full text-center text-[10px] leading-tight transition-colors sm:text-xs",
-                        on ? "font-bold text-primary underline underline-offset-2" : count > 0 ? "font-medium text-foreground group-hover:text-primary" : "text-muted-foreground",
-                      )}
-                    >
-                      {name(p.location)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="absolute bottom-3 left-4 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] text-muted-foreground ring-1 ring-border">{t("schematic")}</p>
-          </div>
+          <CampusAtlas
+            markers={markers}
+            label={t("planLabel")}
+            selectedId={selected}
+            onSelect={setSelected}
+            className="aspect-[4/5] sm:aspect-[4/3] lg:aspect-[16/11]"
+          />
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border px-5 py-3.5 text-xs text-muted-foreground">
             {[1, 2, 3, 4].map((p) => (
               <span key={p} className="inline-flex items-center gap-1.5">
@@ -334,7 +295,7 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
           {sorted.length === 0 ? (
             <p className="px-5 py-6 text-sm text-muted-foreground">{searchQuery ? t("searchEmpty") : t("noBuildings")}</p>
           ) : (
-            <ul className="mt-3 divide-y divide-border border-t border-border">
+            <ul className="mt-3 divide-y divide-border border-t border-border xl:max-h-[36rem] xl:overflow-y-auto">
               {sorted.map((p) => {
                 const count = sized(p);
                 const on = selected === p.id;

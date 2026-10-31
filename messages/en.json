@@ -552,7 +552,22 @@
     "signOut": "Sign out",
     "course": "Course / programme",
     "courseHint": "Helps admins see who is affected. Optional.",
-    "coursePlaceholder": "e.g. MCA, 3rd semester"
+    "coursePlaceholder": "e.g. MCA, 3rd semester",
+    "characterChange": "Change character",
+    "characterPick": "Choose your character",
+    "characterHint": "Your character appears wherever your photo would.",
+    "characterOption": "{style} {n}",
+    "characterSave": "Save character",
+    "characterCancel": "Cancel",
+    "characterSaved": "Character saved",
+    "characterStyle": {
+      "scout": "Scout",
+      "wizard": "Wizard",
+      "robot": "Robot",
+      "fox": "Fox",
+      "knight": "Knight",
+      "pirate": "Pirate"
+    }
   },
   "errors": {
     "notFoundTitle": "Page not found",
@@ -603,8 +618,7 @@
     "filterLabel": "Filter issues",
     "allCategories": "All",
     "includeFixed": "Include fixed in last 7 days",
-    "planLabel": "Campus plan",
-    "schematic": "Schematic campus plan, not to scale",
+    "planLabel": "Campus map with reported issues",
     "legendFixed": "Fixed recently",
     "legendNone": "No open issues",
     "legendSize": "Bigger circle = more issues",
@@ -627,7 +641,14 @@
     "clearFilter": "Clear filter",
     "reportCta": "Report an issue",
     "drawerEmptyTitle": "Nothing reported here",
-    "drawerEmptyBody": "No public issues are open at this building."
+    "drawerEmptyBody": "No public issues are open at this building.",
+    "loading": "Loading the campus map",
+    "atlasKeys": "Drag to move, pinch or scroll to zoom. Keys: arrows move, plus and minus zoom, Home resets.",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetView": "Show whole campus",
+    "atlasCaption": "Campus map",
+    "attribution": "© OpenStreetMap contributors · Overture Maps"
   },
   "staff": {
     "metaTitle": "My work",

@@ -53,7 +53,7 @@ export async function Header() {
               )}
               <NotificationBell userId={user.id} />
               <Link href="/profile" aria-label={t("shell.openProfile")} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <Avatar name={name} src={profile?.avatar_url} size="md" decorative className="ring-1 ring-border" />
+                <Avatar name={name} src={profile?.avatar_url} characterId={profile?.avatar_character} seed={user.id} size="md" decorative className="ring-1 ring-border" />
               </Link>
             </>
           ) : (

@@ -61,7 +61,8 @@ Full spec: `docs/PRD.md` (build milestones in section 14)
 - [x] Local production build in `.next-prod` (`NEXT_DIST_DIR`) + smoke test on :3300
 - [x] Security quick pass: no secrets in git history, `.env.local` ignored, every `/api` route checks auth/role; Supabase advisors reviewed
 - [x] CI (`.github/workflows/ci.yml`): lint, typecheck, build, gofmt, go vet, go test
-- [ ] `/map` (student) is ~25 px wider than a 360 px screen (building labels near the right edge, `src/components/map/campus-map.tsx`) — M9 owner
+- [x] `/map` overflow fixed by the canvas campus map (labels are drawn inside the canvas). Remaining at 360 px: the signed-out Assamese header (`ছাইন ইন কৰক` button) is ~7 px too wide — shell owner
+- [x] Real campus map kit: `public/campus/` (trimmed map-data.json, characters, ATTRIBUTION.txt), migration `20261101060000_real_campus_locations.sql` (83 real places, 10 placeholders updated in place, `profiles.avatar_character`), `CampusAtlas` canvas renderer on /map, /admin/map and the /admin mini map, pixel-character avatars + profile picker. name_as of the 83 places still needs a native-speaker read
 
 ## Deferred (not in the demo)
 - Deferred: P2 voice input, PDF report, PWA, ⌘K command palette, MCP server

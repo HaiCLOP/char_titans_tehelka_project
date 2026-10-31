@@ -13,6 +13,8 @@ import { Avatar, Button, Card, CardHeader, Input, Select, Switch } from "@/compo
 import { signOut } from "@/app/auth/actions";
 import { apiFetch, isApiError } from "@/components/api-client";
 import { saveFontSize, type FontSize } from "./font-size";
+import { CharacterPicker } from "./character-picker";
+import { resolveCharacter } from "@/lib/campus";
 
 type Props = { profile: Profile; email: string | null; departments: NamedRef[]; initialDark: boolean };
 
@@ -66,6 +68,8 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
   const [font, setFont] = useState<FontSize>(profile.font_size);
   const [dark, setDark] = useState(initialDark);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const character = resolveCharacter(profile.avatar_character, profile.id) ?? 0;
   const isStudent = profile.role === "student";
   const canPickDept = profile.role === "staff";
 
@@ -104,6 +108,17 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
     onError: (e) => toast.error(isApiError(e, "FORBIDDEN") ? t("deptLocked") : t("saveFailed")),
   });
 
+  // The character saves on its own from the picker dialog (pinned Save), independent of the form.
+  const saveCharacter = useMutation({
+    mutationFn: (id: number) => apiFetch<Profile>("/api/profile", { method: "PATCH", json: { avatar_character: id } satisfies ProfileUpdate }),
+    onSuccess: () => {
+      toast.success(t("characterSaved"));
+      setPickerOpen(false);
+      startRefresh(() => router.refresh());
+    },
+    onError: () => toast.error(t("saveFailed")),
+  });
+
   const onSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (patch.full_name !== undefined && patch.full_name.length === 0) {
@@ -122,12 +137,15 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
       </div>
 
       <Card className="flex items-center gap-4">
-        <Avatar name={name || email} src={profile.avatar_url} size="lg" />
-        <div className="min-w-0">
+        <Avatar name={name || email} src={profile.avatar_url} characterId={profile.avatar_character} seed={profile.id} size="lg" />
+        <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{name || t("noName")}</p>
           {email && <p className="truncate text-sm text-muted-foreground">{email}</p>}
           <p className="mt-1 text-xs text-muted-foreground">{tr(profile.role)}</p>
         </div>
+        <Button type="button" variant="secondary" size="sm" className="shrink-0" onClick={() => setPickerOpen(true)}>
+          {t("characterChange")}
+        </Button>
       </Card>
 
       <Card className="space-y-4">
@@ -223,6 +241,13 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
         </Button>
       </div>
     </form>
+    <CharacterPicker
+      open={pickerOpen}
+      onOpenChange={setPickerOpen}
+      value={character}
+      onSave={(id) => saveCharacter.mutate(id)}
+      saving={saveCharacter.isPending || refreshing}
+    />
     <form action={signOut} className="border-t border-border pt-5">
       <Button type="submit" variant="secondary">
         <LogOut aria-hidden />

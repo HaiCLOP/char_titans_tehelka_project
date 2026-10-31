@@ -49,3 +49,7 @@ next-env.d.ts
 
 # graphify knowledge-graph output (local tool, not part of the app)
 graphify-out/
+
+# Campus map kit source material (runtime assets live in public/campus/)
+/Dibrugarh-University-Map-Kit/
+/Dibrugarh-University-Map-Kit.zip

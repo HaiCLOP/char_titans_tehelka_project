@@ -1,0 +1,30 @@
+# Map source attribution
+
+© OpenStreetMap contributors. OpenStreetMap data is under ODbL 1.0.
+https://www.openstreetmap.org/copyright
+https://opendatacommons.org/licenses/odbl/1-0/
+
+Overture Maps Foundation, source release 2026-09-23.1. Building footprints include
+OpenStreetMap, Google Open Buildings and Microsoft sources with applicable ODbL / CC BY terms.
+Overture place data includes Meta/Microsoft sources under CDLA Permissive 2.0.
+Keep the per-feature source information.
+https://docs.overturemaps.org/attribution/
+
+Names/public pins were manually reviewed against Google Maps public listings and the
+Dibrugarh University department directory on 18 October 2026. Direct references are
+retained in the place data. This is not a licensed Google map-tile export or a claim
+that all reviewed public content has an open-data licence.
+https://www.dibru.ac.in/department-centre
+
+Approximate western extent and historical land cover: Dibrugarh University Green and
+Carbon Audit 2020, printed p30. data/audit-map-original.jpg is the reference crop used
+by the original build script, not original project artwork. Full report linked, not bundled:
+https://oldweb.dibru.ac.in/wp-content/uploads/2021/11/Green-and-Carbon-Audit_BP2.pdf
+
+Proj4js 2.22.0: see assets/proj4-LICENSE.md.
+Press Start 2P font: see assets/PressStart2P-OFL.txt.
+Tree canopy: original generated decorative artwork; see ASSET_PROMPT.md.
+60 character sprites: original project SVG artwork supplied with this kit.
+
+See PROVENANCE.md for source review decisions and limitations. No new blanket licence
+is assigned to this mixed-source collection; preserve existing attribution and source terms.

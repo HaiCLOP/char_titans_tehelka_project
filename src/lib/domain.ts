@@ -20,6 +20,8 @@ export type Profile = {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
+  /** Pixel character 0–59 (/campus/team-characters.webp); null = derived from the id. */
+  avatar_character: number | null;
   role: Role;
   lang_pref: "en" | "as";
   theme: string;
@@ -409,6 +411,8 @@ export const ProfileUpdateSchema = z
     lang_pref: z.enum(["en", "as"]).optional(),
     theme: z.enum(PROFILE_THEMES).optional(),
     font_size: z.enum(["normal", "large"]).optional(),
+    /** Pixel character avatar (0–59); null = default derived from the user id. */
+    avatar_character: z.number().int().min(0).max(59).nullable().optional(),
     hostel: z.string().trim().max(80).nullable().optional(),
     /** Students only. */
     course: z.string().trim().max(80).nullable().optional(),

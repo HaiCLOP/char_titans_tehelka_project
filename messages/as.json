@@ -552,7 +552,22 @@
     "signOut": "ছাইন আউট কৰক",
     "course": "পাঠ্যক্ৰম",
     "courseHint": "কোন প্ৰভাৱিত হৈছে প্ৰশাসকে বুজিবলৈ সহায় কৰে। বৈকল্পিক।",
-    "coursePlaceholder": "যেনে: এমচিএ, তৃতীয় ষাণ্মাসিক"
+    "coursePlaceholder": "যেনে: এমচিএ, তৃতীয় ষাণ্মাসিক",
+    "characterChange": "চৰিত্ৰ সলনি কৰক",
+    "characterPick": "আপোনাৰ চৰিত্ৰ বাছক",
+    "characterHint": "আপোনাৰ ফটোৰ ঠাইত এই চৰিত্ৰটো দেখা যাব।",
+    "characterOption": "{style} {n}",
+    "characterSave": "চৰিত্ৰ ছেভ কৰক",
+    "characterCancel": "বাতিল কৰক",
+    "characterSaved": "চৰিত্ৰ ছেভ কৰা হ'ল",
+    "characterStyle": {
+      "scout": "স্কাউট",
+      "wizard": "যাদুকৰ",
+      "robot": "ৰবট",
+      "fox": "শিয়াল",
+      "knight": "যোদ্ধা",
+      "pirate": "জলদস্যু"
+    }
   },
   "errors": {
     "notFoundTitle": "পৃষ্ঠা পোৱা নগ'ল",
@@ -603,8 +618,7 @@
     "filterLabel": "সমস্যা ফিল্টাৰ কৰক",
     "allCategories": "সকলো",
     "includeFixed": "যোৱা ৭ দিনত সমাধান হোৱাবোৰো দেখুৱাওক",
-    "planLabel": "কেম্পাছৰ নক্সা",
-    "schematic": "কেম্পাছৰ আনুমানিক নক্সা, জোখ অনুসৰি নহয়",
+    "planLabel": "অভিযোগসহ কেম্পাছৰ নক্সা",
     "legendFixed": "শেহতীয়াকৈ সমাধান",
     "legendNone": "কোনো মুকলি সমস্যা নাই",
     "legendSize": "ডাঙৰ বৃত্ত = অধিক সমস্যা",
@@ -627,7 +641,14 @@
     "clearFilter": "ফিল্টাৰ আঁতৰাওক",
     "reportCta": "সমস্যা জনাওক",
     "drawerEmptyTitle": "ইয়াত কোনো অভিযোগ নাই",
-    "drawerEmptyBody": "এই ভৱনত কোনো মুকলি ৰাজহুৱা সমস্যা নাই।"
+    "drawerEmptyBody": "এই ভৱনত কোনো মুকলি ৰাজহুৱা সমস্যা নাই।",
+    "loading": "কেম্পাছৰ নক্সা ল'ড হৈ আছে",
+    "atlasKeys": "টানি লৰাওক, দুই আঙুলিৰে বা স্ক্ৰ'লেৰে জুম কৰক। কী: কাঁড়চিহ্নই লৰায়, যোগ আৰু বিয়োগ চিহ্নই জুম কৰে, Home-এ আগৰ দৰে কৰে।",
+    "zoomIn": "জুম ইন",
+    "zoomOut": "জুম আউট",
+    "resetView": "গোটেই কেম্পাছ দেখুৱাওক",
+    "atlasCaption": "কেম্পাছৰ নক্সা",
+    "attribution": "© OpenStreetMap অৱদানকাৰীসকল · Overture Maps"
   },
   "staff": {
     "metaTitle": "মোৰ কাম",

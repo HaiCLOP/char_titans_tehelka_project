@@ -9,7 +9,7 @@ import { Avatar, Button } from "@/components/ui";
 export const REPORT_DRAFT_KEY = "cs_report_draft";
 
 /** "What needs fixing?" — starts a report from the home page without leaving the flow. */
-export function HomeComposer({ name }: { name: string | null }) {
+export function HomeComposer({ name, avatar }: { name: string | null; avatar?: { id: string; character: number | null; src: string | null } | null }) {
   const t = useTranslations("home");
   const router = useRouter();
   const [text, setText] = useState("");
@@ -33,7 +33,7 @@ export function HomeComposer({ name }: { name: string | null }) {
     >
       <div className="flex items-start gap-3">
         {name ? (
-          <Avatar name={name} size="md" decorative />
+          <Avatar name={name} src={avatar?.src} characterId={avatar?.character} seed={avatar?.id} size="md" decorative />
         ) : (
           <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-muted text-muted-foreground" aria-hidden>
             <PenLine className="size-[18px]" strokeWidth={1.75} />

@@ -47,6 +47,7 @@ async function loadHome(view: "open" | "resolved") {
 
   return {
     name: profile?.full_name ?? null,
+    avatar: profile ? { id: profile.id, character: profile.avatar_character, src: profile.avatar_url } : null,
     issues: issues.status === "fulfilled" ? issues.value.items.slice(0, 6) : null,
     stats: statsAndTrend.stats,
     trend: statsAndTrend.trend,
@@ -90,7 +91,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
             ))}
           </nav>
 
-          <HomeComposer name={data.name} />
+          <HomeComposer name={data.name} avatar={data.avatar} />
 
           {data.issues === null ? (
             <Card className="border-danger-border bg-danger-soft text-sm text-danger">{t("home.loadError")}</Card>
