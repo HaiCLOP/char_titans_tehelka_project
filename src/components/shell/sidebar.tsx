@@ -2,18 +2,23 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Bell, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
 import { getProfile } from "@/lib/auth";
-import { buttonVariants } from "@/components/ui/button";
 import { BrandMark } from "./brand-mark";
 import { NavLink } from "./nav-link";
 
 const MAIN = [
   { href: "/", key: "home", icon: House, exact: true },
+  { href: "/report", key: "report", icon: Plus, isCta: true },
   { href: "/my", key: "myReports", icon: ClipboardList },
   { href: "/map", key: "map", icon: Map },
   { href: "/notifications", key: "notifications", icon: Bell },
 ] as const;
 
-/** Desktop (lg+) docked sidebar with clear labels, prominent CTA, and clean active states. */
+const ITEM =
+  "group relative grid size-11 place-items-center rounded-full transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const ON = "bg-primary text-primary-foreground shadow-md ring-1 ring-primary/40";
+const OFF = "text-muted-foreground hover:bg-surface-muted hover:text-foreground";
+
+/** Desktop (lg+) sleek floating capsule dock on the left edge. */
 export async function Sidebar() {
   const [t, profile] = await Promise.all([getTranslations(), getProfile()]);
   const role = profile?.role ?? "guest";
@@ -24,71 +29,50 @@ export async function Sidebar() {
         ? [{ href: "/admin", key: "adminPanel", icon: LayoutDashboard }, ...MAIN]
         : MAIN;
 
+  const renderItem = (i: { href: string; key: string; icon: typeof House; exact?: boolean; isCta?: boolean }) => (
+    <li key={i.href}>
+      <NavLink
+        href={i.href}
+        exact={i.exact}
+        aria-label={t(`nav.${i.key}`)}
+        className={ITEM}
+        activeClassName={ON}
+        inactiveClassName={i.isCta ? "bg-primary/10 text-primary hover:bg-primary/20" : OFF}
+      >
+        <i.icon className="size-5" strokeWidth={1.8} aria-hidden />
+        {/* Sleek popout hover tooltip */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-full ml-3.5 hidden rounded-lg border border-border/80 bg-surface px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-foreground opacity-0 shadow-lg transition-all duration-150 group-hover:block group-hover:opacity-100 group-focus-visible:block group-focus-visible:opacity-100"
+        >
+          {t(`nav.${i.key}`)}
+        </span>
+      </NavLink>
+    </li>
+  );
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-surface/95 backdrop-blur-sm lg:flex">
-      {/* Brand Header */}
-      <div className="flex h-16 items-center gap-3 border-b border-border/70 px-5">
+    <aside className="fixed top-1/2 left-5 z-40 hidden -translate-y-1/2 lg:block">
+      <div className="flex w-16 flex-col items-center gap-2 rounded-full border border-border/80 bg-surface/90 p-2.5 shadow-2xl backdrop-blur-xl ring-1 ring-border/40">
         <Link
           href="/"
           aria-label={t("shell.home")}
-          className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mb-1 rounded-full p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-transform hover:scale-105 active:scale-95"
         >
-          <BrandMark className="size-9 rounded-xl shadow-xs" />
-          <div className="min-w-0">
-            <span className="block truncate font-bold text-base leading-tight tracking-tight">CivicSense</span>
-            <span className="block truncate text-[11px] font-medium text-muted-foreground">{t("shell.university")}</span>
-          </div>
+          <BrandMark className="size-11 rounded-full shadow-xs" />
         </Link>
-      </div>
 
-      {/* Primary Action Button */}
-      <div className="px-4 pt-5 pb-2">
-        <Link
-          href="/report"
-          className={buttonVariants({
-            variant: "primary",
-            className: "w-full justify-center gap-2 rounded-xl h-11 font-semibold text-sm shadow-sm transition-transform active:scale-[0.98]",
-          })}
-        >
-          <Plus className="size-4" strokeWidth={2.5} aria-hidden />
-          {t("hero.cta")}
-        </Link>
-      </div>
+        <nav aria-label={t("nav.main")}>
+          <ul className="flex flex-col items-center gap-2">
+            {main.map(renderItem)}
+          </ul>
+        </nav>
 
-      {/* Navigation Links */}
-      <nav aria-label={t("nav.main")} className="flex-1 overflow-y-auto px-3 py-3">
-        <ul className="space-y-1">
-          {main.map((i) => (
-            <li key={i.href}>
-              <NavLink
-                href={i.href}
-                exact={"exact" in i ? i.exact : undefined}
-                className="group flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                activeClassName="bg-primary/10 text-primary font-semibold"
-                inactiveClassName="text-muted-foreground hover:bg-surface-muted hover:text-foreground"
-              >
-                <i.icon className="size-4.5 shrink-0 transition-transform group-hover:scale-105" strokeWidth={1.8} aria-hidden />
-                <span className="truncate">{t(`nav.${i.key}`)}</span>
-              </NavLink>
-            </li>
-          ))}
+        <span className="my-1.5 h-px w-6 bg-border/80" aria-hidden />
+
+        <ul>
+          {renderItem({ href: "/profile", key: "profile", icon: UserRound })}
         </ul>
-      </nav>
-
-      {/* User / Profile Section at Bottom */}
-      <div className="border-t border-border/70 p-3">
-        <NavLink
-          href="/profile"
-          className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          activeClassName="bg-primary/10 text-primary font-semibold"
-          inactiveClassName="text-muted-foreground hover:bg-surface-muted hover:text-foreground"
-        >
-          <UserRound className="size-4.5 shrink-0" strokeWidth={1.8} aria-hidden />
-          <div className="min-w-0 flex-1">
-            <span className="block truncate">{profile?.full_name || t("nav.profile")}</span>
-            <span className="block truncate text-[10px] text-muted-foreground uppercase tracking-wider">{t(`roles.${role}`)}</span>
-          </div>
-        </NavLink>
       </div>
     </aside>
   );

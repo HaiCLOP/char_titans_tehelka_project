@@ -14,7 +14,7 @@ export async function Header() {
   const name = profile?.full_name || user?.email || "";
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-surface/90 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75 sm:px-8 lg:pr-8 lg:pl-72">
+    <header className="sticky top-0 z-20 border-b border-border bg-surface/90 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75 sm:px-8 lg:pr-10 lg:pl-[7.5rem]">
       <div className="flex h-16 items-center gap-3">
         <Link href="/" aria-label={t("shell.home")} className="flex items-center gap-2.5 lg:hidden">
           <BrandMark className="size-8 rounded-xl shadow-xs" />
