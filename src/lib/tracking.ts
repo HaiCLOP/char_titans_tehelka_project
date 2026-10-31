@@ -225,7 +225,9 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
       ? PUBLIC_LIST_COLUMNS
       : q.scope === "dept"
         ? `${LIST_COLUMNS}, anonymous, user_id, assignee_id, auto_assigned_to:ai_meta->>auto_assigned_to`
-        : LIST_COLUMNS;
+        : q.scope === "assigned"
+          ? `${LIST_COLUMNS}, assignee_id`
+          : LIST_COLUMNS;
 
   let query = supabase.from(table).select(columns);
 
@@ -342,6 +344,8 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
       thumb: first ? (thumbs.get(first) ?? null) : null,
     };
     if (viewer && q.scope === "public") item.supported_by_me = supported.has(r.id);
+    // On someone else's job as a helper: only the lead starts and resolves it.
+    if (q.scope === "assigned") item.helper = r.assignee_id !== viewer!.id;
     if (q.scope === "dept") {
       item.anonymous = Boolean(r.anonymous);
       item.reporter_name = r.reporter_id ? (reporters.get(r.reporter_id) ?? null) : null;

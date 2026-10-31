@@ -98,6 +98,15 @@ async function loadRow(supabase: Client, idOrCode: string): Promise<Row> {
   return data as unknown as Row;
 }
 
+const HELPER_MESSAGE = "You are a helper on this job. Only the lead staff member can start and resolve it.";
+
+/** Helpers (migration 18) see the job but only the lead assignee changes its status. */
+async function isHelperOn(complaintId: string, userId: string): Promise<boolean> {
+  const { data } = await createAdminClient()
+    .from("complaint_helpers").select("user_id").eq("complaint_id", complaintId).eq("user_id", userId).maybeSingle();
+  return Boolean(data);
+}
+
 /** Status update with an optimistic check on the previous status. */
 async function updateRow(supabase: Client, id: string, expected: Status, patch: Record<string, unknown>): Promise<ComplaintUpdateResult> {
   const { data, error } = await supabase
@@ -134,7 +143,10 @@ export async function patchComplaint(supabase: Client, actor: Actor, idOrCode: s
   const assignee = row.assignee_id === actor.id;
 
   if (!mgr) {
-    if (!assignee) throw new PipelineError("FORBIDDEN", "Only admins of this department can change this complaint");
+    if (!assignee) {
+      if (await isHelperOn(row.id, actor.id)) throw new PipelineError("FORBIDDEN", HELPER_MESSAGE);
+      throw new PipelineError("FORBIDDEN", "Only admins of this department can change this complaint");
+    }
     const keys = Object.entries(body).filter(([, v]) => v !== undefined).map(([k]) => k);
     if (keys.some((k) => k !== "status" && k !== "note")) throw new PipelineError("FORBIDDEN", "Assigned staff can only update the status");
     if (body.status && body.status !== "in_progress") {
@@ -238,7 +250,10 @@ export async function patchComplaint(supabase: Client, actor: Actor, idOrCode: s
 export async function resolveComplaint(supabase: Client, actor: Actor, idOrCode: string, body: ResolveRequest): Promise<ComplaintUpdateResult> {
   const row = await loadRow(supabase, idOrCode);
   const mgr = isManager(actor.profile, row.department_id);
-  if (!mgr && row.assignee_id !== actor.id) throw new PipelineError("FORBIDDEN", "Only the assigned staff or an admin can resolve this");
+  if (!mgr && row.assignee_id !== actor.id) {
+    if (await isHelperOn(row.id, actor.id)) throw new PipelineError("FORBIDDEN", HELPER_MESSAGE);
+    throw new PipelineError("FORBIDDEN", "Only the assigned staff or an admin can resolve this");
+  }
   if (!mgr && !body.photo_path) throw new PipelineError("VALIDATION_ERROR", "An after photo is required");
   if (body.photo_path) {
     if (!body.photo_path.startsWith(`${row.id}/`)) throw new PipelineError("VALIDATION_ERROR", "That photo belongs to another complaint");

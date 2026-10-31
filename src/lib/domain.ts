@@ -276,6 +276,8 @@ export const ComplaintListItemSchema = z.object({
   assigned: z.boolean().optional(),
   /** dept scope only: the current assignee was picked by auto-assignment. */
   auto_assigned: z.boolean().optional(),
+  /** assigned scope: the viewer is a helper on this job, not the lead (only the lead starts / resolves). */
+  helper: z.boolean().optional(),
 });
 export type ComplaintListItem = z.infer<typeof ComplaintListItemSchema>;
 

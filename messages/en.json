@@ -688,7 +688,8 @@
       "changed": "This complaint changed meanwhile. Refresh and try again.",
       "forbidden": "This complaint is no longer assigned to you.",
       "failed": "Could not mark it resolved. Please try again."
-    }
+    },
+    "helperNote": "You are a helper on this job. Only the lead staff member can start and resolve it."
   },
   "admin": {
     "allDepartments": "All departments",

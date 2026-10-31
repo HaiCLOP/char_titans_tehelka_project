@@ -86,7 +86,7 @@ export function StaffQueue({ userId, isAdmin }: { userId: string; isAdmin: boole
       void qc.invalidateQueries({ queryKey: ["complaints", "assigned"] });
     },
     onError: (e) => {
-      toast.error(isApiError(e, "INVALID_TRANSITION") ? t("changed") : t("failed"));
+      toast.error(isApiError(e, "INVALID_TRANSITION") ? t("changed") : isApiError(e, "FORBIDDEN") ? t("helperNote") : t("failed"));
       void qc.invalidateQueries({ queryKey: ["complaints", "assigned"] });
     },
   });
@@ -148,15 +148,24 @@ export function StaffQueue({ userId, isAdmin }: { userId: string; isAdmin: boole
                 <LifecycleTrack status={i.status} className="mt-4" />
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <SlaCountdown due={i.sla_due_at} status={i.status} className="text-sm" />
+                  {i.helper && (i.status === "assigned" || i.status === "in_progress") && (
+                    <p className="w-full text-xs text-muted-foreground" id={`helper-${i.id}`}>{t("helperNote")}</p>
+                  )}
                   <div className="ml-auto flex flex-wrap gap-2">
                     {i.status === "assigned" && (
-                      <Button variant="secondary" onClick={() => start.mutate(i.id)} loading={start.isPending && start.variables === i.id}>
+                      <Button
+                        variant="secondary"
+                        disabled={i.helper}
+                        aria-describedby={i.helper ? `helper-${i.id}` : undefined}
+                        onClick={() => start.mutate(i.id)}
+                        loading={start.isPending && start.variables === i.id}
+                      >
                         {!(start.isPending && start.variables === i.id) && <Play aria-hidden />}
                         {t("start")}
                       </Button>
                     )}
                     {(i.status === "assigned" || i.status === "in_progress") && (
-                      <Button onClick={() => setResolving(i)}>
+                      <Button disabled={i.helper} aria-describedby={i.helper ? `helper-${i.id}` : undefined} onClick={() => setResolving(i)}>
                         <CheckCircle2 aria-hidden />
                         {t("resolve.open")}
                       </Button>
