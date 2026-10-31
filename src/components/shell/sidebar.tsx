@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Bell, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
+import { Activity, Bell, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { BrandMark } from "./brand-mark";
 import { NavLink } from "./nav-link";
@@ -10,6 +10,7 @@ const MAIN = [
   { href: "/report", key: "report", icon: Plus },
   { href: "/my", key: "myReports", icon: ClipboardList },
   { href: "/map", key: "map", icon: Map },
+  { href: "/pulse", key: "pulse", icon: Activity, label: "pulse.nav" },
   { href: "/notifications", key: "notifications", icon: Bell },
 ] as const;
 
@@ -28,15 +29,15 @@ export async function Sidebar() {
       : role === "dept_admin" || role === "super_admin"
         ? [{ href: "/admin", key: "adminPanel", icon: LayoutDashboard }, ...MAIN]
         : MAIN;
-  const item = (i: { href: string; key: string; icon: typeof House; exact?: boolean }) => (
+  const item = (i: { href: string; key: string; icon: typeof House; exact?: boolean; label?: string }) => (
     <li key={i.href}>
-      <NavLink href={i.href} exact={i.exact} aria-label={t(`nav.${i.key}`)} className={ITEM} activeClassName={ON} inactiveClassName={OFF}>
+      <NavLink href={i.href} exact={i.exact} aria-label={t(i.label ?? `nav.${i.key}`)} className={ITEM} activeClassName={ON} inactiveClassName={OFF}>
         <i.icon className="size-[19px]" strokeWidth={1.75} aria-hidden />
         <span
           aria-hidden
           className="pointer-events-none absolute left-full ml-3 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium whitespace-nowrap text-primary-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
         >
-          {t(`nav.${i.key}`)}
+          {t(i.label ?? `nav.${i.key}`)}
         </span>
       </NavLink>
     </li>

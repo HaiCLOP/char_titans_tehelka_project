@@ -64,7 +64,7 @@ export function AttemptList({ attempts }: { attempts: Attempt[] }) {
     <ol className="divide-y divide-border text-sm">
       {attempts.map((a, i) => (
         <li key={i} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2">
-          <span className="tabular w-5 shrink-0 text-subtle-foreground">{f.n(i + 1)}</span>
+          <span className="tabular w-5 shrink-0 text-muted-foreground">{f.n(i + 1)}</span>
           <span className="min-w-0 font-mono text-[0.8125rem] break-all">{a.provider}/{a.model}</span>
           <span className="text-muted-foreground">{a.keyLabel}</span>
           <StatusText status={a.status} />

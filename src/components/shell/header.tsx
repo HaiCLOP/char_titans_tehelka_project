@@ -16,7 +16,7 @@ export async function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-surface/90 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75 sm:px-8 lg:pr-10 lg:pl-[7.5rem]">
       <div className="flex h-16 items-center gap-3">
-        <Link href="/" aria-label={t("shell.home")} className="lg:hidden">
+        <Link href="/" aria-label={t("shell.home")} className="relative after:absolute after:-inset-0.5 after:content-[''] lg:hidden">
           <BrandMark className="size-9 rounded-xl" />
         </Link>
 

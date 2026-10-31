@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Check, MapPinOff } from "lucide-react";
-import { CATEGORY_ICON, Card, Drawer, EmptyState, IssueCard, buttonVariants } from "@/components/ui";
+import { CATEGORY_ICON, Card, Chip, Drawer, EmptyState, IssueCard, buttonVariants } from "@/components/ui";
 import { CATEGORIES, type Category, type Status } from "@/lib/domain";
 import { cn, toLocaleDigits } from "@/lib/utils";
 
@@ -28,7 +28,13 @@ export type MapIssue = {
   metoo_count: number;
   created_at: string;
   resolved_at: string | null;
+  /** Admin map only (base table): shown as chips in the drawer. */
+  visibility?: "public" | "private";
+  is_sensitive?: boolean;
 };
+
+/** Text overrides for the admin variant (S17). Server components pass plain strings. */
+export type MapLabels = Partial<Record<"legendSize" | "emptyTitle" | "emptyBody" | "drawerEmptyBody" | "private" | "sensitive", string>>;
 
 type Props = {
   locations: MapLocation[];
@@ -36,6 +42,15 @@ type Props = {
   issues: MapIssue[];
   category: Category | null;
   includeFixed: boolean;
+  /** Replaces the built-in category / "include fixed" chips (S17 renders its own URL filters). */
+  filters?: React.ReactNode;
+  /** Ticket link prefix in the drawer. Default `/c/`; the admin map uses `/admin/t/`. */
+  issueHrefBase?: string;
+  /** What the circle size and number count: every issue shown (default) or open ones only. */
+  sizeBy?: "all" | "open";
+  /** Show "Report an issue" calls to action in empty states. Default true. */
+  reportCta?: boolean;
+  labels?: MapLabels;
 };
 
 type Place = {
@@ -87,7 +102,7 @@ function groupPlaces(locations: MapLocation[], issues: MapIssue[], category: Cat
  * S11 — schematic campus plan (not to scale) drawn from `locations.map_x/map_y`, plus an accessible,
  * sortable building list. Tapping a building opens its issues in a Drawer (bottom sheet on mobile).
  */
-export function CampusMap({ locations, issues, category, includeFixed }: Props) {
+export function CampusMap({ locations, issues, category, includeFixed, filters, issueHrefBase = "/c/", sizeBy = "all", reportCta = true, labels = {} }: Props) {
   const t = useTranslations("map");
   const tc = useTranslations("category");
   const tp = useTranslations("priority");
@@ -129,6 +144,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `name` only depends on locale
   }, [places, sort, locale]);
 
+  const sized = (p: Place) => (sizeBy === "open" ? p.open.length : p.open.length + p.fixed.length);
   const current = selected === NONE ? places.none : places.list.find((p) => p.id === selected) ?? null;
   const ringColor = (p: Place) => (p.top !== null ? `var(--p${p.top})` : p.fixed.length ? "var(--success)" : "var(--border-strong)");
   const countLabel = (p: Place) =>
@@ -144,6 +160,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
 
   return (
     <div className="space-y-6">
+      {filters ?? (
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("filterLabel")}>
         <Link href={href(null, includeFixed)} scroll={false} aria-current={category === null ? "true" : undefined} className={chip(category === null)}>
           {t("allCategories")}
@@ -167,6 +184,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
           {t("includeFixed")}
         </Link>
       </div>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <Card className="overflow-hidden p-0">
@@ -181,7 +199,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
             </svg>
             <div className="absolute inset-x-12 top-8 bottom-20 sm:inset-x-20 sm:top-12 sm:bottom-20" role="group" aria-label={t("planLabel")}>
               {plotted.map((p) => {
-                const count = p.open.length + p.fixed.length;
+                const count = sized(p);
                 const d = diameter(count);
                 const on = selected === p.id;
                 return (
@@ -239,7 +257,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
               <span className="size-2.5 rounded-full border-2 border-border-strong bg-surface" aria-hidden />
               {t("legendNone")}
             </span>
-            <span className="w-full sm:ml-auto sm:w-auto">{t("legendSize")}</span>
+            <span className="w-full sm:ml-auto sm:w-auto">{labels.legendSize ?? t("legendSize")}</span>
           </div>
         </Card>
 
@@ -268,10 +286,10 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
             <EmptyState
               bare
               className="py-8"
-              title={category ? t("emptyFilteredTitle") : t("emptyTitle")}
-              body={category ? t("emptyFilteredBody") : t("emptyBody")}
+              title={category ? t("emptyFilteredTitle") : labels.emptyTitle ?? t("emptyTitle")}
+              body={category ? t("emptyFilteredBody") : labels.emptyBody ?? t("emptyBody")}
               action={
-                category ? (
+                !reportCta ? undefined : category ? (
                   <Link href={href(null, includeFixed)} className={buttonVariants({ variant: "secondary" })}>{t("clearFilter")}</Link>
                 ) : (
                   <Link href="/report" className={buttonVariants({ variant: "primary" })}>{t("reportCta")}</Link>
@@ -285,7 +303,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
           ) : (
             <ul className="mt-3 divide-y divide-border border-t border-border">
               {sorted.map((p) => {
-                const count = p.open.length + p.fixed.length;
+                const count = sized(p);
                 return (
                   <li key={p.id}>
                     <button
@@ -324,8 +342,8 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
             bare
             icon={Check}
             title={t("drawerEmptyTitle")}
-            body={t("drawerEmptyBody")}
-            action={<Link href="/report" className={buttonVariants({ variant: "primary" })}>{t("reportCta")}</Link>}
+            body={labels.drawerEmptyBody ?? t("drawerEmptyBody")}
+            action={reportCta ? <Link href="/report" className={buttonVariants({ variant: "primary" })}>{t("reportCta")}</Link> : undefined}
           />
         ) : (
           <ul className="space-y-3">
@@ -334,6 +352,14 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
                 <li key={i.id}>
                   <IssueCard
                     compact
+                    href={`${issueHrefBase}${i.id}`}
+                    footer={
+                      i.is_sensitive || i.visibility === "private" ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {i.is_sensitive ? <Chip tone="danger">{labels.sensitive}</Chip> : <Chip>{labels.private}</Chip>}
+                        </div>
+                      ) : undefined
+                    }
                     issue={{ ...i, photo_url: null, location: current.location ? { name_en: current.location.name_en, name_as: current.location.name_as } : null }}
                   />
                 </li>

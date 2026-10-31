@@ -28,7 +28,7 @@ function ContactRow({ contact }: { contact: EmergencyContact }) {
       {phone ? (
         <a
           href={`tel:${phone.replace(/[^\d+]/g, "")}`}
-          className="inline-flex h-9 items-center gap-2 rounded-full bg-danger px-4 text-sm font-semibold text-white shadow-sm hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-danger px-4 text-sm font-semibold text-danger-foreground shadow-sm hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Phone className="size-4" aria-hidden />
           {toLocaleDigits(phone, locale)}
@@ -53,7 +53,7 @@ export function EmergencyBanner({ className, compact = false }: { className?: st
   return (
     <section role="alert" className={cn("rounded-card border border-danger-border bg-danger-soft p-4", className)}>
       <div className="flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-danger text-white">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-danger text-danger-foreground">
           <Siren className="size-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">

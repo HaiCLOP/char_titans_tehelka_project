@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { AlarmClock, Building2, CheckCircle2 } from "lucide-react";
 import { AreaTrend, Card, EmptyState, ErrorState, LangText, PriorityChip, StatusChip } from "@/components/ui";
+import { AdminBriefCard } from "@/components/brief/brief-card";
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import { getAdminStats } from "@/lib/admin";
 import { requireRole } from "@/lib/auth";
@@ -141,7 +142,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       ) : failure || !data ? (
         <ErrorState className="mt-8" title={t("loadError")} />
       ) : (
-        <Dashboard data={data} t={t} tc={tc} n={n} isSuper={isSuper && !requested} />
+        <Dashboard data={data} t={t} tc={tc} n={n} isSuper={isSuper && !requested} department={scopeId ?? null} />
       )}
     </div>
   );
@@ -150,7 +151,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 type T = Awaited<ReturnType<typeof getTranslations>>;
 type TC = T;
 
-function Dashboard({ data, t, tc, n, isSuper }: { data: AdminStats; t: T; tc: TC; n: (v: number | string) => string; isSuper: boolean }) {
+function Dashboard({ data, t, tc, n, isSuper, department }: { data: AdminStats; t: T; tc: TC; n: (v: number | string) => string; isSuper: boolean; department: string | null }) {
   const s = data.stats;
   const created = data.trend.map((r) => r.created);
   const fixed = data.trend.map((r) => r.resolved);
@@ -198,27 +199,30 @@ function Dashboard({ data, t, tc, n, isSuper }: { data: AdminStats; t: T; tc: TC
           )}
         </Card>
 
-        <Card>
-          <h2 className="text-title text-lg">{t("languageTitle")}</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t("languageBody")}</p>
-          <div className="mt-6">
-            <Bars
-              n={n}
-              rows={[
-                { key: "as", label: t("langAs"), value: s.by_lang.as },
-                { key: "en", label: t("langEn"), value: s.by_lang.en },
-              ]}
-            />
-          </div>
-        </Card>
+        <div className="space-y-6">
+          <Card>
+            <h2 className="text-title text-lg">{t("languageTitle")}</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">{t("languageBody")}</p>
+            <div className="mt-6">
+              <Bars
+                n={n}
+                rows={[
+                  { key: "as", label: t("langAs"), value: s.by_lang.as },
+                  { key: "en", label: t("langEn"), value: s.by_lang.en },
+                ]}
+              />
+            </div>
+          </Card>
+          <Card>
+            <h2 className="text-title text-lg">{t("categoryTitle")}</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">{t("trendRange", { n: n(data.days) })}</p>
+            <div className="mt-6">{categories.length ? <Bars rows={categories} n={n} /> : <p className="text-sm text-muted-foreground">{t("noData")}</p>}</div>
+          </Card>
+        </div>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-3">
-        <Card>
-          <h2 className="text-title text-lg">{t("categoryTitle")}</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t("trendRange", { n: n(data.days) })}</p>
-          <div className="mt-6">{categories.length ? <Bars rows={categories} n={n} /> : <p className="text-sm text-muted-foreground">{t("noData")}</p>}</div>
-        </Card>
+        <AdminBriefCard department={department} />
 
         <Card className="lg:col-span-2">
           <div className="flex items-start justify-between gap-3">

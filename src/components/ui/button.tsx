@@ -11,14 +11,15 @@ export const buttonVariants = cva(
         secondary: "border border-border bg-surface text-foreground shadow-sm hover:border-border-strong hover:bg-surface-muted",
         ghost: "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
         soft: "bg-surface-muted text-foreground hover:bg-surface-sunken",
-        danger: "bg-danger text-white shadow-sm hover:bg-danger/90",
+        danger: "bg-danger text-danger-foreground shadow-sm hover:bg-danger/90",
       },
       size: {
-        sm: "h-8 px-3 text-sm",
+        // sm / icon-sm are 32 px visually; the invisible ::after extends the tap target to 40 px (PRD 360 px rule).
+        sm: "h-8 px-3 text-sm relative after:absolute after:-inset-1 after:content-['']",
         md: "h-10 px-[1.125rem] text-sm",
         lg: "h-12 px-6 text-[0.9375rem]",
         icon: "size-10",
-        "icon-sm": "size-8",
+        "icon-sm": "size-8 relative after:absolute after:-inset-1 after:content-['']",
       },
       block: { true: "w-full" },
     },

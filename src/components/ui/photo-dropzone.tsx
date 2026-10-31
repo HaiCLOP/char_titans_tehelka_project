@@ -127,7 +127,7 @@ export function PhotoDropzone({ value, onChange, max = 3, label, hint, error, di
                 onClick={() => remove(p)}
                 disabled={disabled}
                 aria-label={t("remove", { n: toLocaleDigits(i + 1, locale) })}
-                className="absolute top-1 right-1 grid size-7 place-items-center rounded-full bg-black/60 text-white hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="absolute top-1 right-1 grid size-7 place-items-center after:absolute after:-inset-1.5 after:content-[''] rounded-full bg-black/60 text-white hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <X className="size-3.5" aria-hidden />
               </button>

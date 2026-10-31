@@ -222,7 +222,7 @@ export function QueueView({ isSuper, departmentId, departments }: { isSuper: boo
             aria-pressed={reviewOnly}
             onClick={() => setFilter({ status: reviewOnly ? "active" : "needs_review" })}
             className={cn(
-              "rounded-full border px-3.5 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex h-10 items-center rounded-full border px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               reviewOnly ? "border-foreground bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground",
             )}
           >

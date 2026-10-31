@@ -22,12 +22,13 @@
   --accent: #3a3a3c;
   --ring: #111111;
 
-  --success: #12a150;
+  --success: #0b7a3c; /* AA on success-soft and white */
   --success-soft: #e4f5ea;
   --danger: #c4352b;
+  --danger-foreground: #ffffff;
   --danger-soft: #fbeceb;
   --danger-border: #f2d3d0;
-  --warning: #a86a00;
+  --warning: #955e00; /* AA on warning-soft */
   --warning-soft: #fbf1df;
 
   --chart-line: #111111;
@@ -65,6 +66,7 @@
   --success: #3ecf7f;
   --success-soft: #12301f;
   --danger: #f0675c;
+  --danger-foreground: #0c0c0c; /* white on this red is 3.1:1; near-black is AA */
   --danger-soft: #2c1513;
   --danger-border: #4a211d;
   --warning: #e7ad3c;
@@ -96,6 +98,7 @@
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
   --color-danger-soft: var(--danger-soft);
   --color-danger-border: var(--danger-border);
   --color-warning: var(--warning);

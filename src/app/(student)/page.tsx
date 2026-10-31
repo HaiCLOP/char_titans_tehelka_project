@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { CheckCircle2, Inbox } from "lucide-react";
+import { ArrowRight, CheckCircle2, Inbox } from "lucide-react";
+import { CampusBriefCard } from "@/components/brief/brief-card";
 import { HomeComposer } from "@/components/home/composer";
 import { AreaTrend, Card, EmptyState, IssueCard, LifecycleTrack, buttonVariants } from "@/components/ui";
 import { getProfile, getUser } from "@/lib/auth";
+import { getCachedCampusBrief } from "@/lib/brief";
 import { ComplaintListQuerySchema, type ComplaintListItem } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { listComplaints } from "@/lib/tracking";
@@ -34,7 +36,7 @@ async function loadHome(view: "open" | "resolved") {
 export default async function Home({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const { view: rawView } = await searchParams;
   const view = rawView === "resolved" ? "resolved" : "open";
-  const [t, locale, data] = await Promise.all([getTranslations(), getLocale(), loadHome(view)]);
+  const [t, locale, data, brief] = await Promise.all([getTranslations(), getLocale(), loadHome(view), getCachedCampusBrief()]);
   const n = (v: number) => toLocaleDigits(v, locale);
 
   const created = data.trend.map((r) => Number(r.created));
@@ -127,7 +129,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
           ) : (
             <div className="mt-6 grid h-[120px] place-items-center rounded-2xl bg-surface-muted text-sm text-muted-foreground">{t("home.noData")}</div>
           )}
+          <Link
+            href="/pulse"
+            className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
+          >
+            {t("pulse.homeLink")}
+            <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden />
+          </Link>
         </Card>
+
+        {brief && <CampusBriefCard brief={brief} />}
 
         <Card className="p-6">
           <h2 className="text-title text-lg">{t("home.weekTitle")}</h2>

@@ -194,7 +194,8 @@
       "compressing": "Preparing photo...",
       "tooMany": "You can add up to {max} photos.",
       "invalid": "Some files could not be used. Choose JPG, PNG or WebP photos."
-    }
+    },
+    "loading": "Loading…"
   },
   "time": {
     "justNow": "just now",
@@ -1196,7 +1197,8 @@
       "rows": "{n, plural, one {{count} result} other {{count} results}}",
       "top": "Top: {label} ({value})",
       "failed": "Could not load this data",
-      "meta": "{model} · {seconds} s"
+      "meta": "{model} · {seconds} s",
+      "ms": "{n} ms"
     },
     "tools": {
       "stats": "Headline numbers",
@@ -1220,5 +1222,74 @@
       "forbidden": "You don't have access to the assistant.",
       "validation": "Ask a question of 2 to 500 characters."
     }
+  },
+  "pulse": {
+    "nav": "Campus Pulse",
+    "title": "Campus Pulse",
+    "subtitle": "How quickly campus problems are being fixed, from live numbers. Counts include every report; only public issues are listed.",
+    "kpiLabel": "Key numbers",
+    "kpiFixedWeek": "Fixed this week",
+    "kpiFixedWeekHint": "Marked fixed in the last 7 days",
+    "kpiAvg": "Average time to fix",
+    "kpiAvgHint": "From report to fix, all issues so far",
+    "kpiAvgNone": "Nothing has been fixed yet",
+    "kpiOpen": "Open now",
+    "kpiOpenHint": "{n} being worked on",
+    "hours": "{n} h",
+    "trendTitle": "Reported and fixed",
+    "trendRange": "Last {n} days",
+    "legendReported": "Reported",
+    "legendFixed": "Fixed",
+    "noData": "No reports in this period yet",
+    "categoryTitle": "What gets reported",
+    "fixedTitle": "Recently fixed",
+    "fixedBody": "Public issues, newest fix first.",
+    "seeAll": "See all",
+    "fixedEmptyTitle": "Nothing fixed yet",
+    "fixedEmptyBody": "Fixed public issues will appear here as soon as staff close them.",
+    "fixedIn": "{count, plural, one {Fixed in {n} hour} other {Fixed in {n} hours}}",
+    "reportCta": "Report an issue",
+    "errorTitle": "Couldn't load these numbers",
+    "errorBody": "Check your connection and try again.",
+    "homeLink": "Open Campus Pulse"
+  },
+  "adminMap": {
+    "title": "Campus map",
+    "subtitle": "every ticket in your scope, including private and sensitive ones",
+    "allDepartments": "All departments",
+    "filters": "Map filters",
+    "statusLabel": "Status",
+    "status": {
+      "open": "Open",
+      "fixed": "Fixed",
+      "all": "All"
+    },
+    "days": "{count, plural, one {Last {n} day} other {Last {n} days}}",
+    "priorityLabel": "Priority",
+    "categoryLabel": "Category",
+    "departmentLabel": "Department",
+    "any": "Any",
+    "legendSizeOpen": "Bigger circle = more open tickets · ring = highest priority",
+    "legendSizeFixed": "Bigger circle = more fixed tickets",
+    "emptyTitle": "No tickets match",
+    "emptyBody": "Try a longer period or clear a filter.",
+    "drawerEmptyBody": "No tickets at this building match the filters.",
+    "private": "Private",
+    "sensitive": "Sensitive"
+  },
+  "brief": {
+    "eyebrow": "AI daily brief",
+    "title": "Last 24 hours",
+    "subtitleAll": "All departments",
+    "subtitleDept": "Your department",
+    "subtitlePublic": "Across campus",
+    "loading": "Writing today's brief…",
+    "unavailableTitle": "Brief unavailable right now",
+    "unavailableBody": "The AI could not write it. The numbers on this page are live; try again in a few minutes.",
+    "errorTitle": "Couldn't load the brief",
+    "errorBody": "Check your connection and try again.",
+    "noteAdmin": "Written by AI from counts only; check it against the numbers on this page.",
+    "notePublic": "Written by AI for campus admins from counts only, no complaint text.",
+    "written": "Updated"
   }
 }

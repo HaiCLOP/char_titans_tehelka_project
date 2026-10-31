@@ -89,7 +89,7 @@ function ChainCard({ chain }: { chain: Chain }) {
         <ol className="mt-3 divide-y divide-border">
           {chain.models.map((m, i) => (
             <li key={m.id} className={cn("flex items-center gap-2 py-2.5", !m.enabled && "opacity-55")}>
-              <span className="tabular w-5 shrink-0 text-sm text-subtle-foreground">{f.n(i + 1)}</span>
+              <span className="tabular w-5 shrink-0 text-sm text-muted-foreground">{f.n(i + 1)}</span>
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-[0.8125rem] break-all">{m.provider}/{m.model}</p>
                 {m.model === "auto:free" && <p className="text-xs text-muted-foreground">{t("auto")}</p>}
