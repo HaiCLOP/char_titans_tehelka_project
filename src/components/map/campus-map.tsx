@@ -154,7 +154,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("filterLabel")}>
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 [scrollbar-width:none]" role="group" aria-label={t("filterLabel")}>
         <Link href={href(null, includeFixed)} scroll={false} aria-current={category === null ? "true" : undefined} className={chip(category === null)}>
           {t("allCategories")}
           <span className="tabular text-xs opacity-70">{n(issues.length)}</span>
@@ -189,7 +189,7 @@ export function CampusMap({ locations, issues, category, includeFixed }: Props) 
               </defs>
               <rect width="100%" height="100%" fill="url(#cs-campus-grid)" />
             </svg>
-            <div className="absolute inset-x-12 top-8 bottom-20 sm:inset-x-20 sm:top-12 sm:bottom-20" role="group" aria-label={t("planLabel")}>
+            <div className="absolute inset-x-6 top-6 bottom-16 sm:inset-x-16 sm:top-12 sm:bottom-20" role="group" aria-label={t("planLabel")}>
               {plotted.map((p) => {
                 const count = p.open.length + p.fixed.length;
                 const d = diameter(count);

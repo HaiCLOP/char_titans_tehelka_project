@@ -64,7 +64,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
   return (
     <div className="space-y-8">
       {/* Sleek Minimalist Hero */}
-      <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-surface to-surface-muted/50 p-6 sm:p-8">
+      <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-surface to-surface-muted/50 p-5 sm:p-8">
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-primary shadow-xs">
             <span className="size-2 rounded-full bg-primary animate-pulse" aria-hidden />
@@ -76,13 +76,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
           <p className="mt-2 text-sm text-muted-foreground sm:text-base leading-relaxed">
             {t("hero.subtitle")}
           </p>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Link
               href="/report"
               className={buttonVariants({
                 variant: "primary",
                 size: "lg",
-                className: "gap-2 shadow-sm rounded-xl px-5 h-11 text-sm font-semibold",
+                className: "w-full sm:w-auto justify-center gap-2 shadow-sm rounded-xl px-5 h-11 text-sm font-semibold",
               })}
             >
               <Plus className="size-4" strokeWidth={2.5} aria-hidden />
@@ -93,7 +93,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
               className={buttonVariants({
                 variant: "secondary",
                 size: "lg",
-                className: "gap-2 rounded-xl px-5 h-11 text-sm font-medium",
+                className: "w-full sm:w-auto justify-center gap-2 rounded-xl px-5 h-11 text-sm font-medium",
               })}
             >
               <Map className="size-4 text-muted-foreground" aria-hidden />
@@ -104,7 +104,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
       </section>
 
       {/* Transparent 4-Metric Campus KPI Strip */}
-      <section aria-label="Campus metrics" className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-4">
+      <section aria-label="Campus metrics" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <KpiCard
           label={t("home.statOpen")}
           value={s?.open ?? 0}
@@ -136,7 +136,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8">
         {/* Left Column: Campus Issues */}
         <div className="min-w-0 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3.5">
             <div>
               <h2 className="text-lg font-bold tracking-tight text-foreground">
                 {view === "open" ? t("home.tabOpen") : t("home.tabResolved")}
@@ -146,7 +146,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
               </p>
             </div>
 
-            <nav aria-label={t("home.title")} className="inline-flex rounded-full bg-surface-muted/80 p-1 border border-border/60">
+            <nav aria-label={t("home.title")} className="inline-flex self-start sm:self-auto rounded-full bg-surface-muted/80 p-1 border border-border/60">
               {(["open", "resolved"] as const).map((v) => (
                 <Link
                   key={v}

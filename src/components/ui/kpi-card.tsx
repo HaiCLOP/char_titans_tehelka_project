@@ -58,23 +58,23 @@ export function KpiCard({ label, value, unit, icon: Icon, tone = "primary", hint
   const locale = useLocale();
   const shown = typeof value === "number" ? toLocaleDigits(value, locale) : value;
   return (
-    <div className={cn("flex flex-col gap-3 rounded-card border border-border bg-surface p-4 shadow-sm", className)}>
-      <div className="flex items-center gap-3">
+    <div className={cn("flex flex-col gap-2 sm:gap-3 rounded-card border border-border bg-surface p-3 sm:p-4 shadow-sm", className)}>
+      <div className="flex items-center gap-2.5 sm:gap-3">
         {Icon && (
-          <span className={cn("grid size-11 shrink-0 place-items-center rounded-xl", TONE[tone])}>
-            <Icon className="size-5" aria-hidden />
+          <span className={cn("grid size-9 sm:size-11 shrink-0 place-items-center rounded-lg sm:rounded-xl", TONE[tone])}>
+            <Icon className="size-4 sm:size-5" aria-hidden />
           </span>
         )}
-        <div className="min-w-0">
-          <p className="text-2xl font-semibold tabular-nums">
+        <div className="min-w-0 flex-1">
+          <p className="text-xl sm:text-2xl font-semibold tabular-nums leading-tight">
             {shown}
-            {unit && <span className="ml-0.5 text-base font-medium text-muted-foreground">{unit}</span>}
+            {unit && <span className="ml-0.5 text-xs sm:text-base font-medium text-muted-foreground">{unit}</span>}
           </p>
-          <p className="truncate text-sm text-muted-foreground">{label}</p>
+          <p className="truncate text-xs sm:text-sm text-muted-foreground">{label}</p>
         </div>
       </div>
       {series && series.length > 1 && <Sparkline data={series} className={LINE[tone]} />}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-[11px] sm:text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

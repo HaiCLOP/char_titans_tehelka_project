@@ -13,7 +13,7 @@ const withTransition = (fn: () => void) => {
   else fn();
 };
 
-/** Segmented EN / অসমীয়া control. */
+/** Segmented EN / অসমীয়া control. Compact on mobile (EN/অস), full on sm+. */
 export function LanguageSwitch({ className }: { className?: string }) {
   const locale = useLocale();
   const router = useRouter();
@@ -25,7 +25,7 @@ export function LanguageSwitch({ className }: { className?: string }) {
     start(() => router.refresh());
   };
   return (
-    <div role="group" aria-label={t("language")} className={cn("inline-flex h-10 items-center rounded-full bg-surface-muted p-1 text-[13px]", pending && "opacity-60", className)}>
+    <div role="group" aria-label={t("language")} className={cn("inline-flex h-9 sm:h-10 items-center rounded-full bg-surface-muted p-0.5 sm:p-1 text-xs sm:text-[13px]", pending && "opacity-60", className)}>
       {(["en", "as"] as const).map((l) => (
         <button
           key={l}
@@ -34,11 +34,12 @@ export function LanguageSwitch({ className }: { className?: string }) {
           aria-pressed={locale === l}
           lang={l}
           className={cn(
-            "h-8 rounded-full px-3 font-medium transition-[background-color,color,box-shadow] duration-200",
+            "h-7 sm:h-8 rounded-full px-2.5 sm:px-3 font-medium transition-[background-color,color,box-shadow] duration-200",
             locale === l ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          {l === "en" ? "English" : "অসমীয়া"}
+          <span className="sm:hidden">{l === "en" ? "EN" : "অস"}</span>
+          <span className="hidden sm:inline">{l === "en" ? "English" : "অসমীয়া"}</span>
         </button>
       ))}
     </div>

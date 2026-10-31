@@ -28,7 +28,7 @@ export function BottomNav({ role }: { role?: Role } = {}) {
   return (
     <nav
       aria-label={t("main")}
-      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-full border border-border bg-surface/95 shadow-rail backdrop-blur-md lg:hidden"
+      className="fixed inset-x-2 sm:inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-full border border-border bg-surface/95 shadow-rail backdrop-blur-md lg:hidden"
     >
       <ul className="mx-auto grid h-16 max-w-md grid-cols-5 items-stretch px-1">
         {items.map((item) => {
@@ -55,12 +55,12 @@ export function BottomNav({ role }: { role?: Role } = {}) {
                 href={item.href}
                 aria-current={on ? "page" : undefined}
                 className={cn(
-                  "flex h-full flex-col items-center justify-center gap-1 rounded-full px-1 text-[10.5px] leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  "flex h-full flex-col items-center justify-center gap-1 rounded-full px-1 text-[10px] sm:text-[10.5px] leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                   on ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <item.icon className="size-5" strokeWidth={on ? 2.1 : 1.75} aria-hidden />
-                <span className="line-clamp-2 max-w-full text-center break-words">{t(item.key)}</span>
+                <span className="line-clamp-1 max-w-full text-center truncate">{t(item.key)}</span>
               </Link>
             </li>
           );
