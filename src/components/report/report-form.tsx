@@ -26,8 +26,26 @@ import { REPORT_DRAFT_KEY } from "@/components/home/composer";
 import { EmergencyBanner } from "./emergency-banner";
 
 const MIN_CHARS = 15;
-const IDLE_MS = 1200;
 const MAX_TEXT = 2000;
+// AI preview budget: wait for a real pause, skip small edits, never call more than once every few seconds.
+const TYPE_IDLE_MS = 2500;
+const PHOTO_IDLE_MS = 500;
+const MIN_GAP_MS = 4000;
+
+const normText = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+
+/** True when `b` differs from `a` by more than a typo-sized edit (≥ 12 chars or ≥ 15 % of the text). */
+function changedEnough(a: string, b: string) {
+  if (a === b) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  let j = 0;
+  while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j]) j++;
+  const changed = Math.max(a.length, b.length) - i - j;
+  return changed >= 12 || changed / Math.max(a.length, b.length, 1) >= 0.15;
+}
+
+type Requested = { key: string; norm: string; photoKey: string; raw: string };
 
 type UploadState = { status: "uploading"; pct: number } | { status: "done"; path: string } | { status: "error" };
 type Preview = { key: string; intake: Intake; source: IntakeResult["source"]; model?: string };
@@ -67,14 +85,20 @@ export function ReportForm() {
 
   const trimmed = text.trim();
   const canAnalyze = trimmed.length >= MIN_CHARS || photos.length > 0;
-  const analyzeKey = `${trimmed}|${photos.map((p) => p.id).join(",")}|${location?.id ?? ""}`;
+  const photoKey = photos.map((p) => p.id).join(",");
+  const candidateNorm = normText(trimmed);
+  // The input last sent to the AI. Small edits after it don't trigger a new call; the preview stays valid.
+  const [requested, setRequested] = useState<Requested | null>(null);
+  const needsRequest =
+    canAnalyze && (!requested || requested.photoKey !== photoKey || changedEnough(requested.norm, candidateNorm));
   const previewStatus: "idle" | "loading" | "ready" | "error" = !canAnalyze
     ? "idle"
-    : preview?.key === analyzeKey
+    : requested && preview?.key === requested.key
       ? "ready"
-      : failedKey === analyzeKey
+      : requested && failedKey === requested.key
         ? "error"
         : "loading";
+  const similarKey = requested ? `${requested.key}|${location?.id ?? ""}` : null;
 
   // Prefill from the home-page composer (sessionStorage, never the URL).
   useEffect(() => {
@@ -110,54 +134,90 @@ export function ReportForm() {
     return v;
   }, []);
 
-  // Debounced AI preview: 1.2 s after the last change; stale requests are aborted.
+  // ---------- AI preview: scheduled, deduplicated, cached ----------
+  const lastStart = useRef(0);
+  const results = useRef(new Map<string, Preview>());
+  const commitRequest = useCallback(() => {
+    const { text: txt, photos: pics } = latest.current;
+    const raw = txt.trim();
+    const norm = normText(raw);
+    const pk = pics.map((p) => p.id).join(",");
+    setRequested((prev) => (prev && prev.norm === norm && prev.photoKey === pk ? prev : { key: `${norm}|${pk}`, norm, photoKey: pk, raw }));
+  }, []);
+
+  // Schedule a call only when the input changed enough; photos go fast, typing waits for a real pause.
   useEffect(() => {
-    if (!canAnalyze) return;
+    if (!needsRequest) return;
+    const photoChange = !requested || requested.photoKey !== photoKey;
+    const wait = Math.max(photoChange && photos.length > 0 ? PHOTO_IDLE_MS : TYPE_IDLE_MS, lastStart.current + MIN_GAP_MS - Date.now());
+    const timer = setTimeout(commitRequest, wait);
+    return () => clearTimeout(timer);
+  }, [needsRequest, candidateNorm, photoKey, photos.length, requested, commitRequest]);
+
+  // One request per committed input; results are cached so undoing an edit costs nothing.
+  useEffect(() => {
+    if (!requested) return;
+    const key = requested.key;
+    const cached = results.current.get(key);
+    // Only successful AI answers are cached, so a retry after a failure always reaches the network.
+    if (cached) {
+      setPreview(cached);
+      setFailedKey(null);
+      return;
+    }
     const ctrl = new AbortController();
-    const key = analyzeKey;
-    const timer = setTimeout(async () => {
-      const { text: txt, photos: pics, location: loc } = latest.current;
+    lastStart.current = Date.now();
+    (async () => {
+      const { photos: pics, location: loc } = latest.current;
       try {
         const images = await Promise.all(pics.map(dataUrlFor));
         const res = await apiFetch<IntakeResult>("/api/ai/analyze", {
           method: "POST",
-          json: { text: txt.trim(), images, ...(loc ? { locationName: loc.name_en } : {}) },
+          json: { text: requested.raw, images, ...(loc ? { locationName: loc.name_en } : {}) },
           signal: ctrl.signal,
         });
         if (ctrl.signal.aborted) return;
-        setPreview({ key, intake: res.intake, source: res.source, model: res.model });
+        const next: Preview = { key, intake: res.intake, source: res.source, model: res.model };
+        if (res.source === "ai") results.current.set(key, next);
+        setPreview(next);
         setFailedKey(null);
         if (res.intake.is_sensitive_suggested && !latest.current.sensitive && !sensitiveUserOff.current) {
           setSensitive(true);
           setSensitiveAuto(true);
         }
-        // Duplicate check (skipped when AI is down: the summary is only a keyword fallback then).
-        if (res.source === "ai") {
-          try {
-            const items = await apiFetch<SimilarItem[]>("/api/complaints/similar", {
-              method: "POST",
-              json: { summary_en: res.intake.summary_en, location_id: loc?.id ?? null },
-              signal: ctrl.signal,
-            });
-            if (ctrl.signal.aborted) return;
-            const top = items.slice(0, 3);
-            setSimilar({ key, items: top });
-            if (top.length > 0 && dismissedKey.current !== key) setDupOpen(true);
-          } catch {
-            // 503 AI_UNAVAILABLE or any other failure ⇒ no duplicate step.
-            if (!ctrl.signal.aborted) setSimilar({ key, items: [] });
-          }
-        }
       } catch (e) {
         if (ctrl.signal.aborted || (e instanceof DOMException && e.name === "AbortError")) return;
         setFailedKey(key);
       }
-    }, IDLE_MS);
-    return () => {
-      clearTimeout(timer);
-      ctrl.abort();
-    };
-  }, [analyzeKey, canAnalyze, retryNonce, dataUrlFor]);
+    })();
+    return () => ctrl.abort();
+  }, [requested, retryNonce, dataUrlFor]);
+
+  // Duplicate check: re-runs for a new preview or a new location, never calls the language model.
+  const previewKey = preview?.key;
+  const previewSummary = preview?.source === "ai" ? preview.intake.summary_en : null;
+  const locationId = location?.id ?? null;
+  useEffect(() => {
+    if (!similarKey || !previewSummary || previewKey !== requested?.key) return;
+    const ctrl = new AbortController();
+    (async () => {
+      try {
+        const items = await apiFetch<SimilarItem[]>("/api/complaints/similar", {
+          method: "POST",
+          json: { summary_en: previewSummary, location_id: locationId },
+          signal: ctrl.signal,
+        });
+        if (ctrl.signal.aborted) return;
+        const top = items.slice(0, 3);
+        setSimilar({ key: similarKey, items: top });
+        if (top.length > 0 && dismissedKey.current !== similarKey) setDupOpen(true);
+      } catch {
+        // 503 AI_UNAVAILABLE or any other failure ⇒ no duplicate step.
+        if (!ctrl.signal.aborted) setSimilar({ key: similarKey, items: [] });
+      }
+    })();
+    return () => ctrl.abort();
+  }, [similarKey, previewKey, previewSummary, locationId, requested?.key]);
 
   // ---------- photos + uploads ----------
   const startUpload = useCallback((p: PhotoItem) => {
@@ -211,7 +271,8 @@ export function ReportForm() {
   };
 
   // ---------- effective intake (AI preview + the user's edits) ----------
-  const current = preview && preview.key === analyzeKey ? preview : null;
+  // The preview is only sent with the report when it describes what is written now (small edits are fine).
+  const current = preview && requested && preview.key === requested.key && !needsRequest ? preview : null;
   const shown = canAnalyze ? preview : null; // stale preview stays visible while the next one loads
   const effective: Intake | null = shown ? { ...shown.intake, ...overrides } : null;
   const titleField = locale === "as" ? "title_as" : "title_en";
@@ -219,7 +280,7 @@ export function ReportForm() {
   const editedTitle = overrides[titleField];
   const titleError = editedTitle !== undefined && editedTitle.trim().length < 3 ? t("preview.titleTooShort") : null;
   const isUrgent = Boolean(effective?.is_urgent);
-  const similarItems = similar && similar.key === analyzeKey ? similar.items : [];
+  const similarItems = similar && similar.key === similarKey ? similar.items : [];
 
   // ---------- submit ----------
   const submit = useMutation({
@@ -303,6 +364,9 @@ export function ReportForm() {
               placeholder={t("description.placeholder")}
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onBlur={() => {
+                if (needsRequest) commitRequest();
+              }}
               maxLength={MAX_TEXT}
               showCount
               rows={5}
