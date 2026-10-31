@@ -8,6 +8,17 @@
 
 ---
 
+## Changes since v4 (31 Oct) — the code wins where the sections below disagree
+
+- **Real auth only.** Demo accounts, the "Demo login" row and `NEXT_PUBLIC_DEMO_MODE` are removed (migration `20261031230000_remove_demo.sql`). Sections 3 (S03), 11.3 and 15 now mean real accounts created ahead of the demo.
+- **Monochrome design replaces the three colour themes.** Tea Garden / Brahmaputra / Muga are dropped; only light and dark remain. Colour is used only for meaning (priority P1–P4, success / warning / danger). Section 6 theme text is superseded by `AGENTS.md` styling rules and `PRODUCT.md`.
+- **Go backend engine** (`engine/`, stdlib only): AI router port (key rotation, cooldown, circuit breaker, simulate_failure, free-only OpenRouter), `/v1/intake` `/v1/embed` `/v1/similar` `/v1/router/invalidate`, `/health`, and workers (heal pending AI, SLA alerts, auto-close, daily brief). The web app calls it first and falls back to the TypeScript router. Exposed through a Cloudflare tunnel for the demo.
+- **Students give a course, not a department** (migration `20261031235000_profile_course.sql`); only staff belong to fixing departments.
+- **Auto-assignment** of safe tickets to field staff by skills, building coverage and load (migration `20261101000000_staff_skills_autoassign.sql`, `rank_assignees` / `auto_assign_complaint`); admins see ranked suggestions in S15.
+- **Admin dashboard (S13)** is an "Operations center" (needs-attention cards, KPIs with period deltas, high-priority list, mini campus map, recent reports).
+- **P1 status:** Ask CivicSense (S16), ticket chat + AI reply draft + resolution check (M8) are built. Campus Pulse (S02), the admin campus map (S17) and the AI daily brief are being finished in M9.
+- **Deferred:** PWA, voice input, PDF report, ⌘K palette, MCP server, `/admin/locations` (S19), bulk queue actions, the 40-complaint `seed-demo.ts` script.
+
 ## 0. How to use this with Claude Code
 
 1. Open the repo folder in a terminal, run `claude`. It reads `CLAUDE.md` → `AGENTS.md` → this file.

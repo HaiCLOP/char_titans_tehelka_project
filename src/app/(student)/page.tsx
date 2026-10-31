@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowRight, CheckCircle2, Inbox } from "lucide-react";
-import { CampusBriefCard } from "@/components/brief/brief-card";
 import { HomeComposer } from "@/components/home/composer";
 import { AreaTrend, Card, EmptyState, IssueCard, LifecycleTrack, buttonVariants } from "@/components/ui";
 import { getProfile, getUser } from "@/lib/auth";
-import { getCachedCampusBrief } from "@/lib/brief";
 import { ComplaintListQuerySchema, type ComplaintListItem } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { listComplaints } from "@/lib/tracking";
@@ -58,7 +56,8 @@ async function loadHome(view: "open" | "resolved") {
 export default async function Home({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const { view: rawView } = await searchParams;
   const view = rawView === "resolved" ? "resolved" : "open";
-  const [t, locale, data, brief] = await Promise.all([getTranslations(), getLocale(), loadHome(view), getCachedCampusBrief()]);
+  // No AI brief on this public page: its counts include private/sensitive tickets (admins see it on /admin).
+  const [t, locale, data] = await Promise.all([getTranslations(), getLocale(), loadHome(view)]);
   const n = (v: number) => toLocaleDigits(v, locale);
 
   const created = data.trend.map((r) => Number(r.created));
@@ -160,7 +159,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
           </Link>
         </Card>
 
-        {brief && <CampusBriefCard brief={brief} />}
 
         <Card className="p-6">
           <h2 className="text-title text-lg">{t("home.weekTitle")}</h2>

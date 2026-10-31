@@ -341,6 +341,8 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
   const similarItems = similar && similar.key === similarKey ? similar.items : [];
 
   // ---------- submit ----------
+  // One idempotency key per form: retries (timeout, double tap) can never create a second ticket.
+  const requestId = useRef<string | null>(null);
   const submit = useMutation({
     mutationFn: (body: SubmitComplaintInput) => apiFetch<SubmitResult>("/api/complaints", { method: "POST", json: body }),
     onSuccess: (r) => router.push(`/report/done?id=${encodeURIComponent(r.id)}`),
@@ -379,7 +381,9 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
             [titleField]: (overrides[titleField] ?? effective[titleField]).trim(),
           }
         : undefined;
+    requestId.current ??= crypto.randomUUID();
     submit.mutate({
+      client_request_id: requestId.current,
       text: cleanText,
       image_paths: uploadList.flatMap((u) => (u.status === "done" ? [u.path] : [])),
       location_id: location?.id ?? null,

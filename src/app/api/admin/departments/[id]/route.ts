@@ -3,6 +3,7 @@ import { z } from "zod";
 import { fail, failFrom, ok, parseJson, requireRole } from "@/lib/api";
 import { DepartmentPatchSchema } from "@/lib/domain";
 import { deleteDepartment, updateDepartment } from "@/lib/org";
+import { audit } from "@/lib/audit";
 
 const Id = z.guid();
 
@@ -16,7 +17,9 @@ export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/admin/depa
   const body = await parseJson(req, DepartmentPatchSchema);
   if (body instanceof Response) return body;
   try {
-    return ok(await updateDepartment(auth.supabase, id, body));
+    const dept = await updateDepartment(auth.supabase, id, body);
+    await audit(auth.user.id, "department.update", `departments:${id}`, { changes: body });
+    return ok(dept);
   } catch (e) {
     return failFrom(e, "update the department");
   }
@@ -29,6 +32,7 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext<"/api/admin/de
   if (!Id.safeParse(id).success) return fail("NOT_FOUND", "Department not found");
   try {
     await deleteDepartment(auth.supabase, id);
+    await audit(auth.user.id, "department.delete", `departments:${id}`);
     return ok({ id });
   } catch (e) {
     return failFrom(e, "delete the department");

@@ -6,7 +6,8 @@ import { PipelineError } from "@/lib/complaints";
 import { runAI } from "@/lib/ai/router";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAssameseText } from "@/lib/utils";
-import { loadTicket, rateLimit, withAssameseGuard, type Actor, type AssistTicket } from "./access";
+import { loadTicket, withAssameseGuard, type Actor, type AssistTicket } from "./access";
+import { hitRateLimit } from "@/lib/ratelimit";
 import { translateSystem } from "./prompts";
 import type { ChatLang, ChatMessage, ChatSender, ChatThread } from "./types";
 
@@ -123,7 +124,7 @@ export type PostResult = { message: ChatMessage; translation: { ms: number; mode
 
 export async function postMessage(supabase: SupabaseClient, actor: Actor, idOrCode: string, body: string): Promise<PostResult> {
   const { ticket, manager } = await loadTicket(supabase, actor, idOrCode);
-  if (!rateLimit(`chat:${actor.id}`, RATE_MAX, RATE_WINDOW_MS)) {
+  if (!(await hitRateLimit(supabase, "chat", RATE_MAX, RATE_WINDOW_MS / 1000)).ok) {
     throw new PipelineError("RATE_LIMITED", "Too many messages — wait a few minutes");
   }
   const lang = detectLang(body);

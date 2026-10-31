@@ -523,6 +523,8 @@ export async function getComplaintDetail(
   const events: TimelineEvent[] = eventRows.map((e) => {
     let actor: EventActor;
     if (e.actor_kind) actor = e.actor_kind;
+    // "created" is always the reporter's act; anonymous reports store no actor id for it (migration 11).
+    else if (e.type === "created") actor = isOwner ? "me" : "reporter";
     else if (!e.actor_id) actor = "system";
     else if (e.actor_id === viewer.id) actor = "me";
     else if (e.actor_id === row.user_id) actor = "reporter";

@@ -4,7 +4,8 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight, MapPin, UserPlu
 import { CATEGORY_ICON, Card, LangText, PriorityChip, RelativeTime, StatusChip, buttonVariants } from "@/components/ui";
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import type { Category, Status } from "@/lib/domain";
-import { cn } from "@/lib/utils";
+import { useLocale } from "next-intl";
+import { cn, toLocaleDigits } from "@/lib/utils";
 
 // Building blocks of the admin Operations center (S13). Server components, monochrome tokens only:
 // colour appears only where it means something (priority, overdue, fixed).
@@ -87,6 +88,7 @@ export function OpsKpi({
   goodWhenUp?: boolean;
 }) {
   const up = (delta ?? 0) > 0;
+  const locale = useLocale();
   return (
     <Card className="p-4 sm:p-5">
       {/* Phones: icon above the label so labels never truncate; wider screens: icon beside it. */}
@@ -106,7 +108,7 @@ export function OpsKpi({
                   delta === 0 ? "text-muted-foreground" : (up === Boolean(goodWhenUp)) ? "text-success" : "text-danger",
                 )}
               >
-                {Math.abs(delta)}%
+                {toLocaleDigits(Math.abs(delta), locale)}%
               </span>
               <span>{deltaLabel}</span>
             </p>
@@ -183,12 +185,12 @@ export function MiniMap({
             {hit ? (
               <>
                 <circle cx={x} cy={y} r={2.2 + Math.min(hit.count, 8) * 0.55} fill="var(--surface)" stroke={`var(--p${hit.top})`} strokeWidth="1.1" />
-                <text x={x} y={y + 0.9} textAnchor="middle" fontSize="2.6" fontWeight="700" fill="var(--foreground)">{hit.count}</text>
+                <text x={x} y={y + 0.9} textAnchor="middle" fontSize="2.6" fontWeight="700" fill="var(--foreground)">{toLocaleDigits(hit.count, locale)}</text>
               </>
             ) : (
               <circle cx={x} cy={y} r="1" fill="none" stroke="var(--subtle-foreground)" strokeWidth="0.4" />
             )}
-            <title>{hit ? `${name}: ${hit.count}` : name}</title>
+            <title>{hit ? `${name}: ${toLocaleDigits(hit.count, locale)}` : name}</title>
             {hit && (
               <text x={x} y={y + 6.2} textAnchor="middle" fontSize="2.4" fontWeight="600" fill="var(--foreground)">
                 {name.length > 18 ? `${name.slice(0, 17)}…` : name}

@@ -1,6 +1,7 @@
 import { failFrom, ok, parseJson, requireRole } from "@/lib/api";
 import { DepartmentInputSchema } from "@/lib/domain";
 import { createDepartment, listDepartments } from "@/lib/org";
+import { audit } from "@/lib/audit";
 
 // S18 — departments (super admin only): list with member + open counts, create.
 export async function GET() {
@@ -19,7 +20,9 @@ export async function POST(req: Request) {
   const body = await parseJson(req, DepartmentInputSchema);
   if (body instanceof Response) return body;
   try {
-    return ok(await createDepartment(auth.supabase, body), { status: 201 });
+    const dept = await createDepartment(auth.supabase, body);
+    await audit(auth.user.id, "department.create", `departments:${dept.id}`, { name_en: body.name_en });
+    return ok(dept, { status: 201 });
   } catch (e) {
     return failFrom(e, "create the department");
   }

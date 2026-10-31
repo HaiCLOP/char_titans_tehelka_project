@@ -1,9 +1,9 @@
 import { fail, failFrom, ok, parseJson, requireRole } from "@/lib/api";
 import { AIUnavailableError } from "@/lib/ai/router";
 import { askAgent } from "@/lib/agent/run";
-import { agentLimiter } from "@/lib/agent/rate-limit";
 import { AGENT_QUESTIONS_PER_HOUR, AgentRequestSchema } from "@/lib/agent/schema";
 import { AgentScopeError, agentScope } from "@/lib/agent/scope";
+import { hitRateLimit } from "@/lib/ratelimit";
 
 // S16 — Ask CivicSense. Admins only; tools read with the caller's RLS client, scoped server-side.
 export async function POST(req: Request) {
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     throw e;
   }
 
-  const rate = agentLimiter(AGENT_QUESTIONS_PER_HOUR).take(auth.user.id);
+  const rate = await hitRateLimit(auth.supabase, "agent", AGENT_QUESTIONS_PER_HOUR, 3600);
   if (!rate.ok) {
     return fail("RATE_LIMITED", `You can ask ${AGENT_QUESTIONS_PER_HOUR} questions an hour`, {
       headers: { "retry-after": String(rate.retryAfterSec) },

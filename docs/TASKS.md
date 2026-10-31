@@ -14,7 +14,8 @@ Full spec: `docs/PRD.md` (build milestones in section 14)
 ## 31 Oct
 - [x] Arnav (M1): migration 3 (`app_config` + emergency/security number placeholders, `ai_keys.simulate_failure`, `profiles.font_size`, `profiles.onboarded_at`); `/login` (Google + email magic link), `/auth/callback`, sign-out action, role-based redirect + onboarding redirect; `src/lib/api.ts` + `src/lib/auth.ts` helpers. **Demo accounts / demo login dropped by request — real auth only.**
 - [x] Arnav: run migrations 1–4 + seed on Supabase (via Supabase MCP)
-- [ ] Arnav: enable Google provider + redirect URLs; assign first super_admin via SQL; security-advisor fixes (RPC grants, match_complaints privacy, status_transitions read policy)
+- [x] Security-advisor fixes (RPC grants, match_complaints privacy, status_transitions read policy) — migration 5 `20261031200000_security_hardening.sql`
+- [ ] Arnav: enable Google provider + redirect URLs in Supabase Auth; assign first super_admin via SQL
 - [x] Arnav: Go backend engine (`engine/`, stdlib only): AI router port (key rotation, cooldown, breaker, simulate_failure, free-only OpenRouter), `/v1/intake` `/v1/embed` `/v1/similar` `/v1/router/invalidate`, `/health` `/metrics`, workers (heal_pending_ai, sla_alerts, auto_close, daily_brief); migration 4 (`complaints.sla_alerted_at`); web `analyzeComplaint()` calls engine first, falls back to TS router; intake gains `is_urgent` + `is_sensitive_suggested`
 - [x] M2: shared UI kit `src/components/ui/*` (+ barrel), `BottomNav` + `(student)` route-group layout, `AdminSidebar` + `/admin` layout/placeholder, `src/lib/image.ts` (WebP ≤ 400 KB), `src/lib/search.ts`, `src/lib/lang.ts` (mocks + `/dev/ui` gallery since removed)
 - [ ] Arnav: test engine against live Gemini/OpenRouter/Supabase; cloudflared tunnel dry run
@@ -32,7 +33,8 @@ Full spec: `docs/PRD.md` (build milestones in section 14)
 - [x] M6 (system panel): S20 overview (engine + web router state, per model×purpose success/p50/p95/last error from the last 100 calls, per key calls/min, cooldown, failures; 5 s refresh), S21 keys (add encrypted, enable/disable, **Simulate failure**, delete, Test all; env keys read-only), S22 model chains (reorder, enable/disable, add with free-only OpenRouter check, remove, Test through the real router), S23 AI logs (filters, keyset pages, failover chains grouped); `/api/sys/{health,keys,keys/test,models,test,logs}`; access = secret path rewrite in `src/proxy.ts` + super_admin + SYS_PANEL_EMAILS, else 404 (`src/lib/sys.ts`); TS router honours `ai_keys.simulate_failure` like the engine, `invalidateRouterCache()` + engine `/v1/router/invalidate` after every change
 - [x] M8 (chat, reply draft, resolution check): bilingual ticket chat `GET/POST /api/complaints/[id]/messages` (owner / dept admins / assignee via RLS, non-internal only, auto-detected language, `translate_msg` translation stored in `body_translated` (best effort), 20 msgs / 10 min, new-message notification to the other side, realtime INSERT+UPDATE); `POST /api/complaints/[id]/reply-draft` (`reply_draft`, reporter's language, status/department/SLA facts only, Assamese drift guard); `GET/POST /api/complaints/[id]/check-resolution` (`resolution_check`, before vs after photo, advisory, saved to `ai_meta.resolution_check`); `src/lib/assist/*`; `TicketChat` mounted on `/c/[id]` (S08); `ReplyDraftPanel` + `ResolutionCheckPanel` for the S15 rail; live-tested against Gemini
 - [x] M7 Ask CivicSense (S16): `/admin/agent` chat (suggestion chips per language, answers in the question's language, inline bar/line chart from tool data, "How I got this" trace, loading/error+retry/empty, sticky composer at 360 px) + `POST /api/admin/agent` (admins, 30 questions/h in-memory per instance). `src/lib/agent/*`: 7 read-only Zod-validated tools scoped server-side (dept_admin = own department, super_admin = all or picked; department_load only for super admin viewing all), ≤ 4 tool rounds through `runAI("agent")`, grounded prompt + glossary, Bengali-ra drift guard (strict retry, then replace with ৰ). Tested live on Gemini with a temporary dataset (deleted).
-- [ ] Migration 6: column-restricting update trigger (owner/assignee), stop full-row public reads (`complaints public read`), notifications `with check`
+- [x] M9 (map + pulse + brief): S17 `/admin/map` (base-table tickets in the admin's scope incl. private/sensitive via RLS, URL filters status group / 1-7-30 days / priority / category / department for super admin, size = open count, ring = top priority, Drawer → `/admin/t/[id]`; reuses `CampusMap` via props; admin sidebar points to it); S02 `/pulse` (signed-out OK; fixed this week, avg hours to fix, open now, 14-day trend, 30-day category bars, recently fixed from `complaints_public`; rail item + home link); daily brief `GET /api/admin/brief` (`src/lib/brief.ts`: engine cache → `daily_brief:<dept|all>` 1 h cache, `runAI("daily_brief")` from aggregates only, quiet-day flag, Zod, Bengali-ra drift guard) + `AdminBriefCard` on `/admin` and cached campus brief on the home aside; live-tested on Gemini
+- [x] Migration 6 (`20261031220000_privacy_columns.sql`): column-restricting update trigger (owner/assignee), full-row public reads dropped (`complaints_public` + `public_complaint_events()`), notifications `with check`
 - Arnav: `/api/complaints` (intake + dedup + routing); deploy to Vercel
 - Devansh: `/report` form (text, 3 photos compressed, building combobox, AI preview card, duplicate prompt), `/report/done`, onboarding
 - Darsh: landing polish, `/my`, `/c/[id]` ticket + timeline, notifications bell (realtime)
@@ -49,3 +51,35 @@ Full spec: `docs/PRD.md` (build milestones in section 14)
 
 ## 3 Nov
 - Everyone: bug fixes · Aman: 2 full rehearsals · 8 PM freeze
+
+## M10 — polish & hardening (31 Oct)
+- [x] Empty / loading / error audit: route-level `loading.tsx` + `error.tsx` (Retry + Go home) inside the student, staff and admin shells (`src/components/segment-states.tsx`); every TanStack list already had skeleton / empty / error + Retry
+- [x] 360 px audit: no horizontal scroll on the audited pages (except `/map`, see below); tap targets ≥ 40 px (small buttons, tabs, language switch, header logo, dialog close, photo remove, queue toggle, agent scope select); the report sticky bar never covers content; dialogs cap at 88dvh with a pinned action footer
+- [x] Theme audit: AA contrast for body and muted text on every surface in light + dark; light `--success` / `--warning` darkened for AA on their soft chips; new `--danger-foreground` (white in light, near-black in dark) for danger buttons and the emergency call button; small text moved from `subtle-foreground` to `muted-foreground`; no raw hex in components
+- [x] Assamese audit: `grep -c র messages/as.json` = 0, en/as key sets identical, no hardcoded JSX strings, Assamese digits in the agent trace and the ops KPI deltas / mini-map counts; Bengali র in code only inside drift guards and search folding
+- [x] Warm-up script `scripts/warmup.mjs` (`pnpm warmup`)
+- [x] Local production build in `.next-prod` (`NEXT_DIST_DIR`) + smoke test on :3300
+- [x] Security quick pass: no secrets in git history, `.env.local` ignored, every `/api` route checks auth/role; Supabase advisors reviewed
+- [x] CI (`.github/workflows/ci.yml`): lint, typecheck, build, gofmt, go vet, go test
+- [ ] `/map` (student) is ~25 px wider than a 360 px screen (building labels near the right edge, `src/components/map/campus-map.tsx`) — M9 owner
+
+## Deferred (not in the demo)
+- Deferred: P2 voice input, PDF report, PWA, ⌘K command palette, MCP server
+- Deferred: `/admin/locations` (S19) — locations are edited in SQL / seed for now
+- Deferred: bulk queue actions (S14)
+- Deferred: 40 seed complaints through the real pipeline (`scripts/seed-demo.ts`) — the demo uses live reports
+
+## Demo checklist (PRD §15 → what to open)
+Before: web, engine and tunnel running; `pnpm warmup -- --intake` on the demo laptop; phone signed in as the Assamese reporter, a second phone/profile as the English reporter, laptop as the department admin, another browser profile as super admin, field staff account on a phone.
+
+| Time | Step | Screen / URL |
+|---|---|---|
+| 0:00 | Problem statement | slide |
+| 0:30 | Assamese report with photo → bilingual preview → submit, routed + SLA | phone: language switch in the top bar → `/report` → `/report/done?id=…` |
+| 1:30 | English duplicate → "Already reported" (Assamese ticket shown in English) → Me too | second reporter: `/report` duplicate drawer |
+| 2:15 | Ticket arrives live, dashboard, map, assign field staff | laptop: `/admin` (Operations center) → `/admin/queue` → `/admin/map` → `/admin/t/<id>` (assign / ranked suggestions) |
+| 3:00 | Draft reply → arrives in Assamese for the reporter | `/admin/t/<id>` Draft reply → phone `/c/<id>` chat + `/notifications` |
+| 3:40 | Agent question in Assamese → answer + chart + tool trace | `/admin/agent` |
+| 4:30 | Simulate key failure → submit again → failover in logs | `/<SYS_PANEL_PATH>/keys` (Simulate failure) → phone `/report` → `/<SYS_PANEL_PATH>/logs` |
+| 5:10 | Field staff resolves with after-photo → AI check → reporter confirms + rates | staff phone `/staff` → `/admin/t/<id>` Check resolution → phone `/c/<id>` Confirm fixed |
+| 5:40 | Architecture + impact | slide; public `/pulse` |

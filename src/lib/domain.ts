@@ -77,7 +77,8 @@ export type Intake = z.infer<typeof IntakeSchema>;
 
 export const AnalyzeRequestSchema = z.object({
   text: z.string().max(2000).default(""),
-  images: z.array(z.string().startsWith("data:image/")).max(3).default([]),
+  // ~1.6 M chars ≈ 1.2 MB decoded per photo; the client compresses to ≤ 400 KB WebP.
+  images: z.array(z.string().startsWith("data:image/").max(1_600_000, "photo too large")).max(3).default([]),
   locationName: z.string().max(120).optional(),
 }).refine((v) => v.text.trim().length > 0 || v.images.length > 0, { message: "text or image required" });
 
@@ -129,8 +130,11 @@ export const SubmitComplaintSchema = z.object({
   anonymous: z.boolean().default(false),
   is_sensitive: z.boolean().default(false),
   intake: IntakeSchema.optional(),
-  /** Where the preview came from (`source` of /api/ai/analyze). "fallback" ⇒ stored as ai_status fallback. */
+  /** Idempotency key (one per form): a retried submit returns the first ticket instead of a duplicate. */
+  client_request_id: z.guid().optional(),
+  /** Ignored (untrusted): the server recomputes the source and every safety field at submit. Kept for older clients. */
   intake_source: z.enum(["ai", "fallback"]).optional(),
+  /** Ignored (untrusted). */
   intake_model: z.string().max(120).optional(),
 }).refine((v) => v.text.trim().length > 0 || v.image_paths.length > 0, { message: "text or photo required" });
 export type SubmitComplaintInput = z.input<typeof SubmitComplaintSchema>;

@@ -90,11 +90,36 @@ export type SubmitInput = {
   anonymous: boolean;
   is_sensitive: boolean;
   intake?: Intake;
-  intake_source?: "ai" | "fallback";
-  intake_model?: string;
+  /** Idempotency key from the form: the same key twice returns the first ticket. */
+  client_request_id?: string;
 };
 
 type Department = { id: string; name_en: string; name_as: string };
+
+/** The ticket an earlier submit with the same idempotency key created, in the submit response shape. */
+async function existingSubmit(supabase: SupabaseClient, userId: string, requestId: string): Promise<SubmitResult | null> {
+  const { data } = await supabase
+    .from("complaints")
+    .select("id, code, sla_due_at, status, is_urgent, departments(id, name_en, name_as)")
+    .eq("user_id", userId)
+    .eq("client_request_id", requestId)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as unknown as {
+    id: string; code: string; sla_due_at: string | null; status: string; is_urgent: boolean;
+    departments: Department | Department[] | null;
+  };
+  const dept = Array.isArray(row.departments) ? (row.departments[0] ?? null) : row.departments;
+  return {
+    id: row.id,
+    code: row.code,
+    department: dept,
+    sla_due_at: row.sla_due_at,
+    status: z.enum(STATUSES).parse(row.status),
+    is_urgent: Boolean(row.is_urgent),
+    assignee: null,
+  };
+}
 
 /** Downloads the reporter's own photos (storage RLS: folder = uid) as data URLs for multimodal intake. */
 async function loadImages(supabase: SupabaseClient, paths: string[]): Promise<string[]> {
@@ -125,6 +150,12 @@ export async function submitComplaint(
   const { cleanText, hasAbuse } = filterAbusiveText(input.text);
   input.text = cleanText;
 
+  // A retried submit (timeout, double tap) returns the ticket the first attempt created.
+  if (input.client_request_id) {
+    const prior = await existingSubmit(supabase, user.id, input.client_request_id);
+    if (prior) return prior;
+  }
+
   // Photo paths must be the caller's own uploads (storage RLS also enforces this on upload).
   if (input.image_paths.some((p) => !p.startsWith(`${user.id}/`))) {
     throw new PipelineError("VALIDATION_ERROR", "Photos must be your own uploads");
@@ -143,38 +174,43 @@ export async function submitComplaint(
   if (input.location_id && !location?.data) throw new PipelineError("VALIDATION_ERROR", "Unknown location");
   const locationName = (location?.data as { name_en: string } | null)?.name_en;
 
-  // ---- intake ----
-  let intake: Intake;
-  let meta: Record<string, unknown>;
-  let source: "ai" | "fallback";
-  if (input.intake) {
-    // Preview from /api/ai/analyze, possibly edited by the reporter. The safety flags come from the
-    // client, so OR them with the deterministic keyword detector to keep the auto-route rule honest.
-    const kw = fallbackIntake(input.text);
-    source = input.intake_source ?? "ai";
+  // ---- intake (server-authoritative) ----
+  // The classification that drives routing and privacy (confidence, urgent, sensitive, abusive, relevance,
+  // image checks, AI vs fallback) is ALWAYS computed here. A preview from /api/ai/analyze may only supply
+  // what the reporter is allowed to edit: title, category, priority. analyzeComplaint caches by
+  // text + photos + location, so a submit right after an identical preview normally costs no extra AI call.
+  const images = input.image_paths.length ? await loadImages(supabase, input.image_paths) : [];
+  const r: IntakeResult = await analyzeComplaint({ text: input.text, images, locationName });
+  const source: "ai" | "fallback" = r.source;
+  const kw = fallbackIntake(input.text);
+  let intake: Intake = {
+    ...r.intake,
+    // Deterministic keywords can only add caution, never remove it.
+    is_urgent: r.intake.is_urgent || kw.is_urgent,
+    is_sensitive_suggested: r.intake.is_sensitive_suggested || kw.is_sensitive_suggested,
+  };
+  const edited = input.intake;
+  if (edited) {
     intake = {
-      ...input.intake,
-      is_urgent: input.intake.is_urgent || kw.is_urgent,
-      is_sensitive_suggested: input.intake.is_sensitive_suggested || kw.is_sensitive_suggested,
-    };
-    meta = { source, via: "preview", model: input.intake_model ?? null, edited_preview: true };
-  } else {
-    const images = input.image_paths.length ? await loadImages(supabase, input.image_paths) : [];
-    const r: IntakeResult = await analyzeComplaint({ text: input.text, images, locationName });
-    intake = r.intake;
-    source = r.source;
-    meta = {
-      source: r.source,
-      via: r.via,
-      model: r.model ?? null,
-      ms: r.ms,
-      attempts: {
-        count: r.attempts.length,
-        failed: r.attempts.filter((a) => a.status !== "ok").length,
-        chain: r.attempts.map((a) => `${a.provider}/${a.model}:${a.status}`).slice(0, 10),
-      },
+      ...intake,
+      title_en: edited.title_en,
+      title_as: edited.title_as,
+      category: edited.category,
+      priority: edited.priority,
     };
   }
+  const meta: Record<string, unknown> = {
+    source: r.source,
+    via: r.via,
+    model: r.model ?? null,
+    ms: r.ms,
+    edited_preview: Boolean(edited),
+    attempts: {
+      count: r.attempts.length,
+      failed: r.attempts.filter((a) => a.status !== "ok").length,
+      chain: r.attempts.map((a) => `${a.provider}/${a.model}:${a.status}`).slice(0, 10),
+    },
+  };
   if (intake.is_urgent) intake = { ...intake, priority: 1 };
 
   if (intake.is_relevant === false) {
@@ -242,9 +278,15 @@ export async function submitComplaint(
       visibility: input.is_sensitive ? "private" : input.visibility, // sensitive ⇒ private (DB constraint too)
       is_sensitive: input.is_sensitive,
       is_urgent: intake.is_urgent,
+      client_request_id: input.client_request_id ?? null,
     })
     .select("id, code, sla_due_at, status, is_urgent")
     .single();
+  // Two identical submits racing: the unique (user_id, client_request_id) index lets only one in.
+  if (insErr?.code === "23505" && input.client_request_id) {
+    const prior = await existingSubmit(supabase, user.id, input.client_request_id);
+    if (prior) return prior;
+  }
   if (insErr || !row) {
     console.error("[complaints] insert failed", insErr?.code, insErr?.message);
     throw new PipelineError("INTERNAL", "Could not save the complaint");

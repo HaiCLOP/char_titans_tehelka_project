@@ -3,6 +3,7 @@ import { z } from "zod";
 import { fail, failFrom, ok, parseJson, requireRole } from "@/lib/api";
 import { MemberPatchSchema } from "@/lib/domain";
 import { updateMember } from "@/lib/org";
+import { audit } from "@/lib/audit";
 
 const Id = z.guid();
 
@@ -15,7 +16,9 @@ export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/admin/memb
   const body = await parseJson(req, MemberPatchSchema);
   if (body instanceof Response) return body;
   try {
-    return ok(await updateMember(auth.supabase, { id: auth.user.id, profile: auth.profile }, id, body));
+    const member = await updateMember(auth.supabase, { id: auth.user.id, profile: auth.profile }, id, body);
+    await audit(auth.user.id, "member.update", `profiles:${id}`, { changes: body });
+    return ok(member);
   } catch (e) {
     return failFrom(e, "update the member");
   }

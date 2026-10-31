@@ -79,6 +79,9 @@ function dbError(e: { code?: string; message: string }, what: string): PipelineE
   if (e.code === "P0001") return new PipelineError("INVALID_TRANSITION", "That status change is not allowed");
   if (e.code === "42501") {
     if (e.message.includes("FORBIDDEN_STATUS")) return new PipelineError("INVALID_TRANSITION", "That status change is not allowed");
+    if (e.message.includes("SENSITIVE_ADMINS_ONLY")) {
+      return new PipelineError("FORBIDDEN", "Sensitive reports can only be handled by department admins — assign an admin instead of field staff");
+    }
     return new PipelineError("FORBIDDEN", "You cannot change that");
   }
   if (e.code === "23514" || e.code === "23503" || e.code === "22P02") return new PipelineError("VALIDATION_ERROR", "Invalid value");
