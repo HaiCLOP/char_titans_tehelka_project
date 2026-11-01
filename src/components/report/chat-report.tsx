@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { AlertTriangle, ChevronDown, ClipboardList, EyeOff, Globe2, ImagePlus, Loader2, Lock, MapPin, Pencil, RotateCcw, RotateCw, Send, ShieldAlert, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ClipboardList, EyeOff, Globe2, ImagePlus, Loader2, Lock, MapPin, Mic, Pencil, Square, RotateCcw, RotateCw, Send, ShieldAlert, X } from "lucide-react";
 import {
   CATEGORIES,
   COMPLAINTS_PER_HOUR,
@@ -27,6 +27,7 @@ import { Button, Card, CategoryChip, Chip, Combobox, Drawer, Input, LangText, Pr
 import { ApiError, apiFetch, isApiError } from "@/components/api-client";
 import { Civi, type CiviPose } from "@/components/mascot/civi";
 import { EmergencyBanner } from "./emergency-banner";
+import { useRecorder } from "@/components/voice/use-voice";
 import { toast } from "sonner";
 
 /** Same limits as POST /api/report-agent (src/lib/report-agent.ts). */
@@ -78,6 +79,11 @@ export function ChatReport() {
   const [checking, setChecking] = useState(false);
   const [done, setDone] = useState(false);
 
+  const tv = useTranslations("voiceEngine");
+  // Speak instead of typing: the engine transcribes (Assamese too) into the box, the student checks and sends.
+  const recorder = useRecorder(locale === "as" ? "as" : "en", (text) =>
+    setInput((cur) => (cur.trim() ? `${cur.trim()} ${text}` : text).slice(0, MAX_TURN_CHARS)),
+  );
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const draftRef = useRef<HTMLDivElement>(null);
@@ -617,6 +623,11 @@ export function ChatReport() {
           </ul>
         )}
 
+        {(recorder.state !== "idle" || recorder.error) && (
+          <p role={recorder.error ? "alert" : "status"} className={cn("px-2 text-xs", recorder.error ? "font-medium text-danger" : "text-muted-foreground")}>
+            {recorder.error ? tv(`errors.${recorder.error}`) : recorder.state === "recording" ? tv("listening") : tv("transcribing")}
+          </p>
+        )}
         {chatFull ? (
           <p className="rounded-card border border-border bg-surface px-4 py-3 text-sm text-muted-foreground">{t("full")}</p>
         ) : (
@@ -665,6 +676,25 @@ export function ChatReport() {
               placeholder={t("placeholder")}
               className="field-sizing-content max-h-32 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-base leading-6 text-foreground outline-none placeholder:text-subtle-foreground sm:text-sm"
             />
+            {recorder.supported && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={recorder.state === "recording" ? tv("stopMic") : tv("mic")}
+                aria-pressed={recorder.state === "recording"}
+                disabled={done || recorder.state === "transcribing" || turn.isPending}
+                onClick={() => (recorder.state === "recording" ? recorder.stop() : void recorder.start())}
+                className={cn(recorder.state === "recording" && "bg-danger-soft text-danger")}
+              >
+                {recorder.state === "transcribing" ? (
+                  <Loader2 aria-hidden strokeWidth={1.75} className="animate-spin" />
+                ) : recorder.state === "recording" ? (
+                  <Square aria-hidden strokeWidth={1.75} />
+                ) : (
+                  <Mic aria-hidden strokeWidth={1.75} />
+                )}
+              </Button>
+            )}
             <Button size="icon" type="submit" aria-label={t("send")} disabled={!canSend}>
               <Send aria-hidden strokeWidth={1.75} />
             </Button>

@@ -1922,5 +1922,19 @@
     "video": "Video {n}",
     "previous": "Previous",
     "next": "Next"
+  },
+  "voiceEngine": {
+    "listening": "Listening… tap to stop",
+    "transcribing": "Civi is writing down what you said…",
+    "tapToSpeak": "Tap the microphone and speak",
+    "mic": "Speak instead of typing",
+    "stopMic": "Stop recording",
+    "errors": {
+      "denied": "Microphone access was blocked. Allow it in your browser settings, or type instead.",
+      "unsupported": "This browser cannot record audio. Please type your answer.",
+      "failed": "Civi could not understand the recording. Try again, or type it.",
+      "empty": "I didn't hear anything. Try again a little closer to the microphone.",
+      "rate_limited": "Too many recordings. Wait a few minutes, or type instead."
+    }
   }
 }

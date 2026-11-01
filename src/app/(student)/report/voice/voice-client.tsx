@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui";
 import { Civi, type CiviState } from "@/components/mascot/civi";
 import { type Category, type Visibility } from "@/lib/domain";
 import { cn } from "@/lib/utils";
+import { useRecorder, useSpeaker } from "@/components/voice/use-voice";
 
 type ConversationStep = "issue" | "location" | "duration" | "review";
 
@@ -37,12 +38,6 @@ export function VoiceClient({ locale }: { locale: string }) {
   const router = useRouter();
 
   const [step, setStep] = useState<ConversationStep>("issue");
-  const [isListening, setIsListening] = useState<boolean>(false);
-  const [speechSupported] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-  });
   const [currentTranscript, setCurrentTranscript] = useState<string>("");
   const [audioFeedback, setAudioFeedback] = useState<boolean>(true);
   const [data, setData] = useState<CollectedData>({
@@ -56,67 +51,19 @@ export function VoiceClient({ locale }: { locale: string }) {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
-
-  // Initialize Speech Recognition
-  useEffect(() => {
-    if (!speechSupported) return;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = locale === "as" ? "as-IN" : "en-IN";
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      recognition.onresult = (event: any) => {
-        let interim = "";
-        let final = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            final += event.results[i][0].transcript;
-          } else {
-            interim += event.results[i][0].transcript;
-          }
-        }
-        const text = final || interim;
-        setCurrentTranscript(text);
-      };
-
-      recognition.onerror = (event: { error: string }) => {
-        console.warn("[voice] speech error:", event.error);
-        setIsListening(false);
-        if (event.error === "not-allowed") {
-          setErrorMsg(locale === "as" ? "মাইক্ৰ'ফোনৰ অনুমতি দিয়া হোৱা নাই।" : "Microphone access was denied. Please allow permission or use text fallback.");
-        }
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    } catch (e) {
-      console.warn("[voice] recognition init failed:", e);
-    }
-  }, [locale, speechSupported]);
+  // Speech goes through the Go engine (Gemini, free tier), which understands Assamese; the browser's own
+  // recognition rarely does. Civi's prompts are spoken with the engine's TTS, falling back to the browser.
+  const lang = locale === "as" ? "as" : "en";
+  const recorder = useRecorder(lang, (text) => setCurrentTranscript((cur) => (cur.trim() ? `${cur.trim()} ${text}` : text)));
+  const speaker = useSpeaker(lang);
+  const isListening = recorder.state === "recording";
+  const transcribing = recorder.state === "transcribing";
+  const speechSupported = recorder.supported;
+  const tv = useTranslations("voiceEngine");
+  const recorderError = recorder.error ? tv(`errors.${recorder.error}`) : null;
 
   const speak = (text: string) => {
-    if (!audioFeedback || typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = locale === "as" ? "as-IN" : "en-IN";
-      utterance.rate = 1.0;
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      // Ignore synthesis issues
-    }
+    if (audioFeedback) void speaker.speak(text);
   };
 
   const getStepPrompt = (s: ConversationStep) => {
@@ -148,24 +95,11 @@ export function VoiceClient({ locale }: { locale: string }) {
 
   const startListening = () => {
     setErrorMsg(null);
-    setCurrentTranscript("");
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.lang = locale === "as" ? "as-IN" : "en-IN";
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (err) {
-        console.warn("[voice] start error:", err);
-      }
-    }
+    speaker.cancel();
+    void recorder.start();
   };
 
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
-  };
+  const stopListening = () => recorder.stop();
 
   const handleStepProceed = () => {
     const text = currentTranscript.trim();
@@ -204,6 +138,7 @@ export function VoiceClient({ locale }: { locale: string }) {
   const getCiviState = (): CiviState => {
     if (submitting) return "thinking";
     if (isListening) return "listening";
+    if (transcribing) return "thinking";
     if (step === "review") return "success";
     return "speaking";
   };
@@ -287,6 +222,7 @@ export function VoiceClient({ locale }: { locale: string }) {
                 <button
                   type="button"
                   onClick={isListening ? stopListening : startListening}
+                  disabled={transcribing}
                   className={cn(
                     "relative grid size-20 place-items-center rounded-full border shadow-md transition-all",
                     isListening
@@ -302,22 +238,15 @@ export function VoiceClient({ locale }: { locale: string }) {
                 </button>
 
                 <p className="text-xs font-semibold text-muted-foreground">
-                  {isListening
-                    ? locale === "as"
-                      ? "শুনি আছোঁ... কথা কওক (Tap to stop)"
-                      : "Listening... speak now (Tap to stop)"
-                    : locale === "as"
-                    ? "মাইক্ৰ'ফোনত টেপ কৰি কওক"
-                    : "Tap microphone to speak"}
+                  {isListening ? tv("listening") : transcribing ? tv("transcribing") : tv("tapToSpeak")}
                 </p>
+                {recorderError && <p role="alert" className="text-xs font-medium text-danger">{recorderError}</p>}
               </div>
             ) : (
               <div className="rounded-xl border border-border bg-surface-muted/50 p-3 text-xs text-muted-foreground flex items-center gap-2 justify-center">
                 <Keyboard className="size-4" />
                 <span>
-                  {locale === "as"
-                    ? "ব্ৰাউজাৰত ভইচ স্বীকৃতি অনুপলব্ধ। অনুগ্ৰহ কৰি টাইপ কৰক।"
-                    : "Browser speech recognition not available. Please type your answer."}
+                  {tv("errors.unsupported")}
                 </span>
               </div>
             )}
