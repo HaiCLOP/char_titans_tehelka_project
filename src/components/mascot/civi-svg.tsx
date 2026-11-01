@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useId } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export type CiviPose =
@@ -19,12 +20,108 @@ export interface CiviSvgProps {
 }
 
 /**
- * Pure Vector SVG Mascot for CivicSense ("Civi" — Small. Friendly. Always here.)
- * Culturally authentic Kaziranga One-Horned Rhino in soft clay/dumpling aesthetic.
- * Draped in traditional Assamese Gamosa (গামোচা) with authentic red Phool / geometric weave.
- * 7 expressive poses matching the official CivicSense character sheet.
+ * Civi's own art palette. The mascot is illustration, not UI chrome, so these
+ * literal colours are the one allowed exception to the token-only rule.
+ */
+const C = {
+  bodyLight: "#FCF1E7",
+  bodyMid: "#F3DACA",
+  bodyDark: "#E6C2AC",
+  bodyShade: "#C9A189",
+  hornLight: "#F6DFCB",
+  hornDark: "#D8AD91",
+  ink: "#1E1A1B",
+  mouth: "#4A2326",
+  tongue: "#E8676B",
+  blush: "#F29C9A",
+  cloth: "#FFFDF9",
+  clothShade: "#D9C8BA",
+  weave: "#D8322E",
+  laptop: "#46464B",
+  laptopDark: "#2B2B2F",
+  laptopLogo: "#7FA79E",
+  book: "#3E6E5E",
+  bookDark: "#2C5244",
+  page: "#F5EEE1",
+  bulb: "#F5B83D",
+  bulbBase: "#8A8580",
+  confettiYellow: "#F2B544",
+} as const;
+
+/** Accent strokes adapt to dark backgrounds via currentColor. */
+const ACCENT_TEAL = "text-[#3a8f86] dark:text-[#62bdb2]";
+const ACCENT_GREY = "text-[#868c92] dark:text-[#aab0b6]";
+
+/** Body silhouette: soft gumdrop, round top, bulging lower sides, flat base. */
+const BODY =
+  "M 100 58 C 141 58 166 90 171 128 C 175 158 167 176 142 178 L 58 178 C 33 176 25 158 29 128 C 34 90 59 58 100 58 Z";
+
+const BREATH_EASE = [0.45, 0, 0.55, 1] as const;
+
+function Paw({ cx, cy, rx = 11, ry = 8, rotate = 0, grad }: { cx: number; cy: number; rx?: number; ry?: number; rotate?: number; grad: string }) {
+  return (
+    <g transform={`rotate(${rotate} ${cx} ${cy})`}>
+      <ellipse cx={cx + 1} cy={cy + 2.5} rx={rx} ry={ry} fill={C.bodyShade} opacity={0.28} />
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={`url(#${grad})`} />
+      <ellipse cx={cx - rx * 0.3} cy={cy - ry * 0.4} rx={rx * 0.45} ry={ry * 0.3} fill="#FFFFFF" opacity={0.45} />
+    </g>
+  );
+}
+
+/** A gamosa band: white cloth, thin red edge lines, woven red motif rows. */
+function Band({ d }: { d: string }) {
+  return (
+    <g fill="none" strokeLinecap="butt" strokeLinejoin="round">
+      <path d={d} stroke={C.bodyShade} strokeWidth={31} opacity={0.3} transform="translate(1.5 3)" />
+      <path d={d} stroke={C.clothShade} strokeWidth={31} />
+      <path d={d} stroke={C.cloth} strokeWidth={29.5} />
+      <path d={d} stroke={C.weave} strokeWidth={27} />
+      <path d={d} stroke={C.cloth} strokeWidth={25.4} />
+      <path d={d} stroke={C.weave} strokeWidth={24} strokeDasharray="3 1.6" />
+      <path d={d} stroke={C.cloth} strokeWidth={17.6} />
+      <path d={d} stroke={C.weave} strokeWidth={16.6} />
+      <path d={d} stroke={C.cloth} strokeWidth={15} />
+      <path d={d} stroke={C.clothShade} strokeWidth={5} opacity={0.3} />
+    </g>
+  );
+}
+
+function OvalEyes({ dx = 0, dy = 0, rx = 7, ry = 10.5 }: { dx?: number; dy?: number; rx?: number; ry?: number }) {
+  return (
+    <>
+      <ellipse cx={78 + dx} cy={114 + dy} rx={rx} ry={ry} fill={C.ink} />
+      <ellipse cx={122 + dx} cy={114 + dy} rx={rx} ry={ry} fill={C.ink} />
+      <ellipse cx={76 + dx} cy={109 + dy} rx={1.8} ry={2.4} fill="#FFFFFF" opacity={0.55} />
+      <ellipse cx={120 + dx} cy={109 + dy} rx={1.8} ry={2.4} fill="#FFFFFF" opacity={0.55} />
+    </>
+  );
+}
+
+function OpenMouth({ y = 124, w = 9, h = 13 }: { y?: number; w?: number; h?: number }) {
+  return (
+    <g>
+      <path
+        d={`M ${100 - w} ${y} Q 100 ${y + 2} ${100 + w} ${y} Q ${100 + w - 1} ${y + h} 100 ${y + h} Q ${100 - w + 1} ${y + h} ${100 - w} ${y} Z`}
+        fill={C.mouth}
+      />
+      <ellipse cx={100} cy={y + h - 3.2} rx={w * 0.55} ry={3.2} fill={C.tongue} />
+    </g>
+  );
+}
+
+const inkStroke = { stroke: C.ink, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
+
+/**
+ * Civi, the CivicSense mascot: a soft cream clay blob with a little horn,
+ * wrapped in an Assamese gamosa. Inline SVG, seven poses, gentle idle motion.
  */
 export function CiviSvg({ pose = "hero", className, size = 120 }: CiviSvgProps) {
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const reduce = useReducedMotion();
+  const id = (name: string) => `civi-${uid}-${name}`;
+
+  const openEyes = pose !== "happy" && pose !== "celebrating";
+
   return (
     <svg
       viewBox="0 0 200 200"
@@ -32,507 +129,300 @@ export function CiviSvg({ pose = "hero", className, size = 120 }: CiviSvgProps) 
       height={size}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn("shrink-0 select-none", className)}
-      aria-label={`CivicSense mascot Civi in ${pose} pose`}
+      className={cn("shrink-0 select-none overflow-visible", className)}
+      role="img"
+      aria-label={`Civi, the CivicSense mascot (${pose})`}
     >
       <defs>
-        {/* Soft 3D Volumetric Lighting for Dumpling Body */}
-        <linearGradient id="civi-body-base" x1="100" y1="45" x2="100" y2="182" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FFFDF9" />
-          <stop offset="30%" stopColor="#FAF2E8" />
-          <stop offset="75%" stopColor="#EEDBC7" />
-          <stop offset="100%" stopColor="#DFC3A4" />
+        <linearGradient id={id("body")} x1="70" y1="58" x2="120" y2="180" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor={C.bodyLight} />
+          <stop offset="0.55" stopColor={C.bodyMid} />
+          <stop offset="1" stopColor={C.bodyDark} />
         </linearGradient>
-
-        <radialGradient id="civi-top-highlight" cx="100" cy="70" r="65" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.8" />
-          <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.15" />
-          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+        <radialGradient id={id("hi")} cx="76" cy="84" r="62" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.75" />
+          <stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.18" />
+          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
         </radialGradient>
-
-        {/* Rhino Horn 3D Clay Gradient */}
-        <linearGradient id="civi-horn-grad" x1="94" y1="30" x2="106" y2="76" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FFF9F0" />
-          <stop offset="45%" stopColor="#F5E4CE" />
-          <stop offset="100%" stopColor="#D9BA93" />
-        </linearGradient>
-
-        {/* Traditional Assamese Gamosa Fabric Gradient */}
-        <linearGradient id="civi-gamosa-fabric" x1="50" y1="95" x2="150" y2="175" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="65%" stopColor="#F9F6F0" />
-          <stop offset="100%" stopColor="#ECE4D8" />
-        </linearGradient>
-
-        {/* Soft Peach Blush */}
-        <radialGradient id="civi-blush" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#F8927C" stopOpacity="0.45" />
-          <stop offset="65%" stopColor="#F8927C" stopOpacity="0.15" />
-          <stop offset="100%" stopColor="#F8927C" stopOpacity="0" />
+        <radialGradient id={id("shade")} cx="128" cy="182" r="96" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor={C.bodyShade} stopOpacity="0.55" />
+          <stop offset="0.6" stopColor={C.bodyShade} stopOpacity="0.12" />
+          <stop offset="1" stopColor={C.bodyShade} stopOpacity="0" />
         </radialGradient>
-
-        {/* Ambient Floor Contact Shadow */}
-        <radialGradient id="civi-floor-shadow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#1E1610" stopOpacity="0.22" />
-          <stop offset="50%" stopColor="#1E1610" stopOpacity="0.08" />
-          <stop offset="100%" stopColor="#1E1610" stopOpacity="0" />
+        <linearGradient id={id("horn")} x1="88" y1="40" x2="114" y2="50" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor={C.hornLight} />
+          <stop offset="1" stopColor={C.hornDark} />
+        </linearGradient>
+        <linearGradient id={id("paw")} x1="0" y1="0" x2="0.3" y2="1">
+          <stop offset="0" stopColor={C.bodyLight} />
+          <stop offset="1" stopColor={C.bodyDark} />
+        </linearGradient>
+        <radialGradient id={id("blush")}>
+          <stop offset="0" stopColor={C.blush} stopOpacity="0.6" />
+          <stop offset="1" stopColor={C.blush} stopOpacity="0" />
         </radialGradient>
-
-        {/* Laptop Body Gradient */}
-        <linearGradient id="civi-laptop-body" x1="100" y1="120" x2="160" y2="175" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#3E474B" />
-          <stop offset="100%" stopColor="#22282B" />
+        <radialGradient id={id("floor")}>
+          <stop offset="0" stopColor="#2A1D16" stopOpacity="0.26" />
+          <stop offset="0.6" stopColor="#2A1D16" stopOpacity="0.09" />
+          <stop offset="1" stopColor="#2A1D16" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={id("floorDark")}>
+          <stop offset="0" stopColor="#000000" stopOpacity="0.7" />
+          <stop offset="0.55" stopColor="#000000" stopOpacity="0.3" />
+          <stop offset="1" stopColor="#000000" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={id("glow")}>
+          <stop offset="0" stopColor="#FFF3E6" stopOpacity="0.14" />
+          <stop offset="1" stopColor="#FFF3E6" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={id("laptop")} x1="120" y1="112" x2="176" y2="170" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor={C.laptop} />
+          <stop offset="1" stopColor={C.laptopDark} />
         </linearGradient>
-
-        {/* Book Cover Gradient */}
-        <linearGradient id="civi-book-cover" x1="75" y1="130" x2="125" y2="175" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#4A756D" />
-          <stop offset="100%" stopColor="#2E524C" />
+        <linearGradient id={id("book")} x1="100" y1="132" x2="160" y2="178" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor={C.book} />
+          <stop offset="1" stopColor={C.bookDark} />
         </linearGradient>
+        <clipPath id={id("bodyClip")}>
+          <path d={BODY} />
+        </clipPath>
+        <clipPath id={id("wrapClip")}>
+          <path d={BODY} transform="translate(100 120) scale(1.06) translate(-100 -120)" />
+        </clipPath>
       </defs>
 
-      {/* 1. Floor Drop Shadow */}
-      <ellipse cx="100" cy="182" rx="68" ry="10" fill="url(#civi-floor-shadow)" />
-
-      {/* 2. Rhino Horn (Centered upright on top of head) */}
-      <g id="civi-horn">
-        {/* Soft horn shadow on forehead */}
-        <ellipse cx="100" cy="74" rx="10" ry="3.5" fill="#D3B48F" opacity="0.4" />
-        {/* Horn Cone */}
-        <path
-          d="M 92 72 C 93 52, 97 34, 100 28 C 103 34, 107 52, 108 72 C 103 74.5, 97 74.5, 92 72 Z"
-          fill="url(#civi-horn-grad)"
-        />
-        {/* Horn Specular Highlight */}
-        <path
-          d="M 96 68 C 97 52, 99 38, 100 32 C 100.8 38, 101.5 52, 102 68"
-          stroke="#FFFFFF"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          opacity="0.6"
-        />
+      {/* Contact shadow: warm in light mode; deeper core plus faint floor glow in dark mode */}
+      <g className="dark:hidden">
+        <ellipse cx="100" cy="180" rx="80" ry="11" fill={`url(#${id("floor")})`} />
+      </g>
+      <g className="hidden dark:inline">
+        <ellipse cx="100" cy="182" rx="92" ry="16" fill={`url(#${id("glow")})`} />
+        <ellipse cx="100" cy="180" rx="76" ry="10" fill={`url(#${id("floorDark")})`} />
       </g>
 
-      {/* 3. Main Dumpling/Mochi Body */}
-      <g id="civi-body">
-        {/* Wide rounded chubby pear contour */}
+      <motion.g
+        style={{ originX: 0.5, originY: 1 }}
+        animate={reduce ? undefined : { scaleY: [1, 0.972, 1], scaleX: [1, 1.014, 1] }}
+        transition={{ duration: 3.6, repeat: Infinity, ease: BREATH_EASE }}
+      >
+        {/* Horn, tucked behind the dome so its base blends in */}
         <path
-          d="M 36 156 
-             C 26 130, 42 92, 68 72 
-             C 80 62, 120 62, 132 72 
-             C 158 92, 174 130, 164 156 
-             C 154 177, 46 177, 36 156 Z"
-          fill="url(#civi-body-base)"
+          d="M 86 72 C 90 55 95 40 98 33 Q 100 28.5 102 33 C 105 40 110 55 114 72 Z"
+          fill={`url(#${id("horn")})`}
         />
+        <path d="M 96 62 C 97 50 98.5 41 100 35" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
 
-        {/* Overhead soft lighting overlay */}
-        <path
-          d="M 36 156 
-             C 26 130, 42 92, 68 72 
-             C 80 62, 120 62, 132 72 
-             C 158 92, 174 130, 164 156 
-             C 154 177, 46 177, 36 156 Z"
-          fill="url(#civi-top-highlight)"
-        />
-
-        {/* Bottom ambient occlusion underbelly */}
-        <path
-          d="M 40 158 C 70 176, 130 176, 160 158 C 150 174, 50 174, 40 158 Z"
-          fill="#CBAE90"
-          opacity="0.32"
-        />
-      </g>
-
-      {/* 4. Authentic Assamese Gamosa (গামোচা) Wrapped Stole */}
-      <g id="civi-gamosa">
-        {/* Behind-neck collar fold */}
-        <path
-          d="M 66 82 C 80 93, 120 93, 134 82 C 126 95, 74 95, 66 82 Z"
-          fill="#DFD6C8"
-        />
-
-        {/* Left shoulder stole drape */}
-        <path
-          d="M 68 82 C 50 98, 35 125, 43 149 C 47 161, 57 167, 67 169 C 74 170, 77 157, 75 141 C 72 119, 71 97, 68 82 Z"
-          fill="url(#civi-gamosa-fabric)"
-        />
-
-        {/* Right shoulder stole drape */}
-        <path
-          d="M 132 82 C 150 98, 165 125, 157 149 C 153 161, 143 167, 133 169 C 126 170, 123 157, 125 141 C 128 119, 129 97, 132 82 Z"
-          fill="url(#civi-gamosa-fabric)"
-        />
-
-        {/* Traditional Assamese Red Woven Geometric Phool / Borders */}
-        {/* Left Gamosa Red Motifs */}
-        <g stroke="#C62828" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
-          {/* Main Red Stripe */}
-          <path d="M 41 137 C 44 151, 52 161, 63 166" strokeWidth="2.2" />
-          <path d="M 44 131 C 47 145, 55 155, 66 160" strokeWidth="1.2" />
-          {/* Diamond Weaves (Assamese Geor-Phool) */}
-          <path d="M 46 145 L 50 141 L 54 145 L 50 149 Z" fill="#C62828" strokeWidth="0.5" />
-          <path d="M 53 152 L 57 148 L 61 152 L 57 156 Z" fill="#C62828" strokeWidth="0.5" />
-          <path d="M 60 159 L 64 155 L 68 159 L 64 163 Z" fill="#C62828" strokeWidth="0.5" />
-          {/* Hanging Fringes / Tassels */}
-          <line x1="63" y1="167" x2="62" y2="173" strokeWidth="1.2" />
-          <line x1="66" y1="168" x2="65" y2="174" strokeWidth="1.2" />
-          <line x1="69" y1="168" x2="69" y2="174" strokeWidth="1.2" />
+        {/* Body */}
+        <path d={BODY} fill={`url(#${id("body")})`} />
+        <g clipPath={`url(#${id("bodyClip")})`}>
+          <path d={BODY} fill={`url(#${id("shade")})`} />
+          <path d={BODY} fill={`url(#${id("hi")})`} />
+          <ellipse cx="100" cy="64" rx="18" ry="5" fill={C.bodyShade} opacity="0.16" />
+          <ellipse cx="100" cy="182" rx="74" ry="10" fill={C.bodyShade} opacity="0.35" />
         </g>
 
-        {/* Right Gamosa Red Motifs */}
-        <g stroke="#C62828" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
-          {/* Main Red Stripe */}
-          <path d="M 159 137 C 156 151, 148 161, 137 166" strokeWidth="2.2" />
-          <path d="M 156 131 C 153 145, 145 155, 134 160" strokeWidth="1.2" />
-          {/* Diamond Weaves (Assamese Geor-Phool) */}
-          <path d="M 154 145 L 150 141 L 146 145 L 150 149 Z" fill="#C62828" strokeWidth="0.5" />
-          <path d="M 147 152 L 143 148 L 139 152 L 143 156 Z" fill="#C62828" strokeWidth="0.5" />
-          <path d="M 140 159 L 136 155 L 132 159 L 136 163 Z" fill="#C62828" strokeWidth="0.5" />
-          {/* Hanging Fringes / Tassels */}
-          <line x1="137" y1="167" x2="138" y2="173" strokeWidth="1.2" />
-          <line x1="134" y1="168" x2="135" y2="174" strokeWidth="1.2" />
-          <line x1="131" y1="168" x2="131" y2="174" strokeWidth="1.2" />
+        {/* Blush */}
+        <ellipse cx="64" cy="129" rx="10" ry="6" fill={`url(#${id("blush")})`} />
+        <ellipse cx="136" cy="129" rx="10" ry="6" fill={`url(#${id("blush")})`} />
+
+        {/* Gamosa shawl: over the left side down to the front, and hanging down the right */}
+        <g clipPath={`url(#${id("wrapClip")})`}>
+          <Band d="M 22 102 C 28 140 58 166 106 180" />
+          <Band d="M 174 86 C 158 110 150 142 148 182" />
         </g>
-      </g>
+        {/* Fringe at the hanging ends */}
+        <g stroke={C.cloth} strokeWidth="1.6" strokeLinecap="round" opacity="0.95">
+          <path d="M 98 179 l 0.5 4 M 103 180 l 0.5 4 M 108 180.5 l 0.5 3.5" />
+          <path d="M 137 180 l -0.5 4 M 142 180.5 l 0 4 M 147 181 l 0 3.5 M 152 180.5 l 0 4 M 157 180 l 0.5 3.5" />
+        </g>
 
-      {/* 5. Sweet Peach Cheek Blush */}
-      <circle cx="68" cy="122" r="9" fill="url(#civi-blush)" />
-      <circle cx="132" cy="122" r="9" fill="url(#civi-blush)" />
+        {/* Face */}
+        <g>
+          {openEyes && (
+            <motion.g
+              style={{ originX: 0.5, originY: 0.5 }}
+              animate={reduce ? undefined : { scaleY: [1, 1, 0.12, 1, 1] }}
+              transition={{ duration: 4.8, times: [0, 0.9, 0.93, 0.96, 1], repeat: Infinity, ease: "easeInOut" }}
+            >
+              {pose === "hero" && <OvalEyes />}
+              {pose === "thinking" && (
+                <>
+                  <ellipse cx="124" cy="113" rx="6.8" ry="10" fill={C.ink} />
+                  <ellipse cx="122" cy="108" rx="1.8" ry="2.4" fill="#FFFFFF" opacity="0.55" />
+                </>
+              )}
+              {pose === "helping" && <OvalEyes dx={5} rx={6.5} ry={10} />}
+              {pose === "concerned" && <OvalEyes dy={3} rx={6.5} ry={9.5} />}
+              {pose === "learning" && <OvalEyes dx={3} dy={5} rx={6.5} ry={9} />}
+            </motion.g>
+          )}
 
-      {/* ======================================================== */}
-      {/* 6. POSE SPECIFIC FACIAL EXPRESSIONS & ACCESSORIES         */}
-      {/* ======================================================== */}
+          {pose === "hero" && <path d="M 93 128 Q 100 134 107 128" {...inkStroke} strokeWidth="2.8" />}
 
-      {/* 1. HERO POSE */}
+          {pose === "happy" && (
+            <>
+              <path d="M 68 117 Q 78 105 88 117" {...inkStroke} strokeWidth="3.8" />
+              <path d="M 112 117 Q 122 105 132 117" {...inkStroke} strokeWidth="3.8" />
+              <OpenMouth y={124} />
+            </>
+          )}
+
+          {pose === "thinking" && (
+            <>
+              <path d="M 68 108 L 84 114 L 70 120" {...inkStroke} strokeWidth="3.6" />
+              <path d="M 94 130 Q 99 127 103 129 T 110 128" {...inkStroke} strokeWidth="2.6" />
+            </>
+          )}
+
+          {pose === "helping" && <path d="M 98 128 Q 104 132 110 128" {...inkStroke} strokeWidth="2.6" />}
+
+          {pose === "concerned" && (
+            <>
+              <path d="M 68 102 Q 76 101 85 95" {...inkStroke} strokeWidth="2.8" />
+              <path d="M 115 95 Q 124 101 132 102" {...inkStroke} strokeWidth="2.8" />
+              <path d="M 93 135 Q 100 129 107 135" {...inkStroke} strokeWidth="2.8" />
+            </>
+          )}
+
+          {pose === "celebrating" && (
+            <>
+              <path d="M 67 106 L 85 114 L 67 122" {...inkStroke} strokeWidth="3.8" />
+              <path d="M 133 106 L 115 114 L 133 122" {...inkStroke} strokeWidth="3.8" />
+              <OpenMouth y={123} w={11} h={16} />
+            </>
+          )}
+
+          {pose === "learning" && <path d="M 97 131 Q 103 135 109 131" {...inkStroke} strokeWidth="2.6" />}
+        </g>
+
+        {/* Paws and props */}
+        {(pose === "hero" || pose === "happy" || pose === "concerned") && (
+          <>
+            <Paw cx={56} cy={168} grad={id("paw")} rotate={-12} />
+            <Paw cx={144} cy={168} grad={id("paw")} rotate={12} />
+          </>
+        )}
+
+        {pose === "thinking" && (
+          <>
+            <Paw cx={56} cy={168} grad={id("paw")} rotate={-12} />
+            <Paw cx={114} cy={152} rx={9} ry={11} grad={id("paw")} rotate={-18} />
+          </>
+        )}
+
+        {pose === "celebrating" && (
+          <>
+            <Paw cx={144} cy={168} grad={id("paw")} rotate={12} />
+            <Paw cx={38} cy={110} rx={9} ry={16} grad={id("paw")} rotate={-28} />
+          </>
+        )}
+
+        {pose === "helping" && (
+          <g>
+            <Paw cx={56} cy={168} grad={id("paw")} rotate={-12} />
+            {/* Laptop seen from behind: lid with leaf logo, thin base */}
+            <path d="M 106 172 L 182 166 L 186 173 L 108 178 Z" fill={C.laptopDark} />
+            <path
+              d="M 120 118 Q 120 114 124 114 L 176 110 Q 180 110 180 114 L 178 164 Q 178 168 174 168 L 120 172 Q 116 172 116 168 Z"
+              fill={`url(#${id("laptop")})`}
+            />
+            <path d="M 124 117 L 174 113" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" opacity="0.18" />
+            <path d="M 141 147 C 141 135 150 130 158 130 C 158 141 151 148 141 147 Z" fill={C.laptopLogo} />
+            <path d="M 143 145 L 154 134" stroke={C.laptop} strokeWidth="1.2" strokeLinecap="round" />
+            <Paw cx={112} cy={168} rx={10} ry={7.5} grad={id("paw")} rotate={-8} />
+          </g>
+        )}
+
+        {pose === "learning" && (
+          <g>
+            {/* Open book, cover facing out */}
+            <path d="M 98 140 L 160 134 L 162 138 L 100 144 Z" fill={C.page} />
+            <path
+              d="M 100 142 Q 99 138 103 138 L 157 133 Q 161 133 161 137 L 162 174 Q 162 177 158 177 L 104 180 Q 101 180 101 177 Z"
+              fill={`url(#${id("book")})`}
+            />
+            <path d="M 106 143 L 106 176" stroke={C.bookDark} strokeWidth="2" opacity="0.6" />
+            <path d="M 126 163 C 126 151 135 146 143 146 C 143 157 136 164 126 163 Z" fill={C.laptopLogo} />
+            <path d="M 128 161 L 139 150" stroke={C.book} strokeWidth="1.2" strokeLinecap="round" />
+            <Paw cx={100} cy={162} rx={9} ry={11} grad={id("paw")} rotate={-10} />
+            <Paw cx={162} cy={158} rx={9} ry={11} grad={id("paw")} rotate={10} />
+          </g>
+        )}
+      </motion.g>
+
+      {/* Accent marks */}
       {pose === "hero" && (
-        <g id="pose-hero">
-          {/* Glossy Black Vertical Bead Eyes */}
-          <ellipse cx="80" cy="112" rx="6" ry="8.5" fill="#1A1C1E" />
-          <circle cx="78" cy="109" r="2.4" fill="#FFFFFF" />
-          <circle cx="82" cy="115" r="1.1" fill="#FFFFFF" opacity="0.8" />
-
-          <ellipse cx="120" cy="112" rx="6" ry="8.5" fill="#1A1C1E" />
-          <circle cx="118" cy="109" r="2.4" fill="#FFFFFF" />
-          <circle cx="122" cy="115" r="1.1" fill="#FFFFFF" opacity="0.8" />
-
-          {/* Gentle Cute Smile */}
-          <path
-            d="M 94 122 Q 100 127 106 122"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-
-          {/* Resting Chubby Front Paws */}
-          <ellipse cx="88" cy="162" rx="7.5" ry="5.5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-          <ellipse cx="112" cy="162" rx="7.5" ry="5.5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-
-          {/* Signature 3 Teal Action Energy Ticks (from reference) */}
-          <g stroke="#3D7E73" strokeWidth="3.2" strokeLinecap="round" fill="none">
-            <path d="M 28 90 C 31 88, 35 92, 37 98" />
-            <path d="M 24 102 C 28 102, 31 106, 32 112" />
-            <path d="M 166 72 C 168 68, 172 66, 178 68" />
-            <path d="M 172 82 C 176 80, 180 82, 184 86" />
-          </g>
+        <g className={ACCENT_TEAL} stroke="currentColor" strokeWidth="6" strokeLinecap="round">
+          <path d="M 146 30 L 142 50" />
+          <path d="M 164 52 L 154 62" />
+          <path d="M 22 96 L 30 104" />
+          <path d="M 18 114 L 28 116" />
         </g>
       )}
 
-      {/* 2. HAPPY POSE */}
       {pose === "happy" && (
-        <g id="pose-happy">
-          {/* Curved Happy Inverted Eyes ^ ^ */}
-          <path
-            d="M 72 114 Q 80 104 88 114"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="3.4"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 112 114 Q 120 104 128 114"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="3.4"
-            strokeLinecap="round"
-          />
-
-          {/* Open Joyful Mouth with Pink Tongue */}
-          <path
-            d="M 93 121 Q 100 134 107 121 Z"
-            fill="#1A1C1E"
-          />
-          <path
-            d="M 95 125 Q 100 133 105 125 Z"
-            fill="#FF728B"
-          />
-
-          {/* Resting Paws */}
-          <ellipse cx="86" cy="162" rx="7.5" ry="5.5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-          <ellipse cx="114" cy="162" rx="7.5" ry="5.5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-
-          {/* Joy Sparks Radiating Above Head */}
-          <g stroke="#3D7E73" strokeWidth="3" strokeLinecap="round" fill="none">
-            <line x1="100" y1="16" x2="100" y2="23" />
-            <line x1="116" y1="20" x2="112" y2="26" />
-            <line x1="84" y1="20" x2="88" y2="26" />
-          </g>
+        <g className={ACCENT_TEAL} stroke="currentColor" strokeWidth="5.5" strokeLinecap="round">
+          <path d="M 140 26 L 145 40" />
+          <path d="M 160 36 L 154 48" />
+          <path d="M 174 56 L 162 60" />
         </g>
       )}
 
-      {/* 3. THINKING POSE */}
       {pose === "thinking" && (
-        <g id="pose-thinking">
-          {/* Curious bead eye */}
-          <ellipse cx="80" cy="112" rx="5.8" ry="8" fill="#1A1C1E" />
-          <circle cx="78.5" cy="109" r="2.2" fill="#FFFFFF" />
-
-          {/* Winking eye > */}
-          <path
-            d="M 114 116 L 121 111 L 126 116"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-
-          {/* Pondering tilted mouth */}
-          <path
-            d="M 96 124 Q 100 126 104 123"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-
-          {/* Cute paw resting on chin */}
-          <ellipse cx="106" cy="138" rx="8" ry="6" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-
-          {/* Floating Teal Question Mark ? */}
-          <g transform="translate(140, 34)">
-            <path
-              d="M 6 16 C 6 7, 19 4, 19 14 C 19 20, 12 21, 12 26"
-              fill="none"
-              stroke="#3D7E73"
-              strokeWidth="4.2"
-              strokeLinecap="round"
-            />
-            <circle cx="12" cy="34" r="3" fill="#3D7E73" />
-          </g>
+        <g className={ACCENT_TEAL} stroke="currentColor" fill="none" strokeLinecap="round">
+          <path d="M 148 22 C 148 10 170 8 170 21 C 170 30 159 30 159 40" strokeWidth="6" />
+          <circle cx="159" cy="51" r="3.4" fill="currentColor" stroke="none" />
         </g>
       )}
 
-      {/* 4. HELPING POSE */}
       {pose === "helping" && (
-        <g id="pose-helping">
-          {/* Focused happy bead eyes */}
-          <ellipse cx="80" cy="112" rx="5.5" ry="8" fill="#1A1C1E" />
-          <circle cx="78.5" cy="109" r="2.2" fill="#FFFFFF" />
-
-          <ellipse cx="120" cy="112" rx="5.5" ry="8" fill="#1A1C1E" />
-          <circle cx="118.5" cy="109" r="2.2" fill="#FFFFFF" />
-
-          {/* Confident smile */}
-          <path
-            d="M 95 122 Q 100 126.5 105 122"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-          />
-
-          {/* Mini Laptop */}
-          <g id="civi-laptop">
-            {/* Screen Lid */}
-            <path
-              d="M 106 114 L 158 108 L 154 154 L 102 160 Z"
-              fill="url(#civi-laptop-body)"
-              stroke="#1A1E20"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
-            {/* Soft Screen Glow */}
-            <path
-              d="M 109 117 L 155 111 L 151 151 L 105 157 Z"
-              fill="#E3ECE9"
-              opacity="0.9"
-            />
-            {/* CivicSense Leaf Emblem on Lid */}
-            <path
-              d="M 131 129 C 137 125, 142 127, 140 134 C 136 136, 130 134, 131 129 Z"
-              fill="#3D7E73"
-            />
-            {/* Keyboard base */}
-            <path
-              d="M 94 160 L 150 154 L 160 172 L 100 178 Z"
-              fill="#22282B"
-              stroke="#1A1E20"
-              strokeWidth="1.2"
-              strokeLinejoin="round"
-            />
-            {/* Typing paws */}
-            <ellipse cx="104" cy="164" rx="6.5" ry="5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-            <ellipse cx="138" cy="158" rx="6.5" ry="5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-          </g>
+        <g className={ACCENT_TEAL} stroke="currentColor" strokeWidth="5.5" strokeLinecap="round">
+          <path d="M 162 30 L 154 46" />
+          <path d="M 180 50 L 168 58" />
         </g>
       )}
 
-      {/* 5. CONCERNED POSE */}
       {pose === "concerned" && (
-        <g id="pose-concerned">
-          {/* Tilted sad almond bead eyes */}
-          <ellipse cx="81" cy="115" rx="5.8" ry="8" fill="#1A1C1E" transform="rotate(12 81 115)" />
-          <circle cx="79.5" cy="113" r="2.2" fill="#FFFFFF" />
-
-          <ellipse cx="119" cy="115" rx="5.8" ry="8" fill="#1A1C1E" transform="rotate(-12 119 115)" />
-          <circle cx="117.5" cy="113" r="2.2" fill="#FFFFFF" />
-
-          {/* Sad downturned eyebrows */}
-          <path d="M 74 104 L 85 107" stroke="#1A1C1E" strokeWidth="2.4" strokeLinecap="round" />
-          <path d="M 126 104 L 115 107" stroke="#1A1C1E" strokeWidth="2.4" strokeLinecap="round" />
-
-          {/* Quivering downturned mouth */}
-          <path
-            d="M 95 127 Q 100 123 105 127"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-
-          {/* Worry Squiggle above head (from reference) */}
-          <g stroke="#566266" strokeWidth="2.2" strokeLinecap="round" fill="none">
-            <path d="M 124 50 C 128 46, 136 46, 138 52 C 140 56, 132 60, 128 62 C 134 64, 140 66, 138 72" />
-          </g>
-
-          {/* Paws held closely together in worry */}
-          <ellipse cx="93" cy="158" rx="7" ry="5.5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-          <ellipse cx="107" cy="158" rx="7" ry="5.5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
+        <g className={ACCENT_GREY} stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" fill="none">
+          <path d="M 142 22 C 152 18 168 18 172 22 C 168 27 150 28 146 24 C 152 32 166 32 168 30 C 164 35 152 36 150 34 C 154 39 162 39 162 38 L 158 44" />
         </g>
       )}
 
-      {/* 6. CELEBRATING POSE */}
       {pose === "celebrating" && (
-        <g id="pose-celebrating">
-          {/* Joyful closed eyes > < */}
-          <path
-            d="M 73 111 L 82 116 L 73 121"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="3.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M 127 111 L 118 116 L 127 121"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="3.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-
-          {/* Big cheering open mouth with tongue */}
-          <path
-            d="M 92 120 Q 100 136 108 120 Z"
-            fill="#1A1C1E"
-          />
-          <path
-            d="M 94 125 Q 100 135 106 125 Z"
-            fill="#FF728B"
-          />
-
-          {/* Raised paws in victory! */}
-          <ellipse cx="48" cy="118" rx="8.5" ry="7" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" transform="rotate(-30 48 118)" />
-          <ellipse cx="152" cy="118" rx="8.5" ry="7" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" transform="rotate(30 152 118)" />
-
-          {/* Festive Colorful Confetti & Joy Particles (from reference) */}
-          <path d="M 42 80 L 47 72" stroke="#3D7E73" strokeWidth="3.2" strokeLinecap="round" />
-          <path d="M 62 54 L 66 46" stroke="#3D7E73" strokeWidth="3.2" strokeLinecap="round" />
-          <circle cx="138" cy="52" r="3.2" fill="#F59E0B" />
-          <circle cx="162" cy="74" r="3.5" fill="#F59E0B" />
-          <path d="M 152 90 L 159 86" stroke="#EA580C" strokeWidth="3.2" strokeLinecap="round" />
-          <circle cx="46" cy="96" r="2.8" fill="#EA580C" />
+        <g strokeLinecap="round">
+          <g className={ACCENT_TEAL} stroke="currentColor" strokeWidth="5.5">
+            <path d="M 132 22 L 132 36" />
+            <path d="M 20 64 L 26 76" />
+            <path d="M 172 70 L 182 64" />
+            <circle cx="160" cy="96" r="2.8" fill="currentColor" stroke="none" />
+            <circle cx="36" cy="40" r="3" fill="currentColor" stroke="none" />
+          </g>
+          <g stroke={C.confettiYellow} strokeWidth="5">
+            <path d="M 156 32 L 152 44" />
+            <path d="M 44 54 L 52 58" />
+            <circle cx="66" cy="34" r="3" fill={C.confettiYellow} stroke="none" />
+            <circle cx="180" cy="88" r="2.6" fill={C.confettiYellow} stroke="none" />
+          </g>
         </g>
       )}
 
-      {/* 7. LEARNING POSE */}
       {pose === "learning" && (
-        <g id="pose-learning">
-          {/* Studious bead eyes looking down at book */}
-          <ellipse cx="80" cy="114" rx="5.5" ry="7.5" fill="#1A1C1E" />
-          <circle cx="79" cy="112" r="2" fill="#FFFFFF" />
-
-          <ellipse cx="120" cy="114" rx="5.5" ry="7.5" fill="#1A1C1E" />
-          <circle cx="119" cy="112" r="2" fill="#FFFFFF" />
-
-          {/* Little calm reading smile */}
+        <g>
+          <g stroke={C.bulb} strokeWidth="3.2" strokeLinecap="round">
+            <path d="M 160 6 L 160 11" />
+            <path d="M 144 12 L 147 15" />
+            <path d="M 176 12 L 173 15" />
+            <path d="M 140 27 L 144 27" />
+            <path d="M 180 27 L 176 27" />
+          </g>
           <path
-            d="M 96 123 Q 100 126 104 123"
-            fill="none"
-            stroke="#1A1C1E"
-            strokeWidth="2.2"
-            strokeLinecap="round"
+            d="M 160 16 C 151 16 146 22 146 29 C 146 34 149 37 152 40 C 153 41 154 43 154 45 L 166 45 C 166 43 167 41 168 40 C 171 37 174 34 174 29 C 174 22 169 16 160 16 Z"
+            fill={C.bulb}
           />
-
-          {/* Open Book */}
-          <g id="civi-book">
-            {/* Left page */}
-            <path
-              d="M 100 168 L 72 160 L 75 138 L 100 144 Z"
-              fill="url(#civi-book-cover)"
-              stroke="#213B36"
-              strokeWidth="1.2"
-            />
-            {/* Right page */}
-            <path
-              d="M 100 168 L 128 160 L 125 138 L 100 144 Z"
-              fill="url(#civi-book-cover)"
-              stroke="#213B36"
-              strokeWidth="1.2"
-            />
-            {/* White pages inside */}
-            <path
-              d="M 99 166 L 74 159 L 77 140 L 99 146 Z"
-              fill="#F4F8F6"
-            />
-            <path
-              d="M 101 166 L 126 159 L 123 140 L 101 146 Z"
-              fill="#F4F8F6"
-            />
-            {/* Leaf Emblem on Right Page */}
-            <path
-              d="M 112 148 C 116 145, 120 147, 118 152 C 115 153, 111 152, 112 148 Z"
-              fill="#3D7E73"
-            />
-            {/* Paws holding the book */}
-            <ellipse cx="73" cy="154" rx="6.5" ry="5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-            <ellipse cx="127" cy="154" rx="6.5" ry="5" fill="#FAF1E6" stroke="#D9C2AA" strokeWidth="1" />
-          </g>
-
-          {/* Floating Insight Lightbulb above head */}
-          <g transform="translate(138, 30)">
-            <circle cx="14" cy="14" r="8" fill="#FBBF24" opacity="0.9" />
-            <path
-              d="M 10 18 L 18 18 L 16 23 L 12 23 Z"
-              fill="#78716C"
-            />
-            {/* Filament */}
-            <path
-              d="M 12 14 Q 14 10 16 14"
-              stroke="#FFFFFF"
-              strokeWidth="1.2"
-              fill="none"
-              strokeLinecap="round"
-            />
-            {/* Glow rays */}
-            <g stroke="#F59E0B" strokeWidth="2" strokeLinecap="round">
-              <line x1="14" y1="2" x2="14" y2="4" />
-              <line x1="23" y1="6" x2="21" y2="8" />
-              <line x1="5" y1="6" x2="7" y2="8" />
-            </g>
-          </g>
+          <path d="M 152 25 Q 154 20 159 19" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" opacity="0.6" />
+          <path d="M 156 44 L 158 34 L 160 37 L 162 34 L 164 44" stroke="#C98A1E" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
+          <rect x="154" y="45" width="12" height="7" rx="2" fill={C.bulbBase} />
+          <path d="M 156 54 L 164 54" stroke={C.bulbBase} strokeWidth="2.4" strokeLinecap="round" />
         </g>
       )}
     </svg>
