@@ -1,4 +1,4 @@
-# CivicSense — Campus Together
+# CivicSense — Campus Together 
 
 Bilingual (অসমীয়া + English) AI-powered campus issue management for Dibrugarh University.
 Game of Codes · ANAZORI v16.0 · PS-04. Team: Arnav, Devansh, Darsh, Aman.
