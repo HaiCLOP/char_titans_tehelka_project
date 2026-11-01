@@ -12,6 +12,7 @@ import (
 
 // Same format as src/lib/ai/crypto.ts: AES-256-GCM, key = sha256(AI_KEYS_SECRET),
 // payload = base64(iv) "." base64(tag) "." base64(ciphertext), 12-byte IV, 16-byte tag.
+// touch nako karna gois
 
 func gcmFor(secret string) (cipher.AEAD, error) {
 	if secret == "" {
