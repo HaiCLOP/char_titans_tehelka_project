@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import { Button, Card, EmptyState, ErrorState, LangText, ListSkeleton, RelativeTime } from "@/components/ui";
 import { useMarkRead, useNotificationList, useUnreadCount } from "./use-notifications";
 
-export function NotificationList({ userId }: { userId: string }) {
+/** `admin` opens tickets in the admin workspace instead of the reporter view. */
+export function NotificationList({ userId, admin = false }: { userId: string; admin?: boolean }) {
   const t = useTranslations("notifications");
   const router = useRouter();
   const list = useNotificationList();
@@ -17,7 +18,7 @@ export function NotificationList({ userId }: { userId: string }) {
 
   const openItem = (n: NotificationItem) => {
     if (!n.read) markRead.mutate({ ids: [n.id] });
-    if (n.complaint_id) router.push(`/c/${encodeURIComponent(n.complaint_id)}`);
+    if (n.complaint_id) router.push(`${admin ? "/admin/t" : "/c"}/${encodeURIComponent(n.complaint_id)}`);
   };
 
   return (

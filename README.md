@@ -31,6 +31,8 @@ corepack pnpm install
 | `NEXT_PUBLIC_SITE_URL` | web | optional public base URL for auth redirects |
 | `ENGINE_URL`, `ENGINE_SECRET` | web, engine | Go engine address + shared secret; leave `ENGINE_URL` empty to use the in-process TypeScript AI router |
 | `ENGINE_PORT` | engine | optional, default 8080 |
+| `RESEND_API_KEY`, `RESEND_FROM` | web, engine | invite emails (web) and queued notification emails (engine worker `notification_email`) |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | web | optional shared cache for RAG embeddings and agent answers |
 | `NEXT_DIST_DIR` | web build | optional build folder (default `.next`), see "Local production build" |
 
 ## How to run
@@ -77,7 +79,14 @@ Fresh Supabase project: apply every migration in `supabase/migrations` **in file
 10. `20261101000000_staff_skills_autoassign.sql`
 11. `20261101030000_review_fixes.sql`
 12. `20261101040000_revoke_rls_auto_enable.sql`
-13. `supabase/seed.sql`
+13. `20261101050000_anonymous_owners.sql`
+14. `20261101060000_real_campus_locations.sql`
+15. `20261101070000_notification_fanout.sql`
+16. `20261101080000_emergency_auto_assign.sql`
+17. `20261101090000_rag_search.sql`
+18. `20261101100000_assignment_workflow.sql`
+19. `20261101110000_notification_queue.sql` (enables Supabase Queues / pgmq)
+20. `supabase/seed.sql`
 
 Any migration added later goes after these, again in filename order. **The shared project (`fszfozblvqtpoobmougu`) already has them — never re-run old migrations there; apply only new files.**
 
@@ -85,7 +94,7 @@ Then make yourself super admin: `update profiles set role = 'super_admin' where 
 
 ## Known limitations (from the Oct 31 code review)
 
-- **Anonymous reports, base table:** every app screen, view, API and timeline hides an anonymous reporter, but a dept admin who queries `complaints.user_id` directly over the Supabase REST API can still read it. Planned fix: move the reporter of anonymous reports into an owner table readable only by that reporter (touches the owner policies, rate limit, notifications and realtime, so it was not rushed in before the demo).
+- **Anonymous reports:** the reporter is stored only in `complaint_owners` (readable by that reporter alone); `complaints.user_id`, event actors and chat senders are empty for anonymous reports. Two small gaps remain: photo storage paths start with the uploader's id, and live updates on "My reports" for one's own anonymous tickets arrive on refresh rather than instantly.
 - **AI router cooldowns / circuit breaker** live in memory per process (one web server + one engine on the demo laptop). Rate limits are already shared in Postgres (`hit_rate_limit`).
 - **Sensitive reports** can only be assigned to department admins; field staff are blocked by a database trigger and cannot read them.
 - **Placeholder data:** campus locations, map positions and emergency numbers in `seed.sql` / `app_config` are placeholders until confirmed by the university.

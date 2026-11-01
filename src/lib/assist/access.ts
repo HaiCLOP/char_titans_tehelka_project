@@ -5,6 +5,7 @@ import { PipelineError } from "@/lib/complaints";
 import { isManager } from "@/lib/admin";
 import { idFilter } from "@/lib/tracking";
 import { hasBengaliDrift } from "@/lib/utils";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /*
  * Authorization for M8 (chat, reply draft, resolution check).
@@ -61,6 +62,13 @@ export async function loadTicket(
   }
   if (!data) throw new PipelineError("NOT_FOUND", "Complaint not found");
   const ticket = data as unknown as AssistTicket;
+  // Anonymous reports keep the reporter out of the row (migration 13). Resolve it server-side only, after RLS
+  // has already confirmed the caller may see this ticket; it is used for roles, labels and notifications and
+  // never leaves the server.
+  if (!ticket.user_id && ticket.anonymous) {
+    const { data: rep } = await createAdminClient().rpc("complaint_reporter", { cid: ticket.id });
+    ticket.user_id = typeof rep === "string" ? rep : null;
+  }
   const manager = isManager(actor.profile, ticket.department_id);
   const role: TicketRole | null = manager
     ? "manager"

@@ -50,6 +50,17 @@ const SIGNED_URL_TTL = 60 * 60;
 type Client = SupabaseClient;
 export type Viewer = { id: string; profile: Profile } | null;
 
+// Anonymous reports keep their reporter in complaint_owners (migration 13), not in complaints.user_id.
+// RLS on complaint_owners lets each user read only their own rows.
+async function ownedAnonymousIds(supabase: Client): Promise<string[]> {
+  const { data } = await supabase.from("complaint_owners").select("complaint_id");
+  return (data ?? []).map((r: { complaint_id: string }) => r.complaint_id);
+}
+async function ownsAnonymously(supabase: Client, complaintId: string): Promise<boolean> {
+  const { data } = await supabase.from("complaint_owners").select("complaint_id").eq("complaint_id", complaintId).maybeSingle();
+  return Boolean(data);
+}
+
 const isAdminRole = (r: Role) => (ADMIN_ROLES as readonly Role[]).includes(r);
 
 // ---------- helpers ----------
@@ -215,17 +226,27 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
       ? PUBLIC_LIST_COLUMNS
       : q.scope === "dept"
         ? `${LIST_COLUMNS}, anonymous, user_id, assignee_id, auto_assigned_to:ai_meta->>auto_assigned_to`
-        : LIST_COLUMNS;
+        : q.scope === "assigned"
+          ? `${LIST_COLUMNS}, assignee_id`
+          : LIST_COLUMNS;
 
   let query = supabase.from(table).select(columns);
 
   switch (q.scope) {
-    case "mine":
-      query = query.eq("user_id", viewer!.id);
+    case "mine": {
+      const owned = await ownedAnonymousIds(supabase);
+      query = owned.length
+        ? query.or(`user_id.eq.${viewer!.id},id.in.(${owned.join(",")})`)
+        : query.eq("user_id", viewer!.id);
       break;
-    case "assigned":
-      query = query.eq("assignee_id", viewer!.id);
+    }
+    case "assigned": {
+      // Lead on the job, or a helper on its team (migration 18).
+      const { data: helping } = await supabase.from("complaint_helpers").select("complaint_id").eq("user_id", viewer!.id).limit(200);
+      const ids = (helping ?? []).map((h) => h.complaint_id as string);
+      query = ids.length ? query.or(`assignee_id.eq.${viewer!.id},id.in.(${ids.join(",")})`) : query.eq("assignee_id", viewer!.id);
       break;
+    }
     case "public":
       // complaints_public already filters public / not sensitive / not merged.
       break;
@@ -324,6 +345,8 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
       thumb: first ? (thumbs.get(first) ?? null) : null,
     };
     if (viewer && q.scope === "public") item.supported_by_me = supported.has(r.id);
+    // On someone else's job as a helper: only the lead starts and resolves it.
+    if (q.scope === "assigned") item.helper = r.assignee_id !== viewer!.id;
     if (q.scope === "dept") {
       item.anonymous = Boolean(r.anonymous);
       item.reporter_name = r.reporter_id ? (reporters.get(r.reporter_id) ?? null) : null;
@@ -373,6 +396,8 @@ type EventRow = {
   note_as: string | null;
   created_at: string;
   actor_id: string | null;
+  /** The reporter acted (kept even when an anonymous reporter's actor_id is hidden). */
+  by_reporter?: boolean;
   /** Set instead of actor_id for public-view timelines (public_complaint_events). */
   actor_kind?: EventActor;
 };
@@ -469,7 +494,7 @@ export async function getComplaintDetail(
   if (!row) return null;
 
   const { profile } = viewer;
-  const isOwner = !viaPublicView && row.user_id === viewer.id;
+  const isOwner = !viaPublicView && (row.user_id === viewer.id || (row.anonymous && (await ownsAnonymously(supabase, row.id))));
   const isDeptAdmin =
     !viaPublicView &&
     (profile.role === "super_admin" ||
@@ -487,7 +512,7 @@ export async function getComplaintDetail(
       }))
     : supabase
         .from("complaint_events")
-        .select("id, type, from_status, to_status, note_en, note_as, created_at, actor_id")
+        .select("id, type, from_status, to_status, note_en, note_as, created_at, actor_id, by_reporter")
         .eq("complaint_id", row.id)
         .order("created_at", { ascending: true })
         .order("id", { ascending: true });
@@ -524,8 +549,8 @@ export async function getComplaintDetail(
   const events: TimelineEvent[] = eventRows.map((e) => {
     let actor: EventActor;
     if (e.actor_kind) actor = e.actor_kind;
-    // "created" is always the reporter's act; anonymous reports store no actor id for it (migration 11).
-    else if (e.type === "created") actor = isOwner ? "me" : "reporter";
+    // The reporter's own acts are flagged; anonymous reports store no actor id for them (migrations 11, 13).
+    else if (e.by_reporter || e.type === "created") actor = isOwner ? "me" : "reporter";
     else if (!e.actor_id) actor = "system";
     else if (e.actor_id === viewer.id) actor = "me";
     else if (e.actor_id === row.user_id) actor = "reporter";
@@ -634,7 +659,7 @@ export async function getComplaintDetail(
 /** Workspace extras for admins of the ticket: assignee name, linked parent, merged duplicates. */
 async function loadAdminInfo(supabase: Client, row: DetailRow): Promise<NonNullable<ComplaintDetail["admin"]>> {
   type Ref = { id: string; code: string; title_en: string | null; title_as: string | null };
-  const [assignee, parent, children] = await Promise.all([
+  const [assignee, parent, children, helperRows] = await Promise.all([
     row.assignee_id
       ? supabase.from("profiles").select("id, full_name").eq("id", row.assignee_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -643,7 +668,13 @@ async function loadAdminInfo(supabase: Client, row: DetailRow): Promise<NonNulla
       ? createAdminClient().from("complaints").select("id, code, title_en, title_as").eq("id", row.parent_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from("complaints").select("id, code, title_en, title_as").eq("parent_id", row.id).order("created_at").limit(20),
+    supabase.from("complaint_helpers").select("user_id").eq("complaint_id", row.id),
   ]);
+  const helperIds = ((helperRows.data ?? []) as { user_id: string }[]).map((h) => h.user_id);
+  const { data: helperPeople } = helperIds.length
+    ? await createAdminClient().from("profiles").select("id, full_name").in("id", helperIds)
+    : { data: [] };
+  const helperName = new Map(((helperPeople ?? []) as { id: string; full_name: string | null }[]).map((p) => [p.id, p.full_name]));
   const a = assignee.data as { id: string; full_name: string | null } | null;
   // Auto-assignment (migration 10) is shown only while the auto-picked person is still the assignee.
   const meta = row.ai_meta ?? {};
@@ -659,7 +690,23 @@ async function loadAdminInfo(supabase: Client, row: DetailRow): Promise<NonNulla
           at: typeof meta.auto_assigned_at === "string" ? meta.auto_assigned_at : null,
         }
       : null;
+  // Workflow suggestion (assign_mode "approval"): only while nobody is assigned yet.
+  const prop = (meta.assign_proposal ?? null) as Record<string, unknown> | null;
+  const proposal =
+    !row.assignee_id && prop && typeof prop.id === "string"
+      ? {
+          id: prop.id,
+          name: typeof prop.name === "string" ? prop.name : null,
+          confidence: typeof prop.confidence === "number" ? prop.confidence : 0,
+          level: typeof prop.level === "number" ? Math.min(4, Math.max(1, Math.round(prop.level))) : 1,
+          note_en: typeof prop.note_en === "string" ? prop.note_en : null,
+          note_as: typeof prop.note_as === "string" ? prop.note_as : null,
+          at: typeof prop.at === "string" ? prop.at : null,
+        }
+      : null;
   return {
+    proposal,
+    helpers: helperIds.map((id) => ({ id, name: helperName.get(id) ?? null })),
     auto_assign: auto,
     department_id: row.department_id,
     assignee: row.assignee_id ? { id: row.assignee_id, name: a?.full_name ?? null } : null,
@@ -678,7 +725,9 @@ export async function supportComplaint(supabase: Client, viewer: NonNullable<Vie
   // Own / role tickets come from the base table (RLS); everyone else only finds public tickets via the view.
   // The RPC itself re-checks that the ticket is public.
   const { data: own } = await supabase.from("complaints").select("id, user_id").eq(f.col, f.value).maybeSingle();
-  if (own?.user_id === viewer.id) throw new PipelineError("VALIDATION_ERROR", "You cannot support your own report");
+  if (own && (own.user_id === viewer.id || (await ownsAnonymously(supabase, own.id)))) {
+    throw new PipelineError("VALIDATION_ERROR", "You cannot support your own report");
+  }
   const { data: pub } = own ? { data: null } : await supabase.from("complaints_public").select("id").eq(f.col, f.value).maybeSingle();
   const cid = (own?.id ?? pub?.id) as string | undefined;
   if (!cid) throw new PipelineError("NOT_FOUND", "Complaint not found");
@@ -715,7 +764,9 @@ export async function verifyComplaint(
   if (error) throw new PipelineError("INTERNAL", "Could not load the complaint");
   if (!data) throw new PipelineError("NOT_FOUND", "Complaint not found");
   const row = data as { id: string; user_id: string | null; status: Status; created_at: string; updated_at: string };
-  if (row.user_id !== viewer.id) throw new PipelineError("FORBIDDEN", "Only the reporter can confirm this");
+  if (row.user_id !== viewer.id && !(await ownsAnonymously(supabase, row.id))) {
+    throw new PipelineError("FORBIDDEN", "Only the reporter can confirm this");
+  }
 
   let patch: Record<string, unknown>;
   if (row.status === "resolved" && body.fixed) {

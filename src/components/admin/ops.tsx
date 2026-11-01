@@ -5,6 +5,8 @@ import { CATEGORY_ICON, Card, LangText, PriorityChip, RelativeTime, StatusChip, 
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import type { Category, Status } from "@/lib/domain";
 import { useLocale } from "next-intl";
+import { CampusAtlas, type AtlasMarker } from "@/components/map/campus-atlas";
+import { locationMetres } from "@/lib/campus";
 import { cn, toLocaleDigits } from "@/lib/utils";
 
 // Building blocks of the admin Operations center (S13). Server components, monochrome tokens only:
@@ -147,8 +149,8 @@ export function IssueRow({ t, assignLabel, openLabel }: { t: OpsTicket; assignLa
 }
 
 /**
- * Small schematic campus plan: one node per building at locations.map_x/map_y, sized by open tickets,
- * ring colour = highest open priority. Same honest "schematic" idea as /map, at card size.
+ * Small non-interactive real campus map: one node per building at locations.map_x/map_y, sized by open
+ * tickets, ring colour = highest open priority. Same renderer as /map, at card size.
  */
 export function MiniMap({
   locations, open, locale, label,
@@ -164,43 +166,23 @@ export function MiniMap({
     const cur = byLoc.get(t.location_id) ?? { count: 0, top: 4 };
     byLoc.set(t.location_id, { count: cur.count + 1, top: Math.min(cur.top, t.priority) });
   }
-  const placed = locations.filter((l) => l.map_x != null && l.map_y != null);
-  const W = 100;
-  const H = 62;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="block h-auto w-full rounded-2xl bg-surface-muted">
-      <defs>
-        <pattern id="ops-grid" width="5" height="5" patternUnits="userSpaceOnUse">
-          <path d="M5 0H0V5" fill="none" stroke="var(--border)" strokeWidth="0.2" />
-        </pattern>
-      </defs>
-      <rect width={W} height={H} fill="url(#ops-grid)" />
-      {placed.map((l) => {
-        const x = 6 + (l.map_x as number) * (W - 12);
-        const y = 6 + (l.map_y as number) * (H - 12);
-        const hit = byLoc.get(l.id);
-        const name = locale === "as" ? l.name_as : l.name_en;
-        return (
-          <g key={l.id}>
-            {hit ? (
-              <>
-                <circle cx={x} cy={y} r={2.2 + Math.min(hit.count, 8) * 0.55} fill="var(--surface)" stroke={`var(--p${hit.top})`} strokeWidth="1.1" />
-                <text x={x} y={y + 0.9} textAnchor="middle" fontSize="2.6" fontWeight="700" fill="var(--foreground)">{toLocaleDigits(hit.count, locale)}</text>
-              </>
-            ) : (
-              <circle cx={x} cy={y} r="1" fill="none" stroke="var(--subtle-foreground)" strokeWidth="0.4" />
-            )}
-            <title>{hit ? `${name}: ${toLocaleDigits(hit.count, locale)}` : name}</title>
-            {hit && (
-              <text x={x} y={y + 6.2} textAnchor="middle" fontSize="2.4" fontWeight="600" fill="var(--foreground)">
-                {name.length > 18 ? `${name.slice(0, 17)}…` : name}
-              </text>
-            )}
-          </g>
-        );
-      })}
-    </svg>
-  );
+  const markers: AtlasMarker[] = locations.flatMap((l) => {
+    const at = locationMetres(l);
+    if (!at) return [];
+    const hit = byLoc.get(l.id);
+    return [{
+      id: l.id, x: at.x, y: at.y, count: hit?.count ?? 0, countText: hit ? toLocaleDigits(hit.count, locale) : undefined,
+      topPriority: hit?.top ?? null, label: hit ? (locale === "as" ? l.name_as || l.name_en : l.name_en) : undefined,
+    }];
+  });
+  // Screen readers get the busiest buildings as text; the canvas itself is decorative here.
+  const summary = locations
+    .filter((l) => byLoc.has(l.id))
+    .sort((a, b) => byLoc.get(b.id)!.count - byLoc.get(a.id)!.count)
+    .slice(0, 5)
+    .map((l) => `${locale === "as" ? l.name_as || l.name_en : l.name_en}: ${toLocaleDigits(byLoc.get(l.id)!.count, locale)}`)
+    .join(", ");
+  return <CampusAtlas compact markers={markers} label={summary ? `${label}. ${summary}` : label} className="aspect-[100/62] w-full rounded-2xl" />;
 }
 
 /** A legend entry under the map. */

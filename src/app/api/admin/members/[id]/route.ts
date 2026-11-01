@@ -7,10 +7,11 @@ import { audit } from "@/lib/audit";
 
 const Id = z.guid();
 
-// S18 — change a member's role, department, skills, coverage or active flag (super admin only).
+// S18 — change a member's role, department, skills, coverage or active flag. Super admins: anyone but
+// themselves; department admins: field staff and staff of their own department (checked in applyMember).
 export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/admin/members/[id]">) {
   const { id } = await ctx.params;
-  const auth = await requireRole("super_admin");
+  const auth = await requireRole("super_admin", "dept_admin");
   if (auth instanceof Response) return auth;
   if (!Id.safeParse(id).success) return fail("NOT_FOUND", "Member not found");
   const body = await parseJson(req, MemberPatchSchema);

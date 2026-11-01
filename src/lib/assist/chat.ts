@@ -18,8 +18,13 @@ import type { ChatLang, ChatMessage, ChatSender, ChatThread } from "./types";
  * The AI translation is written afterwards with the service role (messages has no update policy).
  */
 
-type MessageRow = { id: number; body: string; lang: string; body_translated: string | null; created_at: string; sender_id: string | null };
-const MESSAGE_COLUMNS = "id, body, lang, body_translated, created_at, sender_id";
+type MessageRow = {
+  id: number; body: string; lang: string; body_translated: string | null; created_at: string;
+  sender_id: string | null;
+  /** Set by the database; an anonymous reporter's messages carry no sender_id (migration 13). */
+  from_reporter: boolean;
+};
+const MESSAGE_COLUMNS = "id, body, lang, body_translated, created_at, sender_id, from_reporter";
 
 export const RATE_MAX = 20;
 export const RATE_WINDOW_MS = 10 * 60_000;
@@ -28,6 +33,7 @@ const TranslationSchema = z.object({ text: z.string().trim().min(1).max(4000) })
 
 function senderOf(row: MessageRow, actor: Actor, ticket: AssistTicket): ChatSender {
   if (row.sender_id && row.sender_id === actor.id) return "you";
+  if (row.from_reporter) return ticket.user_id === actor.id ? "you" : "reporter";
   if (row.sender_id && row.sender_id === ticket.user_id) return "reporter";
   return "staff";
 }

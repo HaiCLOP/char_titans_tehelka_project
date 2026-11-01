@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Campus map kit source material (runtime copies live in public/campus).
+    "Dibrugarh-University-Map-Kit/**",
   ]),
 ]);
 

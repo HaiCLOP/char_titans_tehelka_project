@@ -245,6 +245,7 @@ function SimilarCard({ d, onLink, onUnlink, busy }: { d: ComplaintDetail; onLink
 /** Ranked field staff (skills + buildings + load) with one-click Assign, plus the auto-assignment reason. */
 function AssigneeSuggestions({ d, enabled, busy, onAssign }: { d: ComplaintDetail; enabled: boolean; busy: boolean; onAssign: (id: string) => void }) {
   const t = useTranslations("assign");
+  const tx = useTranslations("members.experience");
   const tc = useTranslations("category");
   const locale = useLocale();
   const auto = d.admin?.auto_assign ?? null;
@@ -258,6 +259,7 @@ function AssigneeSuggestions({ d, enabled, busy, onAssign }: { d: ComplaintDetai
   const place = d.location ? (locale === "as" ? d.location.name_as : d.location.name_en) : null;
   const reasonText = (r: AssigneeSuggestion["reasons"]) =>
     [
+      tx(`level.${r.level}`) + (r.fit ? ` · ${t("fit")}` : ""),
       r.skill ? tc(d.category) : null,
       r.covers && place ? t("covers", { place }) : null,
       t("openJobs", { count: r.open_jobs, n: toLocaleDigits(r.open_jobs, locale) }),
@@ -306,6 +308,97 @@ function AssigneeSuggestions({ d, enabled, busy, onAssign }: { d: ComplaintDetai
             </ul>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Workflow suggestion (assign mode "approval"): who, how sure, and one-click approve or dismiss. */
+function ProposalCard({ d, busy, onDone }: { d: ComplaintDetail; busy: boolean; onDone: () => void }) {
+  const t = useTranslations("assign.proposal");
+  const tx = useTranslations("members.experience");
+  const locale = useLocale();
+  const errText = useErrorText();
+  const p = d.admin?.proposal;
+  const decide = useMutation({
+    mutationFn: (approve: boolean) =>
+      apiFetch(`/api/complaints/${encodeURIComponent(d.id)}/proposal`, { method: "POST", json: { approve } }),
+    onSuccess: (_r, approve) => {
+      toast.success(approve ? t("approved") : t("dismissed"));
+      onDone();
+    },
+    onError: (e) => toast.error(errText(e)),
+  });
+  if (!p) return null;
+  const pct = Math.round(p.confidence * 100);
+  return (
+    <div className="rounded-xl border border-border-strong bg-surface-muted px-3.5 py-3">
+      <p className="text-xs font-medium text-muted-foreground">{t("title")}</p>
+      <p className="mt-1 flex flex-wrap items-center gap-2 text-sm font-medium">
+        {p.name || t("noName")}
+        <Chip tone={p.level >= 3 ? "primary" : "neutral"}>{tx(`level.${p.level}`)}</Chip>
+        <span className="text-xs font-normal text-muted-foreground tabular">{t("confidence", { n: toLocaleDigits(pct, locale) })}</span>
+      </p>
+      <LangText tag="p" en={p.note_en} as={p.note_as} className="mt-1 text-xs text-muted-foreground" />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" disabled={busy || decide.isPending} loading={decide.isPending && decide.variables === true} onClick={() => decide.mutate(true)}>
+          {t("approve")}
+        </Button>
+        <Button size="sm" variant="ghost" disabled={busy || decide.isPending} loading={decide.isPending && decide.variables === false} onClick={() => decide.mutate(false)}>
+          {t("dismiss")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Extra people on the job besides the lead (fights, harassment, big repairs). */
+function TeamCard({ d, staff, busy, onDone }: { d: ComplaintDetail; staff: StaffMember[]; busy: boolean; onDone: () => void }) {
+  const t = useTranslations("assign.team");
+  const errText = useErrorText();
+  const helpers = d.admin?.helpers ?? [];
+  const leadId = d.admin?.assignee?.id ?? null;
+  const sensitive = Boolean(d.admin?.is_sensitive);
+  const candidates = staff.filter((m) => m.id !== leadId && !helpers.some((h) => h.id === m.id) && (!sensitive || m.role === "dept_admin"));
+  const change = useMutation({
+    mutationFn: (v: { add?: string; remove?: string }) =>
+      v.add
+        ? apiFetch(`/api/complaints/${encodeURIComponent(d.id)}/helpers`, { method: "POST", json: { user_id: v.add } })
+        : apiFetch(`/api/complaints/${encodeURIComponent(d.id)}/helpers?user=${encodeURIComponent(v.remove!)}`, { method: "DELETE" }),
+    onSuccess: (_r, v) => {
+      toast.success(v.add ? t("added") : t("removed"));
+      onDone();
+    },
+    onError: (e) => toast.error(errText(e)),
+  });
+  if (!leadId) return null;
+  return (
+    <div>
+      <p className="text-sm font-medium">{t("title")}</p>
+      <p className="text-xs text-muted-foreground">{t("body")}</p>
+      {helpers.length > 0 && (
+        <ul className="mt-2 divide-y divide-border">
+          {helpers.map((h) => (
+            <li key={h.id} className="flex items-center gap-3 py-2">
+              <span className="min-w-0 flex-1 truncate text-sm">{h.name || t("noName")}</span>
+              <Button size="sm" variant="ghost" disabled={busy || change.isPending} onClick={() => change.mutate({ remove: h.id })}>
+                {t("remove")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {candidates.length > 0 && (
+        <Select
+          id="ws-helper"
+          className="mt-2"
+          label={t("add")}
+          value=""
+          placeholder={t("pick")}
+          disabled={busy || change.isPending}
+          onChange={(e) => e.target.value && change.mutate({ add: e.target.value })}
+          options={candidates.map((m) => ({ value: m.id, label: m.full_name || t("noName") }))}
+        />
       )}
     </div>
   );
@@ -400,7 +493,9 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
   // Status buttons come only from allowed_next (= status_transitions, PRD 8.2). Duplicate is the Link action.
   const actions = d.allowed_next.filter((s) => s !== "duplicate");
   const assignee = d.admin?.assignee ?? null;
-  const staffOptions = (staff.data ?? []).map((m) => ({
+  // Sensitive reports can only go to department admins (DB trigger); don't offer field staff for them.
+  const sensitive = Boolean(d.admin?.is_sensitive);
+  const staffOptions = (staff.data ?? []).filter((m) => !sensitive || m.role === "dept_admin").map((m) => ({
     value: m.id,
     label: `${m.full_name || t("noName")}${m.role === "dept_admin" ? ` · ${t("roleAdmin")}` : ""}`,
   }));
@@ -565,16 +660,24 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
                 value={assignee?.id ?? ""}
                 placeholder={t("unassigned")}
                 disabled={busy || assignLocked || !departmentId || staff.isPending}
-                hint={staff.isError ? t("staffError") : staff.data && staff.data.length === 0 ? t("noStaff") : d.status === "in_progress" ? t("assigneeLocked") : undefined}
+                hint={
+                  staff.isError ? t("staffError")
+                  : d.status === "in_progress" ? t("assigneeLocked")
+                  : sensitive ? (staffOptions.length === 0 ? t("noAdminsSensitive") : t("sensitiveAdminsOnly"))
+                  : staff.data && staff.data.length === 0 ? t("noStaff")
+                  : undefined
+                }
                 onChange={(e) => patch.mutate({ assignee_id: e.target.value || null })}
                 options={staffOptions}
               />
+              {!assignee && <ProposalCard d={d} busy={busy} onDone={refresh} />}
               <AssigneeSuggestions
                 d={d}
-                enabled={Boolean(departmentId) && !assignLocked}
+                enabled={Boolean(departmentId) && !assignLocked && !sensitive}
                 busy={busy}
                 onAssign={(assignee_id) => patch.mutate({ assignee_id })}
               />
+              {isOpen(d.status) && <TeamCard d={d} staff={staff.data ?? []} busy={busy} onDone={refresh} />}
             </div>
           </Card>
 

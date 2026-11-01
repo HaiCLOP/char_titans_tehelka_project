@@ -27,9 +27,12 @@ const RankRow = z.object({
   skill_required: z.boolean(),
   covers: z.boolean(),
   open_jobs: z.number(),
+  level: z.number().default(1),
+  jobs_done: z.number().default(0),
+  fit: z.boolean().default(false),
 });
 
-const AutoResult = z.object({ id: z.string(), name: z.string().nullable() }).nullable();
+const AutoResult = z.object({ id: z.string(), name: z.string().nullable(), proposed: z.boolean().optional() }).nullable();
 
 /**
  * Best-effort auto-assignment of a freshly auto-routed ticket (service role). `auto_assign_complaint`
@@ -45,9 +48,31 @@ export async function autoAssign(complaintId: string): Promise<{ id: string; nam
       return null;
     }
     const parsed = AutoResult.safeParse(data ?? null);
-    return parsed.success ? parsed.data : null;
+    // In "approval" mode the RPC only stores a proposal for an admin; nothing is assigned yet.
+    if (!parsed.success || !parsed.data || parsed.data.proposed) return null;
+    return { id: parsed.data.id, name: parsed.data.name };
   } catch (e) {
     console.warn("[assign] auto-assign failed", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+/**
+ * Emergency auto-assignment (migration 16), only when a super admin turned on `auto_assign_emergency`.
+ * Urgent reports go to field staff of the routed department, or a department admin when sensitive.
+ * Never throws: returns null when the setting is off or nobody could be picked.
+ */
+export async function autoAssignEmergency(complaintId: string): Promise<{ id: string; name: string | null } | null> {
+  try {
+    const { data, error } = await createAdminClient().rpc("auto_assign_emergency", { cid: complaintId });
+    if (error) {
+      console.warn("[assign] emergency auto-assign failed", error.code, error.message);
+      return null;
+    }
+    const parsed = AutoResult.safeParse(data ?? null);
+    return parsed.success ? parsed.data : null;
+  } catch (e) {
+    console.warn("[assign] emergency auto-assign failed", e instanceof Error ? e.message : e);
     return null;
   }
 }
@@ -87,7 +112,10 @@ export async function suggestAssignees(
         id: x.id,
         name: x.full_name,
         score: Math.round(x.score),
-        reasons: { skill: x.skill_match, covers: x.covers, open_jobs: Math.round(x.open_jobs) },
+        reasons: {
+          skill: x.skill_match, covers: x.covers, open_jobs: Math.round(x.open_jobs),
+          level: Math.min(4, Math.max(1, Math.round(x.level))), jobs_done: Math.round(x.jobs_done), fit: x.fit,
+        },
       }),
     );
 }

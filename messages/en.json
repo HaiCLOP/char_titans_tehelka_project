@@ -35,7 +35,8 @@
       "expand": "Expand menu",
       "menu": "Menu",
       "backToSite": "Back to site",
-      "fieldWork": "Field work"
+      "fieldWork": "Field work",
+      "team": "My team"
     },
     "work": "My work",
     "workShort": "My work",
@@ -575,7 +576,24 @@
     "signOut": "Sign out",
     "course": "Course / programme",
     "courseHint": "Helps admins see who is affected. Optional.",
-    "coursePlaceholder": "e.g. MCA, 3rd semester"
+    "coursePlaceholder": "e.g. MCA, 3rd semester",
+    "characterChange": "Change character",
+    "characterPick": "Choose your character",
+    "characterHint": "Your character appears wherever your photo would.",
+    "characterOption": "{style} {n}",
+    "characterSave": "Save character",
+    "characterCancel": "Cancel",
+    "characterSaved": "Character saved",
+    "characterStyle": {
+      "scout": "Scout",
+      "wizard": "Wizard",
+      "robot": "Robot",
+      "fox": "Fox",
+      "knight": "Knight",
+      "pirate": "Pirate"
+    },
+    "emailNotifications": "Email me notifications",
+    "emailNotificationsHint": "Updates on your reports and jobs also arrive by email. If sending fails, it is retried automatically."
   },
   "errors": {
     "notFoundTitle": "Page not found",
@@ -619,6 +637,7 @@
     "courseHint": "Optional. Helps admins understand who is affected."
   },
   "map": {
+    "nameLanguage": "Building names",
     "title": "Campus map",
     "subtitle": "Where open issues are right now. Tap a building to see what has been reported there.",
     "tabMap": "Map view",
@@ -628,8 +647,7 @@
     "filterLabel": "Filter issues",
     "allCategories": "All",
     "includeFixed": "Include fixed in last 7 days",
-    "planLabel": "Campus plan",
-    "schematic": "Schematic campus plan, not to scale",
+    "planLabel": "Campus map with reported issues",
     "legendFixed": "Fixed recently",
     "legendNone": "No open issues",
     "legendSize": "Bigger circle = more issues",
@@ -652,7 +670,14 @@
     "clearFilter": "Clear filter",
     "reportCta": "Report an issue",
     "drawerEmptyTitle": "Nothing reported here",
-    "drawerEmptyBody": "No public issues are open at this building."
+    "drawerEmptyBody": "No public issues are open at this building.",
+    "loading": "Loading the campus map",
+    "atlasKeys": "Drag to move, pinch or scroll to zoom. Keys: arrows move, plus and minus zoom, Home resets.",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetView": "Show whole campus",
+    "atlasCaption": "Campus map",
+    "attribution": "© OpenStreetMap contributors · Overture Maps"
   },
   "staff": {
     "metaTitle": "My work",
@@ -690,7 +715,8 @@
       "changed": "This complaint changed meanwhile. Refresh and try again.",
       "forbidden": "This complaint is no longer assigned to you.",
       "failed": "Could not mark it resolved. Please try again."
-    }
+    },
+    "helperNote": "You are a helper on this job. Only the lead staff member can start and resolve it."
   },
   "admin": {
     "allDepartments": "All departments",
@@ -864,6 +890,8 @@
     "unassigned": "Unassigned",
     "staffError": "Could not load staff.",
     "noStaff": "No field staff in this department yet.",
+    "sensitiveAdminsOnly": "Sensitive report: only department admins can be assigned.",
+    "noAdminsSensitive": "Sensitive report: this department has no admin to assign yet. Add one under Departments.",
     "assigneeLocked": "Work is in progress — to hand over, move it back to Assigned first.",
     "noName": "Unnamed",
     "roleAdmin": "admin",
@@ -971,6 +999,14 @@
     }
   },
   "departments": {
+    "emergency": {
+      "label": "Auto-assign emergencies",
+      "description": "Urgent reports (fights, harassment, injuries) go straight to someone in the routed department: field staff, or a department admin when the report is sensitive. Off: they wait for an admin.",
+      "on": "Emergencies will be auto-assigned",
+      "off": "Emergencies wait for an admin",
+      "error": "Could not save the setting",
+      "loadError": "Could not load the setting"
+    },
     "title": "Departments",
     "subtitle": "Fixing units, what they handle, how fast, and who works in them.",
     "new": "New department",
@@ -1015,6 +1051,25 @@
       "invalid": "Some values are not valid. Check and try again.",
       "inUse": "This department still has complaints or members. Move them to another department first.",
       "generic": "Something went wrong. Please try again."
+    },
+    "workflow": {
+      "title": "Assignment workflow",
+      "body": "How new tickets reach staff. Matching uses skills, buildings, current load and hidden experience: severe work goes to experienced staff, routine work to newer staff so they learn.",
+      "modeLabel": "Safe tickets (not urgent, not sensitive, AI confident)",
+      "mode": {
+        "off": "Manual",
+        "approval": "Suggest + approve",
+        "auto": "Automatic"
+      },
+      "modeHint": {
+        "off": "Admins pick staff themselves; suggestions still show in each ticket.",
+        "approval": "The best match is suggested with a confidence score; an admin approves it in one click.",
+        "auto": "The best match is assigned straight away."
+      },
+      "teamSize": "Emergency team size",
+      "teamSizeHint": "The most experienced people are sent together.",
+      "people": "{count, plural, one {{n} person} other {{n} people}}",
+      "saved": "Workflow saved"
     }
   },
   "members": {
@@ -1037,10 +1092,10 @@
     "allBuildings": "All buildings",
     "dialog": {
       "addTitle": "Add a member",
-      "addBody": "They must have signed in to CivicSense once.",
+      "addBody": "If they have no account yet, they get an email invite to sign in.",
       "editTitle": "Edit {name}",
       "email": "Email",
-      "emailHint": "The address they sign in with.",
+      "emailHint": "Their email. New people get an invite link.",
       "role": "Role",
       "department": "Department",
       "noDepartment": "No department",
@@ -1055,7 +1110,8 @@
       "added": "Member added",
       "saved": "Member saved",
       "activated": "Member activated",
-      "deactivated": "Member deactivated"
+      "deactivated": "Member deactivated",
+      "invited": "Invite sent to {email}"
     },
     "errors": {
       "email": "Enter a valid email address.",
@@ -1064,8 +1120,31 @@
       "openJobs": "They still have open jobs. Reassign them before moving them out.",
       "forbidden": "You cannot change this person here.",
       "invalid": "Some values are not valid. Check and try again.",
-      "generic": "Something went wrong. Please try again."
-    }
+      "generic": "Something went wrong. Please try again.",
+      "lastSuper": "This is the last active super admin. Make someone else a super admin first.",
+      "inviteLimit": "Too many invites right now. Try again in a few minutes."
+    },
+    "supers": {
+      "title": "Super admins",
+      "body": "They see every department and manage people, departments and settings.",
+      "add": "Add super admin"
+    },
+    "experience": {
+      "level": {
+        "1": "Newcomer",
+        "2": "Regular",
+        "3": "Experienced",
+        "4": "Expert"
+      },
+      "jobs": "{count, plural, one {{n} job done} other {{n} jobs done}}",
+      "points": "{n} pts",
+      "rating": "★ {n}",
+      "onTime": "{n}% on time",
+      "title": "Your experience",
+      "body": "Only you, your department admins and super admins see this. Severe jobs go to more experienced staff."
+    },
+    "noDepartmentTitle": "No department yet",
+    "noDepartmentBody": "Ask a super admin to add you to a department."
   },
   "assign": {
     "autoShort": "Auto",
@@ -1081,7 +1160,27 @@
     "current": "Assigned",
     "noName": "Unnamed",
     "none": "No field staff match this ticket. Pick someone from the list above.",
-    "error": "Could not rank staff."
+    "error": "Could not rank staff.",
+    "fit": "fits this severity",
+    "proposal": {
+      "title": "Suggested by the workflow",
+      "noName": "Unnamed",
+      "confidence": "{n}% confident",
+      "approve": "Approve",
+      "dismiss": "Dismiss",
+      "approved": "Assigned",
+      "dismissed": "Suggestion dismissed"
+    },
+    "team": {
+      "title": "Team",
+      "body": "Send more people with the lead, e.g. for fights or big repairs.",
+      "add": "Add a helper",
+      "pick": "Choose a person",
+      "remove": "Remove",
+      "noName": "Unnamed",
+      "added": "Added to the team",
+      "removed": "Removed from the team"
+    }
   },
   "sys": {
     "meta": "System",
@@ -1348,7 +1447,8 @@
       "by_category": "By category",
       "department_load": "Departments compared",
       "list_complaints": "Complaint list",
-      "get_complaint": "One complaint"
+      "get_complaint": "One complaint",
+      "search_tickets": "Similar past tickets"
     },
     "chart": {
       "reported": "Reported",

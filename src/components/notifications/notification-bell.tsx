@@ -13,7 +13,7 @@ import { useUnreadCount } from "./use-notifications";
 export function NotificationBell({ userId, className }: { userId: string | null; className?: string }) {
   const t = useTranslations("notifications");
   const locale = useLocale();
-  const { data: unread = 0 } = useUnreadCount(userId);
+  const { data: unread = 0 } = useUnreadCount(userId, true);
   const shown = unread > 99 ? `${toLocaleDigits(99, locale)}+` : toLocaleDigits(unread, locale);
   return (
     <Link

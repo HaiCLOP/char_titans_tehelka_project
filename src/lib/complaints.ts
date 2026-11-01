@@ -13,13 +13,13 @@ import {
   type SubmitResult,
 } from "@/lib/domain";
 import { analyzeComplaint, embedText, type IntakeResult } from "@/lib/ai/intake";
+import { fallbackIntake } from "@/lib/ai/fallback";
 import { INTAKE_PROMPT_VERSION } from "@/lib/ai/prompts/intake";
-import { autoAssign } from "@/lib/assign";
+import { autoAssign, autoAssignEmergency } from "@/lib/assign";
 import { engineFetch } from "@/lib/engine";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAssameseText } from "@/lib/utils";
 import { filterAbusiveText } from "@/lib/moderation";
-import { buildCivicShieldReport } from "@/lib/civicshield";
 
 /** Safe auto-routing threshold (PRD rule 1). */
 export const AUTO_ROUTE_CONFIDENCE = 0.75;
@@ -128,29 +128,51 @@ export type SubmitInput = {
   anonymous: boolean;
   is_sensitive: boolean;
   intake?: Intake;
-  intake_source?: "ai" | "fallback";
-  intake_model?: string;
+  /** Idempotency key from the form: the same key twice returns the first ticket. */
+  client_request_id?: string;
 };
 
 type Department = { id: string; name_en: string; name_as: string };
 
-type LoadedImage = { path: string; dataUrl: string; bytes: Uint8Array };
+/** The ticket an earlier submit with the same idempotency key created, in the submit response shape. */
+async function existingSubmit(supabase: SupabaseClient, requestId: string): Promise<SubmitResult | null> {
+  const { data } = await supabase
+    .from("complaints")
+    .select("id, code, sla_due_at, status, is_urgent, departments(id, name_en, name_as)")
+    // Not filtered by user_id: anonymous rows have none (migration 13). RLS limits this to the caller's own
+    // tickets and the key is a random UUID, so it can only match the caller's earlier attempt.
+    .eq("client_request_id", requestId)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as unknown as {
+    id: string; code: string; sla_due_at: string | null; status: string; is_urgent: boolean;
+    departments: Department | Department[] | null;
+  };
+  const dept = Array.isArray(row.departments) ? (row.departments[0] ?? null) : row.departments;
+  return {
+    id: row.id,
+    code: row.code,
+    department: dept,
+    sla_due_at: row.sla_due_at,
+    status: z.enum(STATUSES).parse(row.status),
+    is_urgent: Boolean(row.is_urgent),
+    assignee: null,
+  };
+}
 
-/** Downloads the reporter's own photos (storage RLS: folder = uid) for vision intake and CivicShield inspection. */
-async function loadRawImages(supabase: SupabaseClient, paths: string[]): Promise<LoadedImage[]> {
-  const list: LoadedImage[] = [];
-  for (const p of paths) {
-    const { data, error } = await supabase.storage.from(BUCKET).download(p);
-    if (error || !data) continue;
-    const arrayBuf = await data.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuf);
-    const mime = data.type?.startsWith("image/")
-      ? data.type
-      : p.endsWith(".png") ? "image/png" : p.endsWith(".webp") ? "image/webp" : "image/jpeg";
-    const dataUrl = `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
-    list.push({ path: p, dataUrl, bytes });
-  }
-  return list;
+/** Downloads the reporter's own photos (storage RLS: folder = uid) as data URLs for multimodal intake. */
+async function loadImages(supabase: SupabaseClient, paths: string[]): Promise<string[]> {
+  const out = await Promise.all(
+    paths.map(async (p) => {
+      const { data, error } = await supabase.storage.from(BUCKET).download(p);
+      if (error || !data) return null;
+      const mime = data.type?.startsWith("image/")
+        ? data.type
+        : p.endsWith(".png") ? "image/png" : p.endsWith(".webp") ? "image/webp" : "image/jpeg";
+      return `data:${mime};base64,${Buffer.from(await data.arrayBuffer()).toString("base64")}`;
+    }),
+  );
+  return out.filter((u): u is string => u !== null);
 }
 
 /**
@@ -166,6 +188,12 @@ export async function submitComplaint(
   // Automatically filter and mask abusive words from input text
   const { cleanText, hasAbuse } = filterAbusiveText(input.text);
   input.text = cleanText;
+
+  // A retried submit (timeout, double tap) returns the ticket the first attempt created.
+  if (input.client_request_id) {
+    const prior = await existingSubmit(supabase, input.client_request_id);
+    if (prior) return prior;
+  }
 
   // Photo paths must be the caller's own uploads (storage RLS also enforces this on upload).
   if (input.image_paths.some((p) => !p.startsWith(`${user.id}/`))) {
@@ -185,38 +213,43 @@ export async function submitComplaint(
   if (input.location_id && !location?.data) throw new PipelineError("VALIDATION_ERROR", "Unknown location");
   const locationName = (location?.data as { name_en: string } | null)?.name_en;
 
-  // ---- intake (Item 1: Never trust AI analysis from frontend; verify on backend) ----
-  const rawImages = input.image_paths.length ? await loadRawImages(supabase, input.image_paths) : [];
-  const imageUrls = rawImages.map((r) => r.dataUrl);
-
-  const r: IntakeResult = await analyzeComplaint({ text: input.text, images: imageUrls, locationName });
-  let intake: Intake = r.intake;
+  // ---- intake (server-authoritative) ----
+  // The classification that drives routing and privacy (confidence, urgent, sensitive, abusive, relevance,
+  // image checks, AI vs fallback) is ALWAYS computed here. A preview from /api/ai/analyze may only supply
+  // what the reporter is allowed to edit: title, category, priority. analyzeComplaint caches by
+  // text + photos + location, so a submit right after an identical preview normally costs no extra AI call.
+  const images = input.image_paths.length ? await loadImages(supabase, input.image_paths) : [];
+  const r: IntakeResult = await analyzeComplaint({ text: input.text, images, locationName });
   const source: "ai" | "fallback" = r.source;
-
-  // CivicShield evidence verification (authenticity, C2PA, SynthID, and SHA-256 hash preservation)
-  const civicshield = buildCivicShieldReport(
-    rawImages.map((img) => ({ path: img.path, bytes: img.bytes })),
-    intake,
-  );
-
+  const kw = fallbackIntake(input.text);
+  let intake: Intake = {
+    ...r.intake,
+    // Deterministic keywords can only add caution, never remove it.
+    is_urgent: r.intake.is_urgent || kw.is_urgent,
+    is_sensitive_suggested: r.intake.is_sensitive_suggested || kw.is_sensitive_suggested,
+  };
+  const edited = input.intake;
+  if (edited) {
+    intake = {
+      ...intake,
+      title_en: edited.title_en,
+      title_as: edited.title_as,
+      category: edited.category,
+      priority: edited.priority,
+    };
+  }
   const meta: Record<string, unknown> = {
     source: r.source,
     via: r.via,
     model: r.model ?? null,
     ms: r.ms,
+    edited_preview: Boolean(edited),
     attempts: {
       count: r.attempts.length,
       failed: r.attempts.filter((a) => a.status !== "ok").length,
       chain: r.attempts.map((a) => `${a.provider}/${a.model}:${a.status}`).slice(0, 10),
     },
-    civicshield,
   };
-
-  // If user provided custom category override and it's valid, record user hint but verify
-  if (input.intake?.category && input.intake.category !== intake.category) {
-    meta.user_category_hint = input.intake.category;
-  }
-
   if (intake.is_urgent) intake = { ...intake, priority: 1 };
 
   if (intake.is_relevant === false) {
@@ -225,16 +258,13 @@ export async function submitComplaint(
   if (intake.has_abusive_image || intake.has_explicit_image) {
     throw new PipelineError("VALIDATION_ERROR", intake.image_rejection_reason_en || "Abusive, offensive, or explicit images are strictly prohibited");
   }
-  if (intake.has_ai_image || civicshield.status === "ai_detected") {
-    throw new PipelineError("VALIDATION_ERROR", intake.image_rejection_reason_en || "Stock photos, internet images (OSINT), and AI-generated pictures are strictly prohibited. Please capture an authentic campus photo directly.");
+  if (intake.has_ai_image) {
+    throw new PipelineError("VALIDATION_ERROR", intake.image_rejection_reason_en || "AI-generated or synthetic images are not permitted");
   }
   if (intake.is_abusive && (hasAbuse || !intake.is_relevant)) {
     throw new PipelineError("VALIDATION_ERROR", intake.abusive_reason_en || "Abusive language or personal attacks are strictly prohibited");
   }
-
-  // Item 3: Sensitive complaints must automatically become private
-  const sensitive = input.is_sensitive || intake.is_sensitive_suggested || intake.is_abusive;
-  if (sensitive) {
+  if (intake.is_abusive) {
     input.is_sensitive = true;
     input.visibility = "private";
   }
@@ -253,6 +283,7 @@ export async function submitComplaint(
   const department = (deptRes.data as Department | null) ?? null;
 
   // ---- status (PRD rule 1: safe auto-routing only) ----
+  const sensitive = input.is_sensitive || intake.is_sensitive_suggested;
   const autoRoute =
     source === "ai" &&
     department !== null &&
@@ -286,9 +317,15 @@ export async function submitComplaint(
       visibility: input.is_sensitive ? "private" : input.visibility, // sensitive ⇒ private (DB constraint too)
       is_sensitive: input.is_sensitive,
       is_urgent: intake.is_urgent,
+      client_request_id: input.client_request_id ?? null,
     })
     .select("id, code, sla_due_at, status, is_urgent")
     .single();
+  // Two identical submits racing: the unique (user_id, client_request_id) index lets only one in.
+  if (insErr?.code === "23505" && input.client_request_id) {
+    const prior = await existingSubmit(supabase, input.client_request_id);
+    if (prior) return prior;
+  }
   if (insErr || !row) {
     console.error("[complaints] insert failed", insErr?.code, insErr?.message);
     throw new PipelineError("INTERNAL", "Could not save the complaint");
@@ -319,6 +356,11 @@ export async function submitComplaint(
   let assignee: { id: string; name: string | null } | null = null;
   if (statusOut === "triaged" && autoRoute && !metaErr) {
     assignee = await autoAssign(row.id as string);
+    if (assignee) statusOut = "assigned";
+  }
+  // Emergencies (fights, harassment, injuries) skip the safe rule, but only when an admin turned it on.
+  if (!assignee && row.is_urgent) {
+    assignee = await autoAssignEmergency(row.id as string);
     if (assignee) statusOut = "assigned";
   }
 

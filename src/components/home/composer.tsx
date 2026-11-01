@@ -12,7 +12,7 @@ export const REPORT_DRAFT_KEY = "cs_report_draft";
 export const REPORT_PHOTO_DRAFT_KEY = "cs_report_photo_draft";
 
 /** "What needs fixing?" — starts a report from the home page without leaving the flow. */
-export function HomeComposer({ name }: { name: string | null }) {
+export function HomeComposer({ name, avatar }: { name: string | null; avatar?: { id: string; character: number | null; src: string | null } | null }) {
   const t = useTranslations("home");
   const locale = useLocale();
   const router = useRouter();
@@ -91,7 +91,7 @@ export function HomeComposer({ name }: { name: string | null }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           {name ? (
-            <Avatar name={name} size="md" decorative />
+            <Avatar name={name} src={avatar?.src} characterId={avatar?.character} seed={avatar?.id} size="md" decorative />
           ) : (
             <span
               className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary shadow-2xs"

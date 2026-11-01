@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { ChevronDown, GraduationCap, LayoutDashboard, Search } from "lucide-react";
+import { ChevronDown, GraduationCap, LayoutDashboard, LogIn, Search } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Avatar, buttonVariants } from "@/components/ui";
 import { LanguageSwitch, ModeToggle } from "@/components/preference-switchers";
@@ -17,11 +17,11 @@ export async function Header() {
     <header className="sticky top-0 z-20 border-b border-border bg-surface/90 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75 sm:px-8 lg:pr-10 lg:pl-[7.5rem]">
       <div className="flex h-16 items-center gap-3">
         <Link href="/" aria-label={t("shell.home")} className="relative after:absolute after:-inset-0.5 after:content-[''] lg:hidden">
-          <BrandMark className="size-9 rounded-xl shadow-xs" />
+          <BrandMark className="size-9 rounded-xl" />
         </Link>
 
-        <div className="hidden h-10 items-center gap-2.5 rounded-xl border border-border bg-surface pr-2.5 pl-3 text-sm shadow-xs md:flex">
-          <GraduationCap className="size-4 text-primary" strokeWidth={1.75} aria-hidden />
+        <div className="hidden h-10 items-center gap-2.5 rounded-xl border border-border bg-surface pr-2.5 pl-3 text-sm shadow-sm md:flex">
+          <GraduationCap className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
           <span className="font-semibold tracking-[-0.01em]">{t("shell.university")}</span>
           <span className="rounded-md bg-surface-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">{t(`roles.${role}`)}</span>
           <ChevronDown className="size-3.5 text-subtle-foreground" aria-hidden />
@@ -53,11 +53,16 @@ export async function Header() {
               )}
               <NotificationBell userId={user.id} />
               <Link href="/profile" aria-label={t("shell.openProfile")} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <Avatar name={name} src={profile?.avatar_url} size="md" decorative className="ring-1 ring-border" />
+                <Avatar name={name} src={profile?.avatar_url} characterId={profile?.avatar_character} seed={user.id} size="md" decorative className="ring-1 ring-border" />
               </Link>
             </>
           ) : (
-            <Link href="/login" className={buttonVariants({ variant: "primary", size: "sm" })}>{t("shell.signIn")}</Link>
+            // Icon-only below sm: the Assamese label does not fit next to the switches at 360 px.
+            <Link href="/login" className={buttonVariants({ variant: "primary", size: "sm", className: "max-sm:size-10 max-sm:px-0" })}>
+              <LogIn strokeWidth={1.75} aria-hidden />
+              <span className="hidden sm:inline">{t("shell.signIn")}</span>
+              <span className="sr-only sm:hidden">{t("shell.signIn")}</span>
+            </Link>
           )}
         </div>
       </div>

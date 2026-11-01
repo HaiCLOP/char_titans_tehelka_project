@@ -70,6 +70,7 @@ async function loadHome(view: "open" | "resolved") {
   const supabase = await createClient();
   const [user, profile] = await Promise.all([getUser(), getProfile()]);
   const viewer = user && profile ? { id: user.id, profile } : null;
+  const avatar = user ? { id: user.id, character: profile?.avatar_character ?? null, src: profile?.avatar_url ?? null } : null;
 
   const [issues, statsTrend] = await Promise.allSettled([
     getHomeIssues(supabase, viewer, view),
@@ -80,6 +81,7 @@ async function loadHome(view: "open" | "resolved") {
 
   return {
     name: profile?.full_name ?? null,
+    avatar,
     issues: issues.status === "fulfilled" ? issues.value : null,
     stats: statsAndTrend.stats,
     trend: statsAndTrend.trend,
@@ -101,7 +103,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
       {/* ============================================================ */}
       <div className="space-y-6 min-w-0">
         {/* 1. Quick Report Composer ("What needs fixing? like this but better") */}
-        <HomeComposer name={data.name} />
+        <HomeComposer name={data.name} avatar={data.avatar} />
 
         {/* Mobile-only 4-Stat Metric Strip (< lg) */}
         <div className="lg:hidden">
