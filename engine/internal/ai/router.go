@@ -151,6 +151,9 @@ func defaultChains() map[Purpose][]ModelEntry {
 		PurposeTranslateMsg:    {g("gemini-flash-lite-latest", "assamese"), g("gemini-flash-latest", "assamese"), free("assamese")},
 		PurposeResolutionCheck: {g("gemini-flash-latest", "vision", "json")},
 		PurposeDailyBrief:      {g("gemini-flash-latest", "assamese"), free("assamese")},
+		// Speech is Gemini-only (free tier); OpenRouter has no free audio models.
+		PurposeSTT: {g("gemini-flash-lite-latest", "audio", "assamese"), g("gemini-flash-latest", "audio", "assamese")},
+		PurposeTTS: {g("gemini-2.5-flash-preview-tts", "tts")},
 	}
 }
 

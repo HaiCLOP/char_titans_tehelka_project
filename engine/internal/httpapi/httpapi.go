@@ -64,6 +64,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /v1/embed", s.auth(http.HandlerFunc(s.embed)))
 	mux.Handle("POST /v1/similar", s.auth(http.HandlerFunc(s.similar)))
 	mux.Handle("POST /v1/router/invalidate", s.auth(http.HandlerFunc(s.invalidate)))
+	mux.Handle("POST /v1/stt", s.auth(http.HandlerFunc(s.stt)))
+	mux.Handle("POST /v1/tts", s.auth(http.HandlerFunc(s.tts)))
 	mux.Handle("/v1/", s.auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fail(w, "NOT_FOUND", "No such route") })))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fail(w, "NOT_FOUND", "No such route") })
 	return s.recover(s.limit(s.access(mux)))

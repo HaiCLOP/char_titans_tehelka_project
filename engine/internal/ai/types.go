@@ -26,6 +26,7 @@ var PurposeTimeout = map[Purpose]time.Duration{
 	PurposeIntake: 15 * time.Second, PurposeEmbed: 5 * time.Second, PurposeDedupVerify: 6 * time.Second,
 	PurposeAgent: 25 * time.Second, PurposeReplyDraft: 10 * time.Second, PurposeTranslateMsg: 6 * time.Second,
 	PurposeResolutionCheck: 15 * time.Second, PurposeDailyBrief: 20 * time.Second,
+	PurposeSTT: 40 * time.Second, PurposeTTS: 30 * time.Second,
 }
 
 type ModelEntry struct {
