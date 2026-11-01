@@ -70,7 +70,8 @@ export type ReportAgentResult = {
 };
 
 function systemPrompt(o: {
-  replyLang: "en" | "as"; asked: number; mustDraft: boolean; photos: number; location: string | null; placeKnown: boolean; strict: boolean;
+  replyLang: "en" | "as"; asked: number; mustDraft: boolean; photos: number; location: string | null; placeKnown: boolean;
+  homeHostel: string | null; strict: boolean;
 }) {
   return `You are Civi, the friendly helper of CivicSense at Dibrugarh University, Assam. A student is telling you about a campus problem.
 Your job: understand the problem, ask at most ${MAX_QUESTIONS} short follow-up questions in total, then return a report draft.
@@ -80,7 +81,7 @@ Reply language: ${o.replyLang === "as" ? "Assamese (অসমীয়া script
 Questions already asked: ${o.asked} of ${MAX_QUESTIONS}.
 Photos attached by the student: ${o.photos}.
 Location already chosen by the student: ${o.location ?? "none"}.
-Specific campus building named so far: ${o.location || o.placeKnown ? "yes" : "NO (only a generic place or none). If you still may ask, your question must be which building/hostel exactly (need = \"location\")"}.
+${o.homeHostel ? `The student's own hostel (from their profile): ${o.homeHostel}. When they say "my hostel", "our hostel" or just "hostel" without naming one, it means this hostel: use it as draft.location_query and do not ask which hostel.\n` : ""}Specific campus building named so far: ${o.location || o.placeKnown ? "yes" : "NO (only a generic place or none). If you still may ask, your question must be which building/hostel exactly (need = \"location\")"}.
 
 Rules:
 - ${o.mustDraft ? "You MUST return a draft now (need = null). Do not ask another question." : "Ask ONE short question only if something important is missing: where exactly (if no place is known), since when / how bad (if the problem is vague), or a photo (only if a photo would clearly help and none is attached). A generic place without a name (\"hostel\", \"washroom\", \"my department\") counts as missing: ask which one. Otherwise return the draft right away."}
@@ -163,6 +164,8 @@ export function rankLocations(all: LocationItem[], query: string, limit = 3, spe
   return ranked.filter((s) => s.score >= top * 0.6).slice(0, limit).map((s) => s.l);
 }
 
+const HOSTEL_WORD = /hostel|হোষ্টেল|হোস্টেল|ছাত্ৰাবাস|ছাত্ৰীনিবাস/i;
+
 async function loadLocations(supabase: SupabaseClient): Promise<LocationItem[]> {
   const { data, error } = await supabase.from("locations").select("id, name_en, name_as, type").order("name_en");
   if (error) return [];
@@ -212,6 +215,10 @@ export async function runReportAgentTurn(supabase: SupabaseClient, userId: strin
   const chosen = input.location_id ? (allLocations.find((l) => l.id === input.location_id) ?? null) : null;
   // Deterministic hint so even a small model asks "which hostel?" instead of drafting a placeless report.
   const placeKnown = rankLocations(allLocations, userText, 1, true).length > 0;
+  // "No water in my hostel": the profile already says which hostel, so Civi should not ask again.
+  const { data: me } = await supabase.from("profiles").select("hostel").eq("id", userId).maybeSingle();
+  const homeHostel = (me as { hostel?: string | null } | null)?.hostel?.trim() || null;
+  const usesHomeHostel = Boolean(homeHostel) && !placeKnown && HOSTEL_WORD.test(userText);
 
   const history = messages.map((m, i) =>
     m.role === "user" && i === messages.length - 1 && images.length
@@ -225,7 +232,7 @@ export async function runReportAgentTurn(supabase: SupabaseClient, userId: strin
       async ({ languageModel, abortSignal }) => {
         const { output } = await generateText({
           model: languageModel(),
-          system: systemPrompt({ replyLang, asked, mustDraft, photos: images.length, location: chosen ? `${chosen.name_en} (${chosen.name_as})` : null, placeKnown, strict }),
+          system: systemPrompt({ replyLang, asked, mustDraft, photos: images.length, location: chosen ? `${chosen.name_en} (${chosen.name_as})` : null, placeKnown: placeKnown || usesHomeHostel, homeHostel, strict }),
           messages: history,
           output: Output.object({ schema: ModelTurnSchema }),
           abortSignal,
@@ -248,12 +255,15 @@ export async function runReportAgentTurn(supabase: SupabaseClient, userId: strin
   } catch {
     // Every model failed: one canned question about the place, then a keyword draft. The client localises the line.
     source = "fallback";
-    const needPlace = asked === 0 && !chosen && !placeKnown && !mustDraft;
+    const needPlace = asked === 0 && !chosen && !placeKnown && !usesHomeHostel && !mustDraft;
     turn = { reply: "", need: needPlace ? "location" : null, draft: needPlace ? null : fallbackDraft(userText) };
   }
 
   let draft = turn.draft;
   if (!draft && mustDraft) draft = fallbackDraft(userText);
+  if (draft && usesHomeHostel && (!draft.location_query || !rankLocations(allLocations, draft.location_query, 1, true).length)) {
+    draft = { ...draft, location_query: homeHostel };
+  }
   if (draft) {
     const urgent = draft.is_urgent || kw.is_urgent;
     draft = {
