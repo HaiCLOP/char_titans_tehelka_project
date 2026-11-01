@@ -27,12 +27,27 @@ export function PwaManager() {
   const [showRestored, setShowRestored] = useState(false);
 
   useEffect(() => {
-    // Register Service Worker
+    // Only register Service Worker in production to prevent Turbopack chunk cache clashes
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then(() => console.log("[PWA] Service Worker registered"))
-        .catch((err) => console.warn("[PWA] Service Worker registration failed:", err));
+      if (process.env.NODE_ENV === "production") {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .catch((err) => console.warn("[PWA] Service Worker registration failed:", err));
+      } else {
+        // Automatically unregister any stale service workers and clear cache in development
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister();
+          }
+        });
+        if ("caches" in window) {
+          caches.keys().then((keys) => {
+            for (const key of keys) {
+              caches.delete(key);
+            }
+          });
+        }
+      }
     }
 
     let timer: NodeJS.Timeout;

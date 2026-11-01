@@ -1,5 +1,5 @@
 // CivicSense PWA Service Worker - Offline resilience for Dibrugarh University
-const CACHE_NAME = "civicsense-cache-v1";
+const CACHE_NAME = "civicsense-cache-v2";
 const STATIC_ASSETS = [
   "/",
   "/manifest.webmanifest",
@@ -37,6 +37,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Never intercept Turbopack or HMR development streams
+  if (
+    url.pathname.includes("webpack-hmr") ||
+    url.pathname.includes("__turbopack") ||
+    url.pathname.includes(".hot-update.") ||
+    url.pathname.startsWith("/api/")
+  ) {
+    return;
+  }
+
   // Network-first for HTML pages
   if (event.request.mode === "navigate") {
     event.respondWith(
@@ -48,22 +58,18 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static build chunks and campus assets
+  // Network-first for dynamic Next.js chunks, with cache fallback
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/campus/")) {
     event.respondWith(
-      caches.match(event.request).then((cached) => {
-        return (
-          cached ||
-          fetch(event.request).then((res) => {
-            if (res.status === 200) {
-              const copy = res.clone();
-              caches.open(CACHE_NAME).then((c) => c.put(event.request, copy));
-            }
-            return res;
-          })
-        );
-      })
+      fetch(event.request)
+        .then((res) => {
+          if (res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(event.request, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(event.request))
     );
   }
 });
-
