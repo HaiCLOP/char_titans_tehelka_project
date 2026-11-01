@@ -19,17 +19,27 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
   const router = useRouter();
 
   const [text, setText] = useState("");
+  const [selectedStarter, setSelectedStarter] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
+  const [isVideo, setIsVideo] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handlePhotoSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
+    const video = file.type.startsWith("video/");
+    if (video) {
+      const url = URL.createObjectURL(file); const probe = document.createElement("video"); probe.preload = "metadata";
+      probe.onloadedmetadata = () => { URL.revokeObjectURL(url); if (probe.duration > 60) { setMediaError(true); return; } setMediaError(false); setPhotoPreview(URL.createObjectURL(file)); setPhotoName(file.name); setIsVideo(true); };
+      probe.onerror = () => URL.revokeObjectURL(url); probe.src = url; e.target.value = ""; return;
+    }
+    setIsVideo(false);
     setPhotoName(file.name);
     const reader = new FileReader();
+    setMediaError(false);
     reader.onload = () => {
       if (typeof reader.result === "string") {
         setPhotoPreview(reader.result);
@@ -41,6 +51,7 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
   const removePhoto = () => {
     setPhotoPreview(null);
     setPhotoName(null);
+    setIsVideo(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -48,9 +59,12 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
 
   const applyStarter = (prefix: string) => {
     setText((prev) => {
-      const next = prev.trim() ? `${prev} · ${prefix}` : prefix;
-      return next;
+      const description = selectedStarter && prev.startsWith(selectedStarter)
+        ? prev.slice(selectedStarter.length).trimStart()
+        : prev.trim();
+      return description ? `${prefix}${description}` : prefix;
     });
+    setSelectedStarter(prefix);
     textareaRef.current?.focus();
   };
 
@@ -105,11 +119,6 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
           </div>
         </div>
 
-        {/* AI Tag */}
-        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary shrink-0">
-          <Sparkles className="size-3" aria-hidden />
-          <span>{locale === "as" ? "স্বয়ংক্ৰিয় এআই" : "AI Auto-Triage"}</span>
-        </span>
       </div>
 
       {/* Quick Prompt Starter Pills */}
@@ -158,31 +167,32 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
 
       {/* Photo Preview Strip (if attached) */}
       {photoPreview && (
-        <div className="mt-2.5 flex items-center justify-between rounded-xl border border-border/80 bg-surface-muted/50 p-2 text-xs">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-xl border border-border/80 bg-surface-muted/50 p-2 text-xs">
+          <div className="flex min-w-0 items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photoPreview} alt="Attached thumbnail" className="size-9 rounded-lg object-cover border border-border shrink-0" />
+            {isVideo ? <video src={photoPreview} controls playsInline className="h-24 w-36 shrink-0 rounded-lg border border-border object-contain" /> : /* eslint-disable-next-line @next/next/no-img-element */ <img src={photoPreview} alt={t("photoPreviewAlt")} className="size-24 shrink-0 rounded-lg border border-border object-cover" />}
             <div className="min-w-0">
               <span className="block truncate font-medium text-foreground text-xs">{photoName || "photo.jpg"}</span>
-              <span className="text-[10px] text-muted-foreground">Ready to attach</span>
+              <span className="text-[10px] text-muted-foreground">{t("photoReady")}</span>
             </div>
           </div>
           <button
             type="button"
             onClick={removePhoto}
-            className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground transition-colors"
-            aria-label="Remove photo"
+            className="grid size-10 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground transition-colors"
+            aria-label={t("removePhoto")}
           >
             <X className="size-3.5" aria-hidden />
           </button>
         </div>
       )}
+      {mediaError && <p role="alert" className="mt-2 text-xs text-danger">{t("videoTooLong")}</p>}
 
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/mp4,video/webm,video/quicktime"
         className="hidden"
         onChange={handlePhotoSelect}
       />
@@ -196,7 +206,7 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
           className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-surface-muted hover:text-foreground transition-colors"
         >
           <ImagePlus className="size-4 text-primary" aria-hidden />
-          <span>{photoPreview ? (locale === "as" ? "ফটো সলনি কৰক" : "Change photo") : t("addPhoto")}</span>
+          <span>{photoPreview ? t("changeMedia") : t("addPhoto")}</span>
         </button>
 
         <button

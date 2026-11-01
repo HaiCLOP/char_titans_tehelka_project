@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -86,9 +86,48 @@ export function CiviCompanion() {
   const pathname = usePathname();
   const router = useRouter();
   const locale = useLocale();
+  const t = useTranslations("mascot");
+  const rootRef = useRef<HTMLElement>(null);
+  const [position, setPosition] = useState({ right: 16, bottom: 16 });
+  const positionRef = useRef(position);
+  const dragRef = useRef<{ x: number; y: number; right: number; bottom: number; moved: boolean } | null>(null);
+  const suppressClick = useRef(false);
 
   const [expanded, setExpanded] = useState(false);
   const [minimized, setMinimized] = useState(false);
+
+  const place = (right: number, bottom: number) => {
+    const size = rootRef.current?.getBoundingClientRect();
+    const next = { right: Math.max(12, Math.min(right, window.innerWidth - (size?.width ?? 72) - 12)), bottom: Math.max(12, Math.min(bottom, window.innerHeight - (size?.height ?? 72) - 12)) };
+    positionRef.current = next;
+    setPosition(next);
+  };
+  useEffect(() => {
+    try { const saved = JSON.parse(localStorage.getItem("cs_civi_position") ?? "null"); if (saved && Number.isFinite(saved.right) && Number.isFinite(saved.bottom)) place(saved.right, saved.bottom); } catch {}
+    const resize = () => place(positionRef.current.right, positionRef.current.bottom);
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+  useEffect(() => { place(positionRef.current.right, positionRef.current.bottom); }, [expanded, minimized]);
+  const startDrag = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    suppressClick.current = false;
+    setBubbleVisible(false);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { x: event.clientX, y: event.clientY, ...positionRef.current, moved: false };
+  };
+  const moveDrag = (event: PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+    if (Math.hypot(dx, dy) > 5) drag.moved = true;
+    if (drag.moved) place(drag.right - dx, drag.bottom - dy);
+  };
+  const endDrag = () => {
+    suppressClick.current = dragRef.current?.moved ?? false;
+    dragRef.current = null;
+    try { localStorage.setItem("cs_civi_position", JSON.stringify(positionRef.current)); } catch {}
+  };
 
   const isAdmin = pathname.startsWith("/admin");
 
@@ -148,24 +187,13 @@ export function CiviCompanion() {
 
   const tipText = locale === "as" ? advice.tipAs : advice.tipEn;
 
-  if (minimized) {
-    return (
-      <button
-        type="button"
-        onClick={() => setMinimized(false)}
-        className="fixed bottom-4 right-4 z-40 grid size-12 place-items-center rounded-full border border-border bg-surface text-foreground shadow-lg hover:scale-105 active:scale-95 transition-all"
-        title="Open Civi Assistant"
-        aria-label="Open Civi Assistant"
-      >
-        <Civi pose="hero" size="sm" interactive={false} />
-      </button>
-    );
-  }
 
   return (
     <aside
-      aria-label="Civi Campus Assistant"
-      className="fixed bottom-4 right-4 z-40 flex flex-col items-end pointer-events-none"
+      ref={rootRef}
+      style={position}
+      aria-label={t("assistant")}
+      className="fixed z-40 flex max-w-[calc(100vw-2rem)] flex-col items-end pointer-events-none"
     >
       <div className="pointer-events-auto">
         <AnimatePresence>
@@ -176,7 +204,7 @@ export function CiviCompanion() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 12 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="mb-2 w-80 max-w-[calc(100vw-2rem)] rounded-3xl border border-border bg-surface p-4 shadow-xl dark:shadow-black/50"
+              className="mb-2 max-h-[calc(100dvh-2rem)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-3xl border border-border bg-surface p-4 shadow-xl dark:shadow-black/50"
             >
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-2">
@@ -345,7 +373,7 @@ export function CiviCompanion() {
             /* Minimized/Collapsed Floating Pill with Brief Speech Bubble */
             <div className="flex items-end gap-2">
               <AnimatePresence>
-                {bubbleVisible && (
+                {bubbleVisible && !minimized && (
                   <motion.div
                     initial={{ opacity: 0, x: 10, scale: 0.95 }}
                     animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -361,16 +389,17 @@ export function CiviCompanion() {
 
               <button
                 type="button"
-                onClick={() => setExpanded(true)}
-                className="group relative flex items-center justify-center rounded-full border border-border bg-surface p-1 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
-                title="Tap Civi for help"
-                aria-label="Tap Civi for help"
+                onClick={() => { if (suppressClick.current) { suppressClick.current = false; return; } setMinimized(false); setExpanded(true); }}
+                onPointerDown={startDrag}
+                onPointerMove={moveDrag}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
+                className="relative flex min-h-12 min-w-12 touch-none select-none items-center justify-center bg-transparent p-1 cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                title={t("dragHint")}
+                aria-label={t("dragHint")}
               >
-                <Civi pose={advice.pose} size="md" interactive={false} />
-                <span className="absolute -top-1 -right-1 flex size-3">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                  <span className="relative inline-flex size-3 rounded-full bg-primary" />
-                </span>
+                <Civi pose={advice.pose} size={minimized ? "sm" : "md"} interactive={false} />
+
               </button>
             </div>
           )}

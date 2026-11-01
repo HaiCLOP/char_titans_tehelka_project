@@ -364,7 +364,7 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
 
 const DETAIL_COLUMNS =
   `${LIST_COLUMNS}, user_id, anonymous, original_text, location_note, department_id, assignee_id, parent_id, ` +
-  "is_sensitive, ai_status, ai_meta, resolution_note_en, resolution_note_as, resolution_photo_url, rating, " +
+  "is_sensitive, ai_status, ai_meta, video_urls, resolution_note_en, resolution_note_as, resolution_photo_url, rating, " +
   "verified_by_reporter, resolved_at, department:departments(id, name_en, name_as)";
 
 type DetailRow = ListRow & {
@@ -378,6 +378,7 @@ type DetailRow = ListRow & {
   is_sensitive: boolean;
   ai_status: string;
   ai_meta: Record<string, unknown> | null;
+  video_urls: string[] | null;
   resolution_note_en: string | null;
   resolution_note_as: string | null;
   resolution_photo_url: string | null;
@@ -440,6 +441,7 @@ async function loadPublicDetailRow(supabase: Client, f: { col: "id" | "code"; va
   return {
     ...v,
     image_urls: p?.image_urls ?? [],
+    video_urls: [],
     user_id: null,
     anonymous: false,
     original_text: "",
@@ -517,7 +519,7 @@ export async function getComplaintDetail(
         .order("created_at", { ascending: true })
         .order("id", { ascending: true });
 
-  const [eventsRes, supportedRes, transitionsRes, photos, resolutionPhotos, location] = await Promise.all([
+  const [eventsRes, supportedRes, transitionsRes, photos, videos, resolutionPhotos, location] = await Promise.all([
     eventsQuery,
     supabase
       .from("complaint_supporters")
@@ -527,6 +529,7 @@ export async function getComplaintDetail(
       .maybeSingle(),
     supabase.from("status_transitions").select("to_status").eq("from_status", row.status),
     signPaths(supabase, viewer, PHOTO_BUCKET, row.image_urls ?? []),
+    signPaths(supabase, viewer, "complaint-videos", row.video_urls ?? []),
     row.resolution_photo_url && !/^https?:/i.test(row.resolution_photo_url)
       ? signPaths(supabase, viewer, RESOLUTION_BUCKET, [row.resolution_photo_url])
       : Promise.resolve(new Map<string, string>()),
@@ -612,6 +615,7 @@ export async function getComplaintDetail(
     original_text: isOwner || staffView ? row.original_text : null,
     location_note: row.location_note,
     photos: (row.image_urls ?? []).map((p) => photos.get(p)).filter((u): u is string => Boolean(u)),
+    videos: (row.video_urls ?? []).map((p) => videos.get(p)).filter((u): u is string => Boolean(u)),
     resolved_at: row.resolved_at,
     resolution: hasResolution
       ? {
@@ -650,6 +654,9 @@ export async function getComplaintDetail(
       confidence: num(meta.confidence),
       priority_reason_en: str(meta.priority_reason_en),
       auto_routed: typeof meta.auto_routed === "boolean" ? meta.auto_routed : null,
+      location_review: ["inside_campus", "nearby_outside_campus", "no_gps"].includes(String(meta.media_location_review))
+        ? meta.media_location_review as "inside_campus" | "nearby_outside_campus" | "no_gps"
+        : null,
       civicshield: (meta.civicshield as CivicShieldReport | null) ?? null,
     };
   }

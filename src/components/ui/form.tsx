@@ -140,7 +140,7 @@ export function Select({ id: idProp, label, hint, error, fieldClassName, classNa
         >
           {placeholder !== undefined && <option value="">{placeholder}</option>}
           {options.map((o) => (
-            <option key={o.value} value={o.value} disabled={o.disabled}>
+            <option key={o.value} value={o.value} disabled={o.disabled} className="bg-surface text-foreground">
               {o.label}
             </option>
           ))}

@@ -229,14 +229,14 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
       </div>
       )}
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <Card className="min-w-0 overflow-hidden p-0">
+      <div className={cn("grid grid-cols-[minmax(0,1fr)] gap-5", issueHrefBase.startsWith("/admin/") ? "lg:grid-cols-[minmax(0,1fr)_19rem]" : "xl:grid-cols-[minmax(0,1fr)_22rem]")}>
+        <Card className="min-w-0 overflow-hidden p-0 sm:p-0">
           <CampusAtlas
             markers={markers}
             label={t("planLabel")}
             selectedId={selected}
             onSelect={setSelected}
-            className="aspect-[4/5] sm:aspect-[4/3] lg:aspect-[16/11]"
+            className={issueHrefBase.startsWith("/admin/") ? "h-[420px] w-full sm:h-[min(65dvh,640px)] sm:min-h-[400px]" : "aspect-[4/5] sm:aspect-[4/3] lg:aspect-[16/11]"}
           />
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border px-5 py-3.5 text-xs text-muted-foreground">
             {[1, 2, 3, 4].map((p) => (
@@ -279,7 +279,7 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
           </div>
         </Card>
 
-        <Card className="self-start p-0">
+        <Card className="min-w-0 self-start overflow-hidden p-0 sm:p-0">
           <div className="flex items-center justify-between gap-3 px-5 pt-5">
             <h2 className="text-title text-lg">{t("buildings")}</h2>
             <div role="group" aria-label={t("sortLabel")} className="inline-flex rounded-full bg-surface-sunken/70 p-1">
@@ -341,7 +341,7 @@ export function CampusMap({ locations, issues, category, includeFixed, filters, 
           {sorted.length === 0 ? (
             <p className="px-5 py-6 text-sm text-muted-foreground">{searchQuery ? t("searchEmpty") : t("noBuildings")}</p>
           ) : (
-            <ul className="mt-3 divide-y divide-border border-t border-border xl:max-h-[36rem] xl:overflow-y-auto">
+            <ul className={cn("mt-3 divide-y divide-border border-t border-border", issueHrefBase.startsWith("/admin/") ? "max-h-[28rem] overflow-y-auto lg:max-h-[min(60dvh,560px)]" : "xl:max-h-[36rem] xl:overflow-y-auto")}>
               {sorted.map((p) => {
                 const count = sized(p);
                 const on = selected === p.id;

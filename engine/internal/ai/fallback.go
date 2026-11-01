@@ -64,11 +64,16 @@ func runes(s string, n int) string {
 // FallbackIntake classifies by keywords. Never copies English to Assamese or vice versa.
 func FallbackIntake(text string) Intake {
 	cat := "other"
+	categories := make([]string, 0, len(fallbackRules))
 	for _, r := range fallbackRules {
 		if r.re.MatchString(text) {
-			cat = r.cat
-			break
+			categories = append(categories, r.cat)
 		}
+	}
+	if len(categories) > 0 {
+		cat = categories[0]
+	} else {
+		categories = append(categories, cat)
 	}
 
 	catInfo, ok := categoryNames[cat]
@@ -104,7 +109,7 @@ func FallbackIntake(text string) Intake {
 
 	return Intake{
 		TitleEn: titleEn, TitleAs: titleAs, SummaryEn: sumEn, SummaryAs: sumAs,
-		Category: cat, Priority: priority, PriorityReasonEn: reason, LocationHint: nil,
+		Category: cat, Categories: categories, Priority: priority, PriorityReasonEn: reason, LocationHint: nil,
 		IsAbusive: false, HasPersonalData: phoneRe.MatchString(text), Confidence: 0.3,
 		IsUrgent: urgent, IsSensitiveSuggested: sensitiveRe.MatchString(text),
 		IsRelevant: true,

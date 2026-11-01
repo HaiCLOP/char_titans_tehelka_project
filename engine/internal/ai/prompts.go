@@ -3,7 +3,7 @@ package ai
 import "strings"
 
 // IntakePromptVersion tracks src/lib/ai/prompts/intake.ts (INTAKE_PROMPT_VERSION).
-const IntakePromptVersion = "intake-v3"
+const IntakePromptVersion = "intake-v5"
 
 const strictAssameseRule = "\n- PREVIOUS ANSWER USED BENGALI LETTERS. Rewrite all Assamese text with ৰ for 'r' and ৱ for 'w'. Never output র."
 
@@ -16,6 +16,8 @@ Return JSON only, matching the schema exactly.
 
 Rules:
 - category must be one of: ` + strings.Join(Categories, ", ") + `.
+- categories must include the primary category and every other category directly involved in a distinct problem in the report. Return one or more categories; do not add loosely related categories.
+- When a report describes multiple distinct problems, include each problem's category (for example, no water in a hostel bathroom and a broken classroom light → water_supply and electrical).
 - priority: 1 = safety/health risk or many people affected now (exposed wires, no drinking water in a hostel, fire risk); 2 = blocks daily life; 3 = inconvenient; 4 = cosmetic.
 - is_urgent: true only for immediate danger to people right now: fire, smoke, injury, violence, threats, medical emergency, live exposed wires. If is_urgent then priority must be 1.
 - is_sensitive_suggested: true for harassment, threats, stalking, ragging, abuse, mental health or other personal/safety matters that should be visible only to admins.
@@ -38,7 +40,7 @@ Rules:
 
 Example:
 Input: "হোষ্টেলৰ বাথৰুমত তিনিদিন ধৰি পানী নাই"
-Output: {"title_en":"No water in hostel bathroom for 3 days","title_as":"হোষ্টেলৰ বাথৰুমত তিনিদিন ধৰি পানী নাই","summary_en":"The hostel bathroom has had no water supply for three days.","summary_as":"হোষ্টেলৰ বাথৰুমত তিনিদিন ধৰি পানী যোগান বন্ধ হৈ আছে।","category":"water_supply","priority":2,"priority_reason_en":"Basic need affecting hostel residents for days","location_hint":"Hostel","is_abusive":false,"has_personal_data":false,"confidence":0.9,"is_urgent":false,"is_sensitive_suggested":false,"is_relevant":true,"rejection_reason_en":null,"rejection_reason_as":null,"has_explicit_image":false,"has_ai_image":false,"image_rejection_reason_en":null,"image_rejection_reason_as":null}`)
+Output: {"title_en":"No water in hostel bathroom for 3 days","title_as":"হোষ্টেলৰ বাথৰুমত তিনিদিন ধৰি পানী নাই","summary_en":"The hostel bathroom has had no water supply for three days.","summary_as":"হোষ্টেলৰ বাথৰুমত তিনিদিন ধৰি পানী যোগান বন্ধ হৈ আছে।","category":"water_supply","categories":["water_supply"],"priority":2,"priority_reason_en":"Basic need affecting hostel residents for days","location_hint":"Hostel","is_abusive":false,"has_personal_data":false,"confidence":0.9,"is_urgent":false,"is_sensitive_suggested":false,"is_relevant":true,"rejection_reason_en":null,"rejection_reason_as":null,"has_explicit_image":false,"has_ai_image":false,"image_rejection_reason_en":null,"image_rejection_reason_as":null}`)
 	return b.String()
 }
 
@@ -65,6 +67,7 @@ func intakeSchema() map[string]any {
 			"summary_en":             str("1-2 sentence English summary of the problem"),
 			"summary_as":             str("Same summary in Assamese"),
 			"category":               map[string]any{"type": "STRING", "format": "enum", "enum": Categories},
+			"categories":             map[string]any{"type": "ARRAY", "items": map[string]any{"type": "STRING", "format": "enum", "enum": Categories}},
 			"priority":               map[string]any{"type": "INTEGER", "description": "1 critical (safety/health risk), 2 high, 3 medium, 4 low"},
 			"priority_reason_en":     str("Why this priority, in English"),
 			"location_hint":          map[string]any{"type": "STRING", "nullable": true, "description": "Building/place mentioned or visible, else null"},
@@ -75,11 +78,11 @@ func intakeSchema() map[string]any {
 			"is_sensitive_suggested": boolean("Harassment, threats or personal/safety matter: admins only"),
 		},
 		"required": []string{
-			"title_en", "title_as", "summary_en", "summary_as", "category", "priority", "priority_reason_en",
+			"title_en", "title_as", "summary_en", "summary_as", "category", "categories", "priority", "priority_reason_en",
 			"location_hint", "is_abusive", "has_personal_data", "confidence", "is_urgent", "is_sensitive_suggested",
 		},
 		"propertyOrdering": []string{
-			"title_en", "title_as", "summary_en", "summary_as", "category", "priority", "priority_reason_en",
+			"title_en", "title_as", "summary_en", "summary_as", "category", "categories", "priority", "priority_reason_en",
 			"location_hint", "is_abusive", "has_personal_data", "confidence", "is_urgent", "is_sensitive_suggested",
 		},
 	}

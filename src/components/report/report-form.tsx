@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowDown, Camera, CheckCircle2, CloudUpload, ExternalLink, EyeOff, Globe2, Lock, MapPin, Pencil, RotateCw, Send,
+  AlertTriangle, ArrowDown, Camera, CheckCircle2, ChevronDown, CloudUpload, ExternalLink, EyeOff, Globe2, Lock, MapPin, Mic, Pencil, RotateCw, Send, Square,
   ShieldAlert, ScanText, Undo2, Users,
 } from "lucide-react";
 import {
@@ -18,7 +18,7 @@ import { blobToDataURL } from "@/lib/image";
 import { pickLang } from "@/lib/lang";
 import { cn, toLocaleDigits } from "@/lib/utils";
 import {
-  Button, Card, CardHeader, CATEGORY_ICON, CategoryChip, Chip, Combobox, Drawer, Input, LangText, PhotoDropzone, PriorityChip, Select,
+  Button, Card, CardHeader, CATEGORY_ICON, CategoryChip, Chip, Combobox, Drawer, Input, LangText, PhotoDropzone, PriorityChip,
   Skeleton, SkeletonText, StatusChip, Switch, Tabs, Textarea, type PhotoItem,
 } from "@/components/ui";
 import { ApiError, apiFetch, isApiError, uploadWithProgress } from "@/components/api-client";
@@ -50,9 +50,141 @@ type Requested = { key: string; norm: string; photoKey: string; raw: string };
 
 type UploadState = { status: "uploading"; pct: number } | { status: "done"; path: string } | { status: "error" };
 type Preview = { key: string; intake: Intake; source: IntakeResult["source"]; model?: string };
-type Overrides = Partial<Pick<Intake, "title_en" | "title_as" | "category" | "priority">>;
+type Overrides = Partial<Pick<Intake, "title_en" | "title_as" | "category" | "categories" | "priority">>;
 
 const fileName = (blob: Blob) => `photo.${blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg"}`;
+
+type PreviewSelectOption = { value: string; label: string };
+
+function PreviewSelect({
+  id,
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  options: PreviewSelectOption[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
+  const [activeIndex, setActiveIndex] = useState(selectedIndex);
+  const selected = options[selectedIndex];
+  const listId = `${id}-options`;
+
+  useEffect(() => {
+    if (open) optionRefs.current[activeIndex]?.focus();
+  }, [open, activeIndex]);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [open]);
+
+  const moveActive = (index: number) => {
+    setActiveIndex((index + options.length) % options.length);
+  };
+
+  return (
+    <div ref={rootRef} className="relative space-y-1.5">
+      <label id={`${id}-label`} htmlFor={id} className="block text-sm font-medium">{label}</label>
+      <button
+        ref={triggerRef}
+        id={id}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-labelledby={`${id}-label ${id}`}
+        onClick={() => {
+          setActiveIndex(selectedIndex);
+          setOpen((current) => !current);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            setActiveIndex(selectedIndex);
+            setOpen(true);
+          }
+        }}
+        className="flex h-11 w-full items-center justify-between gap-3 rounded-field border border-border bg-surface px-4 text-left text-sm text-foreground transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="truncate">{selected?.label ?? value}</span>
+        <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
+      </button>
+      {open && (
+        <div
+          id={listId}
+          role="listbox"
+          aria-labelledby={`${id}-label`}
+          className="absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-field border border-border bg-surface p-1.5 text-foreground shadow-lg"
+        >
+          {options.map((option, index) => {
+            const isSelected = option.value === value;
+            const isActive = index === activeIndex;
+            return (
+              <button
+                key={option.value}
+                ref={(element) => { optionRefs.current[index] = element; }}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                tabIndex={-1}
+                onMouseMove={() => setActiveIndex(index)}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    moveActive(index + 1);
+                  } else if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    moveActive(index - 1);
+                  } else if (event.key === "Home") {
+                    event.preventDefault();
+                    setActiveIndex(0);
+                  } else if (event.key === "End") {
+                    event.preventDefault();
+                    setActiveIndex(options.length - 1);
+                  } else if (event.key === "Escape") {
+                    event.preventDefault();
+                    setOpen(false);
+                    triggerRef.current?.focus();
+                  } else if (event.key === "Tab") {
+                    setOpen(false);
+                  }
+                }}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }}
+                className={cn(
+                  "flex min-h-10 w-full items-center rounded-field px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isSelected
+                    ? "bg-primary-soft font-semibold text-foreground"
+                    : isActive
+                      ? "bg-surface-muted text-foreground"
+                      : "text-foreground hover:bg-surface-muted",
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export type ReportFormProps = {
   initialLocationId?: string;
@@ -68,11 +200,18 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
   const reduceMotion = useReducedMotion();
 
   const initialValidCat = initialCategory && (CATEGORIES as readonly string[]).includes(initialCategory) ? (initialCategory as Category) : null;
-  const [userCategory, setUserCategory] = useState<Category | "auto">(initialValidCat ?? "auto");
+  const [userCategories, setUserCategories] = useState<Category[] | null>(initialValidCat ? [initialValidCat] : null);
+  const userCategory: Category | "auto" = userCategories?.[0] ?? "auto";
 
   // ---------- form state ----------
   const [text, setText] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [videos, setVideos] = useState<{ id: string; file: File; url: string; path?: string; busy?: boolean }[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [speechLanguage, setSpeechLanguage] = useState(locale === "as" ? "Assamese" : "English");
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const [uploads, setUploads] = useState<Record<string, UploadState>>({});
   const [location, setLocation] = useState<LocationItem | null>(null);
   const [locationNote, setLocationNote] = useState("");
@@ -134,8 +273,13 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
         .then((blob) => {
           const id = Math.random().toString(36).slice(2, 9);
           const url = URL.createObjectURL(blob);
-          const item: PhotoItem = { id, blob, url, name: "photo.jpg" };
-          setPhotos((cur) => (cur.length === 0 ? [item] : cur));
+          if (blob.type.startsWith("video/")) {
+            URL.revokeObjectURL(url);
+            void addVideo(new File([blob], "report-video", { type: blob.type }));
+          } else {
+            const item: PhotoItem = { id, blob, url, name: "photo.jpg" };
+            setPhotos((cur) => (cur.length === 0 ? [item] : cur));
+          }
           try {
             sessionStorage.removeItem(REPORT_PHOTO_DRAFT_KEY);
           } catch {}
@@ -294,6 +438,45 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
     for (const p of next) if (!(p.id in uploads)) startUpload(p);
   };
 
+  async function addVideo(file: File) {
+    const id = crypto.randomUUID();
+    const url = URL.createObjectURL(file);
+    const item = { id, file, url, busy: true };
+    setVideos((current) => [...current, item]);
+    const upload = new FormData(); upload.append("file", file);
+    const uploadPromise = apiFetch<{ path: string }>("/api/upload/video", { method: "POST", body: upload });
+    try {
+      const form = new FormData(); form.append("file", file);
+      const extracted = await apiFetch<{ transcript: string; useful_info: string }>("/api/ai/media-extract", { method: "POST", body: form });
+      const details = [extracted.transcript, extracted.useful_info].filter(Boolean).join("\n");
+      if (details) setText((current) => `${current}${current.trim() ? "\n" : ""}${details}`.slice(0, MAX_TEXT));
+    } catch { toast.error(t("videos.aiFailed")); }
+    try { const saved = await uploadPromise; setVideos((current) => current.map((v) => v.id === id ? { ...v, path: saved.path, busy: false } : v)); }
+    catch (error) { toast.error(error instanceof Error ? error.message : t("videos.failed")); setVideos((current) => current.map((v) => v.id === id ? { ...v, busy: false } : v)); }
+  }
+
+  const toggleVoice = async () => {
+    if (recording) { recorderRef.current?.stop(); streamRef.current?.getTracks().forEach((track) => track.stop()); setRecording(false); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream; chunksRef.current = [];
+      const recorder = new MediaRecorder(stream); recorderRef.current = recorder;
+      recorder.ondataavailable = (event) => { if (event.data.size) chunksRef.current.push(event.data); };
+      recorder.onstop = async () => {
+        const audio = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        stream.getTracks().forEach((track) => track.stop());
+        const form = new FormData(); form.append("file", audio, "report-audio.webm"); form.append("language", speechLanguage);
+        try {
+          const result = await apiFetch<{ transcript: string; useful_info: string }>("/api/ai/media-extract", { method: "POST", body: form });
+          const words = [result.transcript, result.useful_info].filter(Boolean).join("\n");
+          if (words) setText((current) => `${current}${current.trim() ? "\n" : ""}${words}`.slice(0, MAX_TEXT));
+        } catch (error) { toast.error(error instanceof Error ? error.message : t("voice.failed")); }
+      };
+      recorder.start(); setRecording(true);
+      window.setTimeout(() => { if (recorder.state === "recording") { recorder.stop(); setRecording(false); } }, 60_000);
+    } catch { toast.error(t("voice.permission")); }
+  };
+
   useEffect(() => {
     const ctrls = uploadCtrls.current;
     return () => ctrls.forEach((c) => c.abort());
@@ -319,7 +502,7 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
     ? {
         ...shown.intake,
         ...overrides,
-        ...(userCategory !== "auto" ? { category: userCategory } : {}),
+        ...(userCategories ? { category: userCategories[0], categories: userCategories } : {}),
       }
     : userCategory !== "auto"
       ? ({
@@ -328,6 +511,7 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
           summary_en: text.slice(0, 400),
           summary_as: text.slice(0, 400),
           category: userCategory,
+          categories: userCategories,
           priority: 3,
           priority_reason_en: "",
           location_hint: null,
@@ -347,6 +531,7 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
         } as Intake)
       : null;
   const effectiveCategory: Category = userCategory !== "auto" ? userCategory : (effective?.category ?? "other");
+  const effectiveCategories = userCategories ?? (effective ? (effective.categories.length ? effective.categories : [effectiveCategory]) : []);
   const isRelevant = effective?.is_relevant !== false;
   const isAbusive = Boolean(effective?.is_abusive) || containsAbuse(text);
   const hasAbusiveImage = Boolean(effective?.has_abusive_image);
@@ -360,6 +545,16 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
   const isUrgent = Boolean(effective?.is_urgent);
   const similarItems = similar && similar.key === similarKey ? similar.items : [];
 
+  const toggleCategory = (category: Category) => {
+    const currentCategories = userCategories ?? (effective ? (effective.categories.length ? effective.categories : [effectiveCategory]) : []);
+    if (currentCategories.includes(category) && currentCategories.length === 1) return;
+    const next = currentCategories.includes(category)
+      ? currentCategories.filter((item) => item !== category)
+      : [...currentCategories, category];
+    setUserCategories(next);
+    setOverrides((current) => ({ ...current, category: next[0], categories: next }));
+  };
+
   // ---------- submit ----------
   // One idempotency key per form: retries (timeout, double tap) can never create a second ticket.
   const requestId = useRef<string | null>(null);
@@ -368,7 +563,7 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
     onSuccess: (r) => router.push(`/report/done?id=${encodeURIComponent(r.id)}`),
   });
 
-  const missingContent = trimmed.length === 0 && photos.length === 0;
+  const missingContent = trimmed.length === 0 && photos.length === 0 && videos.length === 0;
   const onSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     setShowErrors(true);
@@ -381,7 +576,7 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
       setText(cleanText);
     }
 
-    if (missingContent || titleError || uploading || uploadFailed || isBlocked) {
+    if (missingContent || titleError || uploading || uploadFailed || videos.some((v) => v.busy || !v.path) || isBlocked) {
       if (isAbusive || hasAbusiveImage) toast.error(t("moderation.cannotSubmitAbuse"));
       else if (!isRelevant) toast.error(t("rejection.cannotSubmit"));
       else if (hasExplicitImage || hasAiImage) toast.error(t("imageModeration.cannotSubmit"));
@@ -391,13 +586,14 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
       ? {
           ...current.intake,
           ...overrides,
-          ...(userCategory !== "auto" ? { category: userCategory } : {}),
+          ...(userCategories ? { category: userCategories[0], categories: userCategories } : {}),
           [titleField]: (overrides[titleField] ?? current.intake[titleField]).trim(),
         }
-      : effective && userCategory !== "auto"
+      : effective && userCategories
         ? {
             ...effective,
-            category: userCategory,
+            category: userCategories[0],
+            categories: userCategories,
             [titleField]: (overrides[titleField] ?? effective[titleField]).trim(),
           }
         : undefined;
@@ -406,12 +602,13 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
       client_request_id: requestId.current,
       text: cleanText,
       image_paths: uploadList.flatMap((u) => (u.status === "done" ? [u.path] : [])),
+      video_paths: videos.flatMap((video) => video.path ? [video.path] : []),
       location_id: location?.id ?? null,
       location_note: locationNote.trim() || null,
       visibility: effectiveVisibility,
       anonymous,
       is_sensitive: sensitive,
-      ...(intake && (current || userCategory !== "auto")
+      ...(intake && (current || userCategories)
         ? {
             intake,
             intake_source: current ? current.source : "fallback",
@@ -490,6 +687,19 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
               rows={5}
               error={showErrors && missingContent ? t("errors.needContent") : undefined}
             />
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <select value={speechLanguage} onChange={(event) => setSpeechLanguage(event.target.value)} aria-label={t("voice.languageLabel")} className="h-10 rounded-full border border-border bg-surface px-3 text-sm text-foreground">
+                {["Assamese", "English", "Hindi"].map((language) => <option key={language}>{language}</option>)}
+              </select>
+              <Button type="button" variant={recording ? "danger" : "secondary"} onClick={() => void toggleVoice()}>
+                {recording ? <Square className="size-4" aria-hidden /> : <Mic className="size-4" aria-hidden />}
+                {recording ? t("voice.stop") : t("voice.speak")}
+              </Button>
+              <label className="inline-flex h-10 cursor-pointer items-center rounded-full border border-border bg-surface px-4 text-sm text-foreground hover:bg-surface-muted">
+                {t("videos.add")}<input type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" disabled={videos.length >= 3} onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; const url = URL.createObjectURL(file); const probe = document.createElement("video"); probe.preload = "metadata"; probe.onloadedmetadata = () => { URL.revokeObjectURL(url); if (probe.duration > 60) { toast.error(t("videos.tooLong")); return; } void addVideo(file); }; probe.onerror = () => { URL.revokeObjectURL(url); toast.error(t("videos.invalid")); }; probe.src = url; event.target.value = ""; }} />
+              </label>
+            </div>
+            {videos.length > 0 && <div className="mt-3 grid gap-3 sm:grid-cols-2">{videos.map((video) => <div key={video.id} className="relative overflow-hidden rounded-card border border-border bg-surface-muted"><video src={video.url} controls playsInline className="max-h-64 w-full" /><button type="button" aria-label={t("videos.remove")} className="absolute right-2 top-2 rounded-full bg-surface p-2" onClick={() => { URL.revokeObjectURL(video.url); setVideos((current) => current.filter((v) => v.id !== video.id)); }}><span aria-hidden>×</span></button><p className="p-2 text-xs text-muted-foreground">{video.busy ? t("videos.processing") : t("videos.ready")}</p></div>)}</div>}
           </Card>
 
           {/* Photos */}
@@ -544,16 +754,17 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
                 <h2 className="text-title text-[1.0625rem]">{t("category.label")}</h2>
                 <p className="text-xs text-muted-foreground">{t("category.hint")}</p>
               </div>
-              {userCategory !== "auto" && (
+              {userCategories && (
                 <Button
                   type="button"
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    setUserCategory("auto");
+                    setUserCategories(null);
                     setOverrides((o) => {
                       const next = { ...o };
                       delete next.category;
+                      delete next.categories;
                       return next;
                     });
                   }}
@@ -568,16 +779,14 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
               {CATEGORIES.map((c) => {
                 const Icon = CATEGORY_ICON[c];
-                const isSelected = effectiveCategory === c;
-                const isManual = userCategory === c;
+                const isSelected = effectiveCategories.includes(c);
+                const isAiSuggested = userCategories === null && isSelected;
                 return (
                   <button
                     key={c}
                     type="button"
-                    onClick={() => {
-                      setUserCategory(c);
-                      setOverrides((o) => ({ ...o, category: c }));
-                    }}
+                    aria-pressed={isSelected}
+                    onClick={() => toggleCategory(c)}
                     className={cn(
                       "group flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isSelected
@@ -594,9 +803,9 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
                       >
                         <Icon className="size-4" strokeWidth={1.75} aria-hidden />
                       </span>
-                      {isSelected && !isManual && (
+                      {isAiSuggested && (
                         <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                          AI
+                          {t("category.aiSuggested")}
                         </span>
                       )}
                     </div>
@@ -790,22 +999,22 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
                       error={titleError ?? undefined}
                       lang={locale}
                     />
-                    <Select
+                    <PreviewSelect
                       id="preview-category"
                       label={t("preview.categoryLabel")}
                       value={effective.category}
-                      onChange={(e) => {
-                        const nextCat = e.target.value as Category;
-                        setUserCategory(nextCat);
-                        setOverrides((o) => ({ ...o, category: nextCat }));
+                      onChange={(value) => {
+                        const nextCat = value as Category;
+                        setUserCategories([nextCat]);
+                        setOverrides((o) => ({ ...o, category: nextCat, categories: [nextCat] }));
                       }}
                       options={CATEGORIES.map((c) => ({ value: c, label: tc(c) }))}
                     />
-                    <Select
+                    <PreviewSelect
                       id="preview-priority"
                       label={t("preview.priorityLabel")}
                       value={String(effective.priority)}
-                      onChange={(e) => setOverrides((o) => ({ ...o, priority: Number(e.target.value) }))}
+                      onChange={(value) => setOverrides((o) => ({ ...o, priority: Number(value) }))}
                       options={[1, 2, 3, 4].map((p) => ({ value: String(p), label: `P${n(p)} · ${tp(String(p))}` }))}
                     />
                     {(Object.keys(overrides).length > 0 || userCategory !== "auto") && (
@@ -813,7 +1022,7 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
                         size="sm"
                         variant="ghost"
                         onClick={() => {
-                          setUserCategory("auto");
+                          setUserCategories(null);
                           setOverrides({});
                         }}
                       >
@@ -826,7 +1035,7 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
                   <>
                     <LangText tag="h3" en={effective.title_en} as={effective.title_as} className="font-semibold" />
                     <div className="flex flex-wrap gap-1.5">
-                      <CategoryChip category={effective.category} />
+                      {effectiveCategories.map((category) => <CategoryChip key={category} category={category} />)}
                       <PriorityChip priority={effective.priority} showCode />
                       {Object.keys(overrides).length > 0 && <Chip tone="accent">{t("preview.edited")}</Chip>}
                     </div>

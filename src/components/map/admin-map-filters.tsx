@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { CATEGORY_ICON } from "@/components/ui";
 import { CATEGORIES, type Category } from "@/lib/domain";
 import { cn, toLocaleDigits } from "@/lib/utils";
@@ -36,7 +37,7 @@ function href(q: AdminMapQuery, patch: Partial<Record<keyof AdminMapQuery, strin
 
 const chip = (active: boolean) =>
   cn(
-    "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    "inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface text-foreground hover:border-border-strong",
   );
 
@@ -52,7 +53,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
-      <div role="group" aria-label={label} className="-mx-1 flex min-w-0 gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+      <div role="group" aria-label={label} className="flex min-w-0 flex-wrap gap-2">
         {children}
       </div>
     </div>
@@ -70,7 +71,7 @@ export async function AdminMapFilters({ query: q, departments }: { query: AdminM
   const n = (v: number) => toLocaleDigits(v, locale);
 
   return (
-    <div className="space-y-3" aria-label={t("filters")} role="search">
+    <div className="space-y-4 rounded-card border border-border bg-surface p-4 sm:p-5" aria-label={t("filters")} role="search">
       <Row label={t("statusLabel")}>
         {STATUS_GROUPS.map((s) => (
           <L key={s} on={q.status === s} to={href(q, { status: s })}>
@@ -84,6 +85,14 @@ export async function AdminMapFilters({ query: q, departments }: { query: AdminM
           </L>
         ))}
       </Row>
+      <details className="group border-t border-border pt-3" open={q.priority != null || q.category != null || q.department != null}>
+        <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <SlidersHorizontal className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+          <span className="flex-1">{t("moreFilters")}</span>
+          <Link href="/admin/map" className="rounded-full border border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground">{t("resetFilters")}</Link>
+          <ChevronDown className="size-4 transition-transform group-open:rotate-180" strokeWidth={1.75} aria-hidden />
+        </summary>
+        <div className="mt-3 space-y-4">
       <Row label={t("priorityLabel")}>
         <L on={q.priority === null} to={href(q, { priority: null })}>
           {t("any")}
@@ -121,6 +130,8 @@ export async function AdminMapFilters({ query: q, departments }: { query: AdminM
           ))}
         </Row>
       )}
+        </div>
+      </details>
     </div>
   );
 }

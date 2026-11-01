@@ -58,6 +58,7 @@ export const IntakeSchema = z.object({
   summary_en: z.string().min(10).max(400).describe("1-2 sentence English summary of the problem"),
   summary_as: z.string().min(10).max(500).describe("Same summary in Assamese"),
   category: z.enum(CATEGORIES),
+  categories: z.array(z.enum(CATEGORIES)).max(CATEGORIES.length).default([]).describe("All categories directly involved, including the primary category"),
   priority: z.number().int().min(1).max(4).describe("1 critical (safety/health risk), 2 high, 3 medium, 4 low"),
   priority_reason_en: z.string().max(160),
   location_hint: z.string().max(80).nullable().describe("Building/place mentioned or visible, else null"),
@@ -95,6 +96,8 @@ export type Visibility = (typeof VISIBILITIES)[number];
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 export const MAX_PHOTOS = 3;
+export const MAX_VIDEOS = 3;
+export const MAX_VIDEO_UPLOAD_BYTES = 40 * 1024 * 1024;
 export const COMPLAINTS_PER_HOUR = 5;
 
 /** `POST /api/upload` (multipart, field `file`) → */
@@ -133,6 +136,7 @@ export type SimilarItem = z.infer<typeof SimilarItemSchema>;
 export const SubmitComplaintSchema = z.object({
   text: z.string().max(2000).default(""),
   image_paths: z.array(z.string().regex(PHOTO_PATH, "invalid photo path")).max(MAX_PHOTOS).default([]),
+  video_paths: z.array(z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(mp4|webm|mov)$/)).max(MAX_VIDEOS).default([]),
   location_id: z.guid().nullish(),
   location_note: z.string().trim().max(200).nullish(),
   visibility: z.enum(VISIBILITIES).default("public"),
@@ -145,7 +149,7 @@ export const SubmitComplaintSchema = z.object({
   intake_source: z.enum(["ai", "fallback"]).optional(),
   /** Ignored (untrusted). */
   intake_model: z.string().max(120).optional(),
-}).refine((v) => v.text.trim().length > 0 || v.image_paths.length > 0, { message: "text or photo required" });
+}).refine((v) => v.text.trim().length > 0 || v.image_paths.length > 0 || v.video_paths.length > 0, { message: "text or media required" });
 export type SubmitComplaintInput = z.input<typeof SubmitComplaintSchema>;
 
 /** `POST /api/complaints` response. */
@@ -356,6 +360,7 @@ export const ComplaintDetailSchema = ComplaintListItemSchema.extend({
   original_text: z.string().nullable(),
   location_note: z.string().nullable(),
   photos: z.array(z.string()),
+  videos: z.array(z.string()).default([]),
   resolved_at: z.string().nullable(),
   resolution: z
     .object({ note_en: z.string().nullable(), note_as: z.string().nullable(), photo_url: z.string().nullable() })
@@ -383,6 +388,7 @@ export const ComplaintDetailSchema = ComplaintListItemSchema.extend({
       confidence: z.number().nullable(),
       priority_reason_en: z.string().nullable(),
       auto_routed: z.boolean().nullable(),
+      location_review: z.enum(["inside_campus", "nearby_outside_campus", "no_gps"]).nullable().optional(),
       civicshield: z
         .object({
           status: z.enum(["verified_signals", "no_ai_signals", "needs_review", "ai_detected"]),

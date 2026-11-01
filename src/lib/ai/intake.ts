@@ -35,7 +35,10 @@ const EngineIntakeSchema = z.object({
 const cache = ((globalThis as { __intakeCache?: Map<string, IntakeResult> }).__intakeCache ??= new Map());
 
 /** Urgent always means P1 (PRD rule 5), whichever model answered. */
-const normalise = (intake: Intake): Intake => (intake.is_urgent ? { ...intake, priority: 1 } : intake);
+const normalise = (intake: Intake): Intake => {
+  const categories = [...new Set([intake.category, ...intake.categories])];
+  return intake.is_urgent ? { ...intake, categories, priority: 1 } : { ...intake, categories };
+};
 
 export async function analyzeComplaint(input: { text: string; images: string[]; locationName?: string }): Promise<IntakeResult> {
   const started = Date.now();

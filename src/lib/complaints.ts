@@ -18,6 +18,7 @@ import { INTAKE_PROMPT_VERSION } from "@/lib/ai/prompts/intake";
 import { autoAssign, autoAssignEmergency } from "@/lib/assign";
 import { engineFetch } from "@/lib/engine";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { inspectMediaLocation } from "@/lib/media-location";
 import { isAssameseText } from "@/lib/utils";
 import { filterAbusiveText } from "@/lib/moderation";
 
@@ -122,6 +123,7 @@ export async function findSimilar(
 export type SubmitInput = {
   text: string;
   image_paths: string[];
+  video_paths: string[];
   location_id?: string | null;
   location_note?: string | null;
   visibility: "public" | "private";
@@ -199,6 +201,22 @@ export async function submitComplaint(
   if (input.image_paths.some((p) => !p.startsWith(`${user.id}/`))) {
     throw new PipelineError("VALIDATION_ERROR", "Photos must be your own uploads");
   }
+  if (input.video_paths.some((p) => !p.startsWith(`${user.id}/`))) {
+    throw new PipelineError("VALIDATION_ERROR", "Videos must be your own uploads");
+  }
+  const evidence = await Promise.all([
+    ...input.image_paths.map((p) => supabase.storage.from("complaint-photos").download(p)),
+    ...input.video_paths.map((p) => supabase.storage.from("complaint-videos").download(p)),
+  ]);
+  const mediaLocation = evidence.length
+    ? await inspectMediaLocation(await Promise.all(evidence.map(async ({ data, error }) => {
+        if (error || !data) throw new PipelineError("VALIDATION_ERROR", "One of the uploaded media files is unavailable");
+        return new Uint8Array(await data.arrayBuffer());
+      })))
+    : { status: "no_gps" as const };
+  if (mediaLocation.status === "outside_campus") {
+    throw new PipelineError("VALIDATION_ERROR", "Media GPS places this report outside the university area. Please upload evidence captured on or near campus.");
+  }
 
   const [{ data: allowed, error: rlError }, location] = await Promise.all([
     supabase.rpc("check_rate_limit", { max_per_hour: COMPLAINTS_PER_HOUR }),
@@ -216,7 +234,7 @@ export async function submitComplaint(
   // ---- intake (server-authoritative) ----
   // The classification that drives routing and privacy (confidence, urgent, sensitive, abusive, relevance,
   // image checks, AI vs fallback) is ALWAYS computed here. A preview from /api/ai/analyze may only supply
-  // what the reporter is allowed to edit: title, category, priority. analyzeComplaint caches by
+  // what the reporter is allowed to edit: title, categories, priority. analyzeComplaint caches by
   // text + photos + location, so a submit right after an identical preview normally costs no extra AI call.
   const images = input.image_paths.length ? await loadImages(supabase, input.image_paths) : [];
   const r: IntakeResult = await analyzeComplaint({ text: input.text, images, locationName });
@@ -235,6 +253,7 @@ export async function submitComplaint(
       title_en: edited.title_en,
       title_as: edited.title_as,
       category: edited.category,
+      categories: edited.categories?.length ? edited.categories : [edited.category],
       priority: edited.priority,
     };
   }
@@ -313,6 +332,7 @@ export async function submitComplaint(
       location_note: input.location_note || null,
       department_id: department?.id ?? null,
       image_urls: input.image_paths,
+      video_urls: input.video_paths,
       ai_status: source === "ai" ? "done" : "fallback",
       visibility: input.is_sensitive ? "private" : input.visibility, // sensitive ⇒ private (DB constraint too)
       is_sensitive: input.is_sensitive,
@@ -336,12 +356,14 @@ export async function submitComplaint(
     ...meta,
     prompt_version: INTAKE_PROMPT_VERSION,
     confidence: intake.confidence,
+    categories: intake.categories,
     priority_reason_en: intake.priority_reason_en,
     location_hint: intake.location_hint,
     is_abusive: intake.is_abusive,
     has_personal_data: intake.has_personal_data,
     is_sensitive_suggested: intake.is_sensitive_suggested,
     auto_routed: autoRoute,
+    media_location_review: mediaLocation.status,
   };
   const { error: metaErr } = await createAdminClient()
     .from("complaints")

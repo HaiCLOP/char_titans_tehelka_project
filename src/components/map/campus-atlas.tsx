@@ -272,7 +272,7 @@ class Renderer {
     const [x0, y0, x1, y1] = this.atlas.campus;
     this.cx = (x0 + x1) / 2;
     this.cy = (y0 + y1) / 2;
-    this.fitZ = Math.min(this.w / (x1 - x0), this.h / (y1 - y0)) * (this.compact ? 1.02 : 0.94);
+    this.fitZ = Math.min(this.w / (x1 - x0), this.h / (y1 - y0)) * (this.compact ? 1.02 : 1);
     this.z = this.fitZ;
     this.draw(); // synchronous: a resize just cleared the bitmap
   }

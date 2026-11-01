@@ -36,7 +36,9 @@ const SENSITIVE = /harass|threat|stalk|ragging|abuse|molest|bully|suicid|unsafe|
 const IRRELEVANT = /^(asdf|test|xyz|qwerty|12345|\s*)+$|bitcoin|crypto|casino|loan|essay on|solve for x/i;
 
 export function fallbackIntake(text: string): Intake {
-  const category = RULES.find(([, re]) => re.test(text))?.[0] ?? "other";
+  const categories = RULES.filter(([, re]) => re.test(text)).map(([category]) => category);
+  if (categories.length === 0) categories.push("other");
+  const category = categories[0];
   const trimmed = text.trim();
   const isUrgent = URGENT.test(text);
   const isIrrelevant = IRRELEVANT.test(trimmed);
@@ -76,6 +78,7 @@ export function fallbackIntake(text: string): Intake {
     summary_en,
     summary_as,
     category,
+    categories,
     priority: isUrgent ? 1 : 3,
     priority_reason_en: isUrgent ? "Possible emergency keywords (AI unavailable)" : "Default priority (AI unavailable)",
     location_hint: null,

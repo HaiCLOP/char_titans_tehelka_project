@@ -40,6 +40,10 @@ const DEFAULT_CHAIN: ModelEntry[] = [
   { provider: "openrouter", model: "auto:free", caps: ["vision", "assamese", "json", "tools"] },
 ];
 const DEFAULT_EMBED: ModelEntry[] = [{ provider: "google", model: "gemini-embedding-001", caps: ["embed"] }];
+const DEFAULT_MEDIA: ModelEntry[] = [
+  { provider: "google", model: "gemini-2.5-flash", caps: ["video", "audio", "json", "assamese"] },
+  { provider: "google", model: "gemini-2.0-flash", caps: ["video", "audio", "json", "assamese"] },
+];
 
 async function loadConfig() {
   if (g.__aiCache && Date.now() - g.__aiCache.at < 30_000) return g.__aiCache;
@@ -175,12 +179,10 @@ export async function runAI<T>(
   opts: { requireCaps?: string[]; timeoutMs?: number } = {},
 ): Promise<{ result: T; attempts: Attempt[]; model: string }> {
   const cfg = await loadConfig();
-  const fallback = purpose === "embed" ? DEFAULT_EMBED : DEFAULT_CHAIN;
+  const fallback = purpose === "embed" ? DEFAULT_EMBED : purpose === "media_extract" ? DEFAULT_MEDIA : DEFAULT_CHAIN;
   const caps = opts.requireCaps ?? [];
-  const chain = await expandChain(
-    (cfg.chains.get(purpose) ?? fallback).filter((m) => caps.every((c) => m.caps.includes(c))),
-    caps,
-  );
+  const configured = (cfg.chains.get(purpose) ?? []).filter((m) => caps.every((c) => m.caps.includes(c)));
+  const chain = await expandChain(configured.length ? configured : fallback.filter((m) => caps.every((c) => m.caps.includes(c))), caps);
   const timeout = opts.timeoutMs ?? PURPOSE_TIMEOUT_MS[purpose];
   const attempts: Attempt[] = [];
 

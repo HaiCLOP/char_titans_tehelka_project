@@ -47,7 +47,7 @@ function ChipPicker<T extends string>({
 }
 
 function useSlaText() {
-  const t = useTranslations("departments");
+  const t = useTranslations("departmentManagement");
   const locale = useLocale();
   return (h: number) =>
     h >= 48 && h % 24 === 0 ? t("days", { n: toLocaleDigits(h / 24, locale) }) : t("hours", { n: toLocaleDigits(h, locale) });
@@ -67,7 +67,7 @@ const toForm = (d?: Department): DeptForm => ({
 });
 
 function DepartmentDialog({ open, onOpenChange, editing }: { open: boolean; onOpenChange: (o: boolean) => void; editing: Department | null }) {
-  const t = useTranslations("departments");
+  const t = useTranslations("departmentManagement");
   const tc = useTranslations("category");
   const tp = useTranslations("priority");
   const qc = useQueryClient();
@@ -497,8 +497,8 @@ function SuperAdminsPanel({ departments, locations }: { departments: Department[
 /** S18 — departments (bilingual names, categories, SLA) and their members (super admin). */
 /** Super admin: how safe tickets get assigned (off / approval / automatic) and emergency auto-assignment. */
 function AssignmentWorkflow() {
-  const t = useTranslations("departments.workflow");
-  const te = useTranslations("departments.emergency");
+  const t = useTranslations("departmentManagement.workflow");
+  const te = useTranslations("departmentManagement.emergency");
   const locale = useLocale();
   const qc = useQueryClient();
   const q = useQuery({
@@ -580,7 +580,7 @@ function AssignmentWorkflow() {
 }
 
 export function DepartmentsView({ locations }: { locations: NamedRef[] }) {
-  const t = useTranslations("departments");
+  const t = useTranslations("departmentManagement");
   const tc = useTranslations("category");
   const locale = useLocale();
   const qc = useQueryClient();

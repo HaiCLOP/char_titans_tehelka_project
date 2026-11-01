@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { AlarmClock, AlertTriangle, Building2, CalendarDays, CheckCircle2, ClipboardList, Clock, Hourglass, UserPlus } from "lucide-react";
-import { AreaTrend, Card, EmptyState, ErrorState, LangText, PriorityChip, StatusChip } from "@/components/ui";
+import { AlarmClock, AlertTriangle, ArrowRight, Building2, CheckCircle2, ChevronDown, ClipboardList, Clock, UserPlus } from "lucide-react";
+import { AreaTrend, Card, EmptyState, ErrorState, LangText, PriorityChip, StatusChip, buttonVariants } from "@/components/ui";
 import { AdminBriefCard } from "@/components/brief/brief-card";
 import { AttentionCard, IssueRow, LegendDot, MiniMap, OpsKpi, RecentRow, type OpsLocation, type OpsTicket } from "@/components/admin/ops";
 import { AdminTour } from "@/components/admin/admin-tour";
-import { AdminTourTrigger } from "@/components/admin/admin-tour-trigger";
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import { getAdminStats } from "@/lib/admin";
 import { requireRole } from "@/lib/auth";
@@ -156,7 +155,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   return (
     <>
       <AdminTour />
-      <div className="mx-auto max-w-[84rem]">
+      <div className="mx-auto max-w-7xl pb-8">
         <header id="admin-tour-header" className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-display text-[2.25rem] sm:text-[2.75rem]">{t("ops.title")}</h1>
@@ -166,11 +165,6 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <AdminTourTrigger />
-            <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-medium shadow-sm">
-              <CalendarDays className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
-              <span className="tabular">{new Intl.DateTimeFormat(locale === "as" ? "as-IN" : "en-IN", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Kolkata" }).format(new Date())}</span>
-            </span>
             <nav aria-label={t("rangeLabel")} className="inline-flex rounded-full bg-surface-sunken/70 p-1 shadow-[inset_0_1px_2px_rgb(0_0_0/0.04)]">
               {ADMIN_STATS_DAYS.map((d) => (
                 <Link
@@ -187,11 +181,19 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                 </Link>
               ))}
             </nav>
+            <Link href="/admin/queue" className={buttonVariants({ size: "sm" })}>{t("openQueue")}<ArrowRight className="size-4" strokeWidth={1.75} aria-hidden /></Link>
           </div>
         </header>
 
         {isSuper && departments.length > 0 && (
-          <nav id="admin-tour-filters" aria-label={t("departmentFilter")} className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+          <details id="admin-tour-filters" className="mt-5 rounded-card border border-border bg-surface">
+          <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-2 px-4 py-3 text-sm text-muted-foreground [&::-webkit-details-marker]:hidden">
+            <Building2 className="size-4" strokeWidth={1.75} aria-hidden />
+            <span>{t("departmentFilter")}</span>
+            <span className="min-w-0 flex-1 font-medium text-foreground">{scope ? <LangText en={scope.name_en} as={scope.name_as} /> : t("allDepartments")}</span>
+            <ChevronDown className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+          </summary>
+          <nav aria-label={t("departmentFilter")} className="flex flex-wrap gap-2 border-t border-border p-4">
             {[{ id: null as string | null, name_en: "", name_as: "" }, ...departments].map((d) => {
               const on = (d.id ?? null) === requested;
               return (
@@ -201,7 +203,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   scroll={false}
                   aria-current={on ? "page" : undefined}
                   className={cn(
-                    "shrink-0 rounded-full border px-3.5 py-1.5 text-sm whitespace-nowrap transition-colors",
+                    "inline-flex min-h-10 max-w-full items-center rounded-full border px-3.5 py-2 text-sm transition-colors",
                     on ? "border-foreground bg-primary text-primary-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -210,6 +212,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
               );
             })}
           </nav>
+          </details>
         )}
 
         {failure === "noDept" ? (
@@ -247,7 +250,12 @@ function Dashboard({
     <div className="mt-8 space-y-6">
       {ops && <OpsTop ops={ops} data={data} t={t} tc={tc} n={n} locale={locale} tab={tab} qs={qs} />}
 
-      <h2 className="text-title pt-2 text-xl">{t("ops.insightsTitle")}</h2>
+      <details className="group rounded-card border border-border bg-surface">
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 p-5 [&::-webkit-details-marker]:hidden">
+        <div><h2 className="text-title text-lg">{t("ops.insightsTitle")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("trendRange", { n: n(data.days) })}<span className="mx-2" aria-hidden>·</span>{t("ops.kpiAvg")}: {s.avg_resolution_hours != null ? t("hours", { n: n(s.avg_resolution_hours) }) : "—"}</p></div>
+        <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" strokeWidth={1.75} aria-hidden />
+      </summary>
+      <div className="space-y-6 border-t border-border bg-background p-3 sm:p-5">
       <section className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <h2 className="text-title text-lg">{t("trendTitle")}</h2>
@@ -359,6 +367,8 @@ function Dashboard({
           </div>
         </Card>
       )}
+      </div>
+      </details>
     </div>
   );
 }
@@ -444,15 +454,23 @@ function OpsTop({
 
   return (
     <>
+      {/* KPIs */}
+      <section id="admin-tour-kpis" aria-label={t("kpiLabel")} className="grid grid-cols-2 divide-border overflow-hidden rounded-card border border-border bg-surface lg:grid-cols-4 lg:divide-x">
+        <OpsKpi icon={ClipboardList} label={t("ops.kpiOpen")} value={n(s.open)} />
+        <OpsKpi icon={AlarmClock} label={t("ops.kpiOverdue")} value={n(s.overdue)} tone={s.overdue > 0 ? "danger" : undefined} />
+        <OpsKpi icon={UserPlus} label={t("ops.kpiUnassigned")} value={n(unassigned)} />
+        <OpsKpi icon={CheckCircle2} label={t("ops.kpiFixed")} value={n(ops.fixedInPeriod)} delta={ops.fixedDelta} deltaLabel={t("ops.vsPrev", { n: n(data.days) })} goodWhenUp />
+      </section>
+
       {/* Needs attention */}
-      <section id="admin-tour-attention" aria-labelledby="ops-attention" className="rounded-[1.75rem] border border-border bg-surface-muted/70 p-4 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
+      <section id="admin-tour-attention" aria-labelledby="ops-attention" className="overflow-hidden rounded-card border border-border bg-surface">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
           <AlertTriangle className={cn("size-5", needs ? "text-warning" : "text-muted-foreground")} strokeWidth={1.75} aria-hidden />
           <h2 id="ops-attention" className="text-title text-lg">{t("ops.attention")}</h2>
           {needs > 0 && <span className="rounded-full bg-warning-soft px-2.5 py-0.5 text-[11px] font-semibold text-warning">{t("ops.actionRequired")}</span>}
           <p className="w-full text-sm text-muted-foreground sm:w-auto">{needs ? t("ops.attentionCount", { n: n(needs) }) : t("ops.attentionNone")}</p>
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
           <AttentionCard
             icon={AlarmClock}
             tone="danger"
@@ -467,7 +485,6 @@ function OpsTop({
             tone="warning"
             quiet={ops.highUnassigned.length === 0}
             title={t("ops.unassignedTitle", { n: n(ops.highUnassigned.length) })}
-            tag={t("ops.unassignedTag")}
             body={t("ops.unassignedBody")}
             action={t("ops.assignNow")}
             href={ops.highUnassigned[0] ? `/admin/t/${ops.highUnassigned[0].id}` : "/admin/queue"}
@@ -477,7 +494,6 @@ function OpsTop({
             tone="warning"
             quiet={ops.nearing.length === 0}
             title={t("ops.nearingTitle", { n: n(ops.nearing.length) })}
-            tag={t("ops.nearingTag")}
             body={t("ops.nearingBody")}
             action={t("ops.reviewNow")}
             href={ops.nearing[0] ? `/admin/t/${ops.nearing[0].id}` : "/admin/queue"}
@@ -485,17 +501,8 @@ function OpsTop({
         </div>
       </section>
 
-      {/* KPIs */}
-      <section id="admin-tour-kpis" aria-label={t("kpiLabel")} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-        <OpsKpi icon={ClipboardList} label={t("ops.kpiOpen")} value={n(s.open)} delta={ops.reportedDelta} deltaLabel={t("ops.vsPrev", { n: n(data.days) })} />
-        <OpsKpi icon={AlarmClock} label={t("ops.kpiOverdue")} value={n(s.overdue)} tone={s.overdue > 0 ? "danger" : undefined} />
-        <OpsKpi icon={UserPlus} label={t("ops.kpiUnassigned")} value={n(unassigned)} />
-        <OpsKpi icon={CheckCircle2} label={t("ops.kpiFixed")} value={n(ops.fixedInPeriod)} delta={ops.fixedDelta} deltaLabel={t("ops.vsPrev", { n: n(data.days) })} goodWhenUp />
-        <OpsKpi icon={Hourglass} label={t("ops.kpiAvg")} value={s.avg_resolution_hours != null ? t("hours", { n: n(s.avg_resolution_hours) }) : "—"} />
-      </section>
-
       {/* High-priority issues + live map */}
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+      <section className="space-y-6">
         <Card id="admin-tour-high" className="p-0 sm:p-0">
           <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-6">
             <div className="flex items-center gap-2.5">
@@ -523,7 +530,12 @@ function OpsTop({
           )}
         </Card>
 
-        <Card id="admin-tour-map" className="flex flex-col">
+        <details id="admin-tour-map" className="group rounded-card border border-border bg-surface">
+          <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+            <h2 className="text-title text-lg">{t("ops.mapTitle")}</h2>
+            <ChevronDown className="size-5 text-muted-foreground transition-transform group-open:rotate-180" strokeWidth={1.75} aria-hidden />
+          </summary>
+          <div className="border-t border-border p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-title text-lg">{t("ops.mapTitle")}</h2>
@@ -538,7 +550,8 @@ function OpsTop({
             <LegendDot className="border border-foreground bg-transparent" label={t("ops.legendUnassigned")} value={n(unassigned)} />
             <LegendDot className="bg-success" label={t("ops.legendFixed")} value={n(ops.counts.fixed)} />
           </div>
-        </Card>
+          </div>
+        </details>
       </section>
 
       {/* Recent reports */}
@@ -556,7 +569,7 @@ function OpsTop({
                     scroll={false}
                     aria-current={on ? "page" : undefined}
                     className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors",
+                      "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors",
                       on ? "border-foreground bg-primary text-primary-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground",
                     )}
                   >
@@ -582,7 +595,7 @@ function OpsTop({
                   <th scope="col" className="py-2.5 pr-4 font-medium">{t("ops.colStatus")}</th>
                   <th scope="col" className="hidden py-2.5 pr-4 font-medium sm:table-cell">{t("ops.colPriority")}</th>
                   <th scope="col" className="hidden py-2.5 pr-4 font-medium xl:table-cell">{t("ops.colReported")}</th>
-                  <th scope="col" className="py-2.5 pr-5 text-right font-medium sm:pr-6"><span className="sr-only">{t("ops.colReported")}</span></th>
+                  <th scope="col" className="hidden py-2.5 pr-5 text-right font-medium sm:table-cell sm:pr-6"><span className="sr-only">{t("ops.colReported")}</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

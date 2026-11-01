@@ -20,7 +20,7 @@ import {
 } from "@/components/ui";
 import { apiFetch, isApiError } from "@/components/api-client";
 import { useRealtime } from "@/components/use-realtime";
-import { PhotoCarousel } from "@/components/ticket/ticket-view";
+import { EvidenceGallery } from "@/components/ticket/evidence-gallery";
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import { ResolveDrawer } from "@/components/staff/resolve-drawer";
 import { TicketChat } from "@/components/chat/ticket-chat";
@@ -103,6 +103,12 @@ function AiCard({ d }: { d: ComplaintDetail }) {
         <p className="mt-3 rounded-xl bg-surface-muted px-3.5 py-2.5 text-sm text-muted-foreground" lang="en">
           <span className="font-medium text-foreground">{t("priorityReason")}: </span>
           {d.ai.priority_reason_en}
+        </p>
+      )}
+      {d.ai.location_review === "nearby_outside_campus" && (
+        <p className="mt-3 flex items-start gap-2 rounded-xl border border-warning/40 bg-warning-soft px-3.5 py-2.5 text-sm text-foreground">
+          <MapPin className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+          {t("nearbyLocation")}
         </p>
       )}
     </Card>
@@ -592,7 +598,7 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
             </div>
           </Card>
 
-          <PhotoCarousel photos={d.photos} />
+          <EvidenceGallery photos={d.photos} videos={d.videos} />
           <SummaryCard d={d} />
           <AiCard d={d} />
           <CivicShieldCard data={d.ai?.civicshield} hasPhotos={d.photos.length > 0} />
@@ -602,8 +608,7 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
               <CardHeader icon={<Wrench className="size-4 text-success" strokeWidth={1.75} aria-hidden />} title={tt("resolution.title")} className="mb-3" />
               <LangText tag="p" en={d.resolution.note_en} as={d.resolution.note_as} fallback={tt("resolution.noNote")} className="text-sm" />
               {d.resolution.photo_url && (
-                // eslint-disable-next-line @next/next/no-img-element -- signed Supabase URL
-                <img src={d.resolution.photo_url} alt={tt("resolution.photoAlt")} className="mt-3 aspect-[4/3] w-full rounded-xl object-cover" loading="lazy" />
+                <EvidenceGallery photos={[d.resolution.photo_url]} />
               )}
               {d.rating != null && <p className="mt-3 text-sm text-muted-foreground">{t("rating", { n: n(d.rating) })}</p>}
             </Card>

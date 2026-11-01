@@ -127,6 +127,7 @@ func (d *Deps) healOne(ctx context.Context, c pendingRow) error {
 		meta["healed_at"] = d.now().Format(time.RFC3339)
 		meta["prompt_version"] = ai.IntakePromptVersion
 		meta["confidence"] = in.Confidence
+		meta["categories"] = in.Categories
 		meta["priority_reason_en"] = in.PriorityReasonEn
 		meta["location_hint"] = in.LocationHint
 		meta["is_abusive"] = in.IsAbusive

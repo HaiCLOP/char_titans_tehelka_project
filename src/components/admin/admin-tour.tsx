@@ -141,6 +141,7 @@ export function AdminTour() {
 
     const el = document.getElementById(step.targetId);
     if (el) {
+      if (el instanceof HTMLDetailsElement) el.open = true;
       prevTargetRef.current = el;
       el.classList.add("tour-active-highlight");
       el.scrollIntoView({ behavior: "smooth", block: "center" });

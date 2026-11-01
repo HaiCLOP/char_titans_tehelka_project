@@ -19,6 +19,7 @@ import { apiFetch, isApiError } from "@/components/api-client";
 import { useRealtime } from "@/components/use-realtime";
 import { TicketChat } from "@/components/chat/ticket-chat";
 import { SlaCountdown } from "./sla-countdown";
+import { EvidenceGallery } from "./evidence-gallery";
 
 const KNOWN_EVENTS = ["created", "status", "assigned", "note", "metoo", "ai"];
 
@@ -286,7 +287,7 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div className="min-w-0 space-y-5">
-          <PhotoCarousel photos={d.photos} />
+          <EvidenceGallery photos={d.photos} videos={d.videos} />
 
           <Card>
             <CardHeader
@@ -318,8 +319,7 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
               <CardHeader icon={<Wrench className="size-4 text-p4" aria-hidden />} title={t("resolution.title")} className="mb-3" />
               <LangText tag="p" en={d.resolution.note_en} as={d.resolution.note_as} fallback={t("resolution.noNote")} className="text-sm" />
               {d.resolution.photo_url && (
-                // eslint-disable-next-line @next/next/no-img-element -- signed Supabase URL
-                <img src={d.resolution.photo_url} alt={t("resolution.photoAlt")} className="mt-3 aspect-[4/3] w-full rounded-xl object-cover" loading="lazy" />
+                <EvidenceGallery photos={[d.resolution.photo_url]} />
               )}
               {d.status === "closed" && d.rating && (
                 <p className="mt-3 flex items-center gap-1 text-sm">

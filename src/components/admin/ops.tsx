@@ -5,7 +5,8 @@ import { CATEGORY_ICON, Card, LangText, PriorityChip, RelativeTime, StatusChip, 
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import type { Category, Status } from "@/lib/domain";
 import { useLocale } from "next-intl";
-import { CampusAtlas, type AtlasMarker } from "@/components/map/campus-atlas";
+import type { AtlasMarker } from "@/components/map/campus-atlas";
+import { AdminLiveMap } from "./admin-live-map";
 import { locationMetres } from "@/lib/campus";
 import { cn, toLocaleDigits } from "@/lib/utils";
 
@@ -42,7 +43,7 @@ export function AttentionCard({
   quiet?: boolean;
 }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-border bg-surface p-5 shadow-sm">
+    <div className="flex h-full flex-col p-4 sm:p-5">
       <div className="flex items-start gap-3.5">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-muted" aria-hidden>
           <Icon
@@ -62,11 +63,11 @@ export function AttentionCard({
               {tag}
             </span>
           )}
-          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
         </div>
       </div>
       <div className="mt-auto pt-4">
-        <Link href={href} className={buttonVariants({ variant: quiet ? "secondary" : "primary", size: "sm" })}>
+        <Link href={href} className={buttonVariants({ variant: "ghost", size: "sm", className: "-ml-3" })}>
           {action}
           <ArrowRight aria-hidden />
         </Link>
@@ -92,10 +93,10 @@ export function OpsKpi({
   const up = (delta ?? 0) > 0;
   const locale = useLocale();
   return (
-    <Card className="p-4 sm:p-5">
+    <div className="min-w-0 p-4 sm:p-5">
       {/* Phones: icon above the label so labels never truncate; wider screens: icon beside it. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-surface-muted sm:size-10" aria-hidden>
+        <span className="hidden size-8 shrink-0 place-items-center rounded-full bg-surface-muted xl:grid" aria-hidden>
           <Icon className={cn("size-[18px] sm:size-[19px]", tone === "danger" ? "text-danger" : "text-foreground")} strokeWidth={1.75} />
         </span>
         <div className="min-w-0">
@@ -117,7 +118,7 @@ export function OpsKpi({
           )}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -149,7 +150,7 @@ export function IssueRow({ t, assignLabel, openLabel }: { t: OpsTicket; assignLa
 }
 
 /**
- * Small non-interactive real campus map: one node per building at locations.map_x/map_y, sized by open
+ * Interactive campus map: one node per building at locations.map_x/map_y, sized by open
  * tickets, ring colour = highest open priority. Same renderer as /map, at card size.
  */
 export function MiniMap({
@@ -175,14 +176,14 @@ export function MiniMap({
       topPriority: hit?.top ?? null, label: hit ? (locale === "as" ? l.name_as || l.name_en : l.name_en) : undefined,
     }];
   });
-  // Screen readers get the busiest buildings as text; the canvas itself is decorative here.
+  // Include the busiest buildings in the accessible map description.
   const summary = locations
     .filter((l) => byLoc.has(l.id))
     .sort((a, b) => byLoc.get(b.id)!.count - byLoc.get(a.id)!.count)
     .slice(0, 5)
     .map((l) => `${locale === "as" ? l.name_as || l.name_en : l.name_en}: ${toLocaleDigits(byLoc.get(l.id)!.count, locale)}`)
     .join(", ");
-  return <CampusAtlas compact markers={markers} label={summary ? `${label}. ${summary}` : label} className="aspect-[100/62] w-full rounded-2xl" />;
+  return <AdminLiveMap markers={markers} locations={locations} tickets={open} label={summary ? `${label}. ${summary}` : label} />;
 }
 
 /** A legend entry under the map. */
@@ -201,7 +202,7 @@ export function RecentRow({ t, location, categoryLabel, reported }: { t: OpsTick
   const Icon = CATEGORY_ICON[t.category];
   return (
     <tr className="group">
-      <td className="max-w-[18rem] py-3 pr-4 pl-5 sm:pl-6">
+      <td className="max-w-[9rem] py-3 pr-3 pl-4 sm:max-w-[18rem] sm:pr-4 sm:pl-6">
         <Link href={`/admin/t/${t.id}`} className="block truncate font-medium group-hover:underline">
           <LangText en={t.title_en} as={t.title_as} fallback={t.code} />
         </Link>
@@ -217,7 +218,7 @@ export function RecentRow({ t, location, categoryLabel, reported }: { t: OpsTick
       <td className="py-3 pr-4"><StatusChip status={t.status} /></td>
       <td className="hidden py-3 pr-4 sm:table-cell"><PriorityChip priority={t.priority} /></td>
       <td className="tabular hidden py-3 pr-4 text-muted-foreground xl:table-cell">{reported}</td>
-      <td className="py-3 pr-5 text-right text-muted-foreground sm:pr-6"><RelativeTime date={t.created_at} className="tabular text-xs" /></td>
+      <td className="hidden py-3 pr-5 text-right text-muted-foreground sm:table-cell sm:pr-6"><RelativeTime date={t.created_at} className="tabular text-xs" /></td>
     </tr>
   );
 }

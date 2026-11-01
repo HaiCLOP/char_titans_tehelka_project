@@ -18,6 +18,7 @@ type Intake struct {
 	SummaryEn              string  `json:"summary_en"`
 	SummaryAs              string  `json:"summary_as"`
 	Category               string  `json:"category"`
+	Categories             []string `json:"categories"`
 	Priority               int     `json:"priority"`
 	PriorityReasonEn       string  `json:"priority_reason_en"`
 	LocationHint           *string `json:"location_hint"`
@@ -64,6 +65,7 @@ func ParseIntake(raw string) (Intake, error) {
 		SummaryEn              *string  `json:"summary_en"`
 		SummaryAs              *string  `json:"summary_as"`
 		Category               *string  `json:"category"`
+		Categories             []string `json:"categories"`
 		Priority               *float64 `json:"priority"`
 		PriorityReasonEn       *string  `json:"priority_reason_en"`
 		LocationHint           *string  `json:"location_hint"`
@@ -114,6 +116,28 @@ func ParseIntake(raw string) (Intake, error) {
 		return out, invalidf("bad category")
 	}
 	out.Category = *m.Category
+	out.Categories = append([]string(nil), m.Categories...)
+	if len(out.Categories) > len(Categories) {
+		return out, invalidf("too many categories")
+	}
+	if len(out.Categories) == 0 {
+		out.Categories = []string{out.Category}
+	}
+	seenCategory := map[string]bool{}
+	uniqueCategories := make([]string, 0, len(out.Categories))
+	for _, category := range out.Categories {
+		if !validCategory(category) {
+			return out, invalidf("bad categories")
+		}
+		if !seenCategory[category] {
+			seenCategory[category] = true
+			uniqueCategories = append(uniqueCategories, category)
+		}
+	}
+	if !seenCategory[out.Category] {
+		uniqueCategories = append([]string{out.Category}, uniqueCategories...)
+	}
+	out.Categories = uniqueCategories
 	if m.Priority == nil || *m.Priority != math.Trunc(*m.Priority) || *m.Priority < 1 || *m.Priority > 4 {
 		return out, invalidf("bad priority")
 	}

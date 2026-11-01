@@ -92,10 +92,10 @@ export default async function AdminMapPage({ searchParams }: { searchParams: Pro
   const scope = departments.find((d) => d.id === dept) ?? null;
 
   return (
-    <div className="mx-auto max-w-[84rem]">
-      <header className="max-w-2xl">
+    <div className="mx-auto max-w-7xl pb-6">
+      <header className="max-w-3xl">
         <h1 className="text-display text-[2.25rem] sm:text-[2.75rem]">{t("title")}</h1>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           {scope ? <LangText en={scope.name_en} as={scope.name_as} /> : t("allDepartments")}
           {" · "}
           {t("subtitle")}

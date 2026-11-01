@@ -16,7 +16,7 @@ const ITEMS = [
   { href: "/admin", key: "dashboard", icon: LayoutDashboard, exact: true, superOnly: false, deptOnly: false },
   { href: "/admin/queue", key: "queue", icon: ClipboardList, exact: false, superOnly: false, deptOnly: false },
   { href: "/admin/agent", key: "agent", icon: MessagesSquare, exact: false, superOnly: false, deptOnly: false },
-  { href: "/staff", key: "fieldWork", icon: Wrench, exact: false, superOnly: false, deptOnly: false },
+  { href: "/admin/field-work", key: "fieldWork", icon: Wrench, exact: false, superOnly: false, deptOnly: false },
   { href: "/admin/map", key: "map", icon: Map, exact: false, superOnly: false, deptOnly: false },
   { href: "/admin/departments", key: "departments", icon: Building2, exact: false, superOnly: true, deptOnly: false },
   { href: "/admin/team", key: "team", icon: Users, exact: false, superOnly: false, deptOnly: true },

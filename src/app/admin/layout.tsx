@@ -4,6 +4,7 @@ import { LanguageSwitch, ModeToggle } from "@/components/preference-switchers";
 import { AdminSidebar } from "@/components/shell/admin-sidebar";
 import { ADMIN_NAV_COOKIE } from "@/components/shell/admin-nav";
 import { getProfile } from "@/lib/auth";
+import { AdminClock } from "@/components/admin/admin-clock";
 
 /**
  * Admin shell. Access control is enforced per page with `requireRole("dept_admin", "super_admin")`
@@ -26,10 +27,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         }
       />
       <div className="min-w-0 flex-1">
-        <header className="hidden h-16 items-center justify-end gap-1.5 px-8 lg:flex">
+        <header className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 sm:px-8">
+          <AdminClock initialTimestamp={new Date().toISOString()} />
+          <div className="hidden items-center gap-1.5 lg:flex">
           <LanguageSwitch />
           <ModeToggle />
           <NotificationBell userId={profile?.id ?? null} />
+          </div>
         </header>
         <main className="px-4 pt-6 pb-12 sm:px-8 lg:pt-2">{children}</main>
       </div>

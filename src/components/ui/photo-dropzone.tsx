@@ -49,6 +49,7 @@ export function PhotoDropzone({ value, onChange, max = 3, label, hint, error, di
   const busy = 0;
   const [drag, setDrag] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<PhotoItem | null>(null);
 
   // Camera modal state
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
@@ -170,6 +171,7 @@ export function PhotoDropzone({ value, onChange, max = 3, label, hint, error, di
 
   function remove(item: PhotoItem) {
     URL.revokeObjectURL(item.url);
+    setPreviewItem((current) => current?.id === item.id ? null : current);
     onChange(latest.current.filter((p) => p.id !== item.id));
   }
 
@@ -205,19 +207,26 @@ export function PhotoDropzone({ value, onChange, max = 3, label, hint, error, di
           disabled && "opacity-60",
         )}
       >
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
           {value.map((p, i) => (
-            <div key={p.id} className="relative aspect-square overflow-hidden rounded-xl border border-border bg-surface">
-              {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
-              <img src={p.url} alt={t("preview", { n: toLocaleDigits(i + 1, locale) })} className="size-full object-cover" />
+            <div key={p.id} className="relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-surface-sunken">
+              <button
+                type="button"
+                onClick={() => setPreviewItem(p)}
+                aria-label={t("openPreview", { n: toLocaleDigits(i + 1, locale) })}
+                className="absolute inset-0 grid size-full place-items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
+                <img src={p.url} alt={t("preview", { n: toLocaleDigits(i + 1, locale) })} className="size-full object-contain" />
+              </button>
               <button
                 type="button"
                 onClick={() => remove(p)}
                 disabled={disabled}
                 aria-label={t("remove", { n: toLocaleDigits(i + 1, locale) })}
-                className="absolute top-1 right-1 grid size-7 place-items-center after:absolute after:-inset-1.5 after:content-[''] rounded-full bg-black/60 text-white hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="absolute top-2 right-2 grid size-10 place-items-center rounded-full border border-background/80 bg-foreground text-background shadow-sm hover:bg-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <X className="size-3.5" aria-hidden />
+                <X className="size-4" aria-hidden />
               </button>
             </div>
           ))}
@@ -378,6 +387,19 @@ export function PhotoDropzone({ value, onChange, max = 3, label, hint, error, di
             </div>
           )}
         </div>
+      </Dialog>
+      <Dialog
+        open={previewItem !== null}
+        onOpenChange={(open) => { if (!open) setPreviewItem(null); }}
+        title={previewItem?.name || t("preview", { n: "1" })}
+        className="max-w-[min(92vw,64rem)]"
+      >
+        {previewItem && (
+          <div className="grid max-h-[68dvh] min-h-0 place-items-center overflow-hidden rounded-xl bg-surface-sunken">
+            {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
+            <img src={previewItem.url} alt={t("preview", { n: "1" })} className="max-h-[68dvh] w-full object-contain" />
+          </div>
+        )}
       </Dialog>
     </Field>
   );

@@ -37,7 +37,8 @@
       "menu": "Menu",
       "backToSite": "Back to site",
       "fieldWork": "Field work",
-      "team": "My team"
+      "team": "My team",
+      "dateTime": "Current date and time (India)"
     },
     "work": "My work",
     "workShort": "My work",
@@ -63,6 +64,10 @@
     "resolved": "Resolved",
     "contributors": "Students Contributed"
   },
+  "mascot": {
+    "assistant": "Civi campus assistant",
+    "dragHint": "Tap Civi for help. Drag to move Civi."
+  },
   "home": {
     "map": "Campus Map",
     "insights": "AI Insights",
@@ -73,10 +78,16 @@
     "title": "Campus issues",
     "subtitle": "Report a problem in Assamese or English, then watch it move from your phone to the person who fixes it.",
     "composeTitle": "What needs fixing?",
-    "composeHint": "Write in any language, or just add a photo.",
+    "composeHint": "Write in English, Assamese or Hindi, or attach a photo or video.",
     "composePlaceholder": "e.g. No water in the girls’ hostel washroom since Monday",
     "continue": "Continue",
-    "addPhoto": "Add a photo",
+    "addPhoto": "Add a photo or video",
+    "addVideo": "Add a video",
+    "changeMedia": "Change media",
+    "videoTooLong": "Videos must be 1 minute or shorter.",
+    "photoPreviewAlt": "Selected photo preview",
+    "photoReady": "Ready to attach",
+    "removePhoto": "Remove photo",
     "tabOpen": "Open now",
     "tabResolved": "Recently fixed",
     "emptyOpenTitle": "A quiet campus",
@@ -131,7 +142,11 @@
     "1": "Critical",
     "2": "High",
     "3": "Medium",
-    "4": "Low"
+    "4": "Low",
+    "p1": "Critical",
+    "p2": "High",
+    "p3": "Medium",
+    "p4": "Low"
   },
   "category": {
     "water_supply": "Water supply",
@@ -214,6 +229,7 @@
       "hint": "Up to {max} photos. Live photos recommended; stock/web images prohibited.",
       "remove": "Remove photo {n}",
       "preview": "Photo {n}",
+      "openPreview": "Open full preview of photo {n}",
       "compressing": "Preparing photo...",
       "tooMany": "You can add up to {max} photos.",
       "invalid": "Some files could not be used. Choose JPG, PNG or WebP photos."
@@ -265,6 +281,23 @@
       "hint": "Write in English or Assamese. Say what is wrong and since when.",
       "placeholder": "e.g. No water in the girls' hostel washroom for three days"
     },
+    "voice": {
+      "languageLabel": "Speech language",
+      "speak": "Speak",
+      "stop": "Stop and transcribe",
+      "failed": "Could not transcribe audio",
+      "permission": "Allow microphone access to record your report"
+    },
+    "videos": {
+      "add": "Add video (up to 1 minute)",
+      "tooLong": "Videos must be 1 minute or shorter",
+      "invalid": "Could not read this video",
+      "failed": "Video upload failed",
+      "aiFailed": "AI could not transcribe this video. You can still submit it with a description.",
+      "remove": "Remove video",
+      "processing": "Uploading and extracting details…",
+      "ready": "Video attached"
+    },
     "photos": {
       "label": "Photos",
       "statusLabel": "Photo upload status",
@@ -284,8 +317,9 @@
     },
     "category": {
       "label": "Category",
-      "hint": "Pick the category or let AI auto-detect from your description.",
+      "hint": "Select every category that fits, or let AI highlight them from your description.",
       "autoOption": "Auto-detect (AI)",
+      "aiSuggested": "AI",
       "selected": "Selected category"
     },
     "rejection": {
@@ -792,6 +826,8 @@
       "assign": "Assign",
       "open": "Open",
       "mapTitle": "Live map",
+      "mapInteraction": "Drag to pan, zoom with the controls, and select a building to see its reports.",
+      "mapNoIssues": "No open reports at this building.",
       "viewMap": "View full map",
       "legendOpen": "Open",
       "legendWorking": "In progress",
@@ -937,6 +973,7 @@
       "autoRouted": "Auto-routed",
       "manualReview": "Sent for review",
       "priorityReason": "Priority reason",
+      "nearbyLocation": "Media GPS is near campus but outside its boundary. Please review this report.",
       "state": {
         "done": "Done",
         "pending": "Pending",
@@ -1478,7 +1515,9 @@
     "emptyBody": "Try a longer period or clear a filter.",
     "drawerEmptyBody": "No tickets at this building match the filters.",
     "private": "Private",
-    "sensitive": "Sensitive"
+    "sensitive": "Sensitive",
+    "moreFilters": "Priority, category & department",
+    "resetFilters": "Reset filters"
   },
   "brief": {
     "eyebrow": "AI daily brief",
@@ -1541,5 +1580,85 @@
     "listening": "Listening…",
     "tapToSpeak": "Tap microphone to speak",
     "submit": "Confirm and submit"
+  },
+  "departmentManagement": {
+    "title": "Departments & members",
+    "subtitle": "Manage departments, response deadlines, staff, and assignment settings.",
+    "new": "New department",
+    "listLabel": "Departments",
+    "membersLabel": "Department members",
+    "emptyTitle": "No departments yet",
+    "emptyBody": "Create a department to route reports and assign staff.",
+    "noCategories": "No categories assigned",
+    "editAria": "Edit {name}",
+    "deleteAria": "Delete {name}",
+    "counts": "{m} members · {o} open reports",
+    "days": "{n} days",
+    "hours": "{n} h",
+    "toast": {
+      "saved": "Department saved",
+      "created": "Department created",
+      "deleted": "Department deleted"
+    },
+    "errors": {
+      "invalid": "Check the department details and try again.",
+      "generic": "Something went wrong. Please try again.",
+      "names": "Enter both department names (at least 2 characters).",
+      "bengaliRa": "Use Assamese letters in the Assamese name.",
+      "sla": "Response deadlines must be whole hours between 1 and 2160.",
+      "inUse": "This department still has members or reports. Move them before deleting it."
+    },
+    "dialog": {
+      "editTitle": "Edit department",
+      "newTitle": "New department",
+      "body": "Set bilingual names, service categories, and response deadlines.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create department",
+      "nameEn": "Name in English",
+      "nameAs": "Name in Assamese",
+      "categories": "Service categories",
+      "sla": "Response deadlines by priority",
+      "slaHint": "Enter the target response time in hours for each priority."
+    },
+    "delete": {
+      "title": "Delete department?",
+      "body": "This department can only be deleted when it has no members or reports.",
+      "cancel": "Cancel",
+      "confirm": "Delete department"
+    },
+    "workflow": {
+      "title": "Assignment workflow",
+      "body": "Choose how reports are assigned and how emergencies are handled.",
+      "saved": "Assignment settings saved",
+      "modeLabel": "Assignment mode",
+      "mode": {
+        "off": "Manual",
+        "approval": "Admin approval",
+        "auto": "Automatic"
+      },
+      "modeHint": {
+        "off": "Admins assign reports to staff manually.",
+        "approval": "Review suggested staff before approving assignments.",
+        "auto": "Eligible reports are assigned automatically using staff skills and workload."
+      },
+      "teamSize": "Emergency team size",
+      "teamSizeHint": "Maximum number of staff for an emergency response.",
+      "people": "{count, plural, one {{n} person} other {{n} people}}"
+    },
+    "emergency": {
+      "label": "Automatically assign emergencies",
+      "description": "Assign available staff to urgent reports using the emergency workflow.",
+      "error": "Could not save assignment settings. Please try again.",
+      "loadError": "Could not load assignment settings"
+    }
+  },
+  "evidence": {
+    "title": "Report evidence",
+    "hint": "Select a photo or video to preview it in full.",
+    "photo": "Photo {n}",
+    "video": "Video {n}",
+    "previous": "Previous",
+    "next": "Next"
   }
 }
