@@ -568,7 +568,9 @@
       "fox": "Fox",
       "knight": "Knight",
       "pirate": "Pirate"
-    }
+    },
+    "emailNotifications": "Email me notifications",
+    "emailNotificationsHint": "Updates on your reports and jobs also arrive by email. If sending fails, it is retried automatically."
   },
   "errors": {
     "notFoundTitle": "Page not found",

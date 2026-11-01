@@ -20,6 +20,9 @@ type Config struct {
 	GeminiAPIKeys     []string
 	OpenRouterAPIKeys []string
 	EngineSecret      string
+	ResendAPIKey      string
+	ResendFrom        string
+	SiteURL           string // links in notification emails
 	Port              int
 	LogLevel          slog.Level
 	EnvFiles          []string // .env files that were found and read (paths only)
@@ -55,6 +58,9 @@ func Load() (*Config, error) {
 		GeminiAPIKeys:     SplitList(get("GEMINI_API_KEYS")),
 		OpenRouterAPIKeys: SplitList(get("OPENROUTER_API_KEYS")),
 		EngineSecret:      get("ENGINE_SECRET"),
+		ResendAPIKey:      get("RESEND_API_KEY"),
+		ResendFrom:        get("RESEND_FROM"),
+		SiteURL:           strings.TrimRight(get("NEXT_PUBLIC_SITE_URL"), "/"),
 		Port:              8080,
 		LogLevel:          slog.LevelInfo,
 		EnvFiles:          found,

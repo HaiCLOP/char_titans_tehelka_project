@@ -15,6 +15,7 @@ import (
 	"civicsense/engine/internal/ai"
 	"civicsense/engine/internal/config"
 	"civicsense/engine/internal/httpapi"
+	"civicsense/engine/internal/mail"
 	"civicsense/engine/internal/supa"
 	"civicsense/engine/internal/workers"
 )
@@ -63,7 +64,9 @@ func run() error {
 
 	runner := workers.NewRunner(log, 10*time.Second)
 	if db.Configured() {
-		runner = workers.NewRunner(log, 10*time.Second, workers.Jobs(&workers.Deps{DB: db, Analyzer: analyzer})...)
+		runner = workers.NewRunner(log, 10*time.Second, workers.Jobs(&workers.Deps{
+			DB: db, Analyzer: analyzer, Mail: mail.New(cfg.ResendAPIKey, cfg.ResendFrom), SiteURL: cfg.SiteURL,
+		})...)
 	}
 	runner.Start(ctx)
 

@@ -31,6 +31,8 @@ export type Profile = {
   course: string | null;
   department_id: string | null;
   onboarded_at: string | null;
+  /** Also email notifications (delivered through the notification_email queue). */
+  notify_email: boolean;
 };
 
 /** API error codes → HTTP status (PRD section 10). */
@@ -442,6 +444,7 @@ export const ProfileUpdateSchema = z
     lang_pref: z.enum(["en", "as"]).optional(),
     theme: z.enum(PROFILE_THEMES).optional(),
     font_size: z.enum(["normal", "large"]).optional(),
+    notify_email: z.boolean().optional(),
     /** Pixel character avatar (0–59); null = default derived from the user id. */
     avatar_character: z.number().int().min(0).max(59).nullable().optional(),
     hostel: z.string().trim().max(80).nullable().optional(),

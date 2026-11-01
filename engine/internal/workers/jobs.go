@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"civicsense/engine/internal/ai"
+	"civicsense/engine/internal/mail"
 	"civicsense/engine/internal/supa"
 )
 
@@ -19,6 +20,8 @@ import (
 type Deps struct {
 	DB       *supa.Client
 	Analyzer *ai.Analyzer
+	Mail     *mail.Sender // nil or unconfigured: notification emails wait in the queue
+	SiteURL  string
 	Now      func() time.Time
 
 	briefFailAt time.Time // back off 10 min after a failed brief so we don't burn quota every minute
@@ -33,13 +36,14 @@ func (d *Deps) now() time.Time {
 
 const openFilter = "not.in.(resolved,closed,rejected,duplicate)"
 
-// Jobs returns the four background jobs (each ticks every 60 s).
+// Jobs returns the background jobs.
 func Jobs(d *Deps) []Job {
 	return []Job{
 		{Name: "heal_pending_ai", Every: time.Minute, Timeout: 55 * time.Second, Run: d.HealPendingAI},
 		{Name: "sla_alerts", Every: time.Minute, Timeout: 30 * time.Second, Run: d.SLAAlerts},
 		{Name: "auto_close", Every: time.Minute, Timeout: 30 * time.Second, Run: d.AutoClose},
 		{Name: "daily_brief", Every: time.Minute, Timeout: 55 * time.Second, Run: d.DailyBrief},
+		{Name: "notification_email", Every: 30 * time.Second, Timeout: 25 * time.Second, Run: d.NotificationEmail},
 	}
 }
 

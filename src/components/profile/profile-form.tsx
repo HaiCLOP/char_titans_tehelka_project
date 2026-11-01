@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { LogOut, Moon, Save, Type } from "lucide-react";
+import { LogOut, Mail, Moon, Save, Type } from "lucide-react";
 import type { NamedRef, Profile, ProfileUpdate } from "@/lib/domain";
 import { MODE_COOKIE } from "@/lib/theme";
 import { pickLang } from "@/lib/lang";
@@ -67,6 +67,7 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
   const [course, setCourse] = useState(profile.course ?? "");
   const [font, setFont] = useState<FontSize>(profile.font_size);
   const [dark, setDark] = useState(initialDark);
+  const [emailMe, setEmailMe] = useState(profile.notify_email ?? true);
   const [nameError, setNameError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const character = resolveCharacter(profile.avatar_character, profile.id) ?? 0;
@@ -96,6 +97,7 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
   if (canPickDept && dept !== (profile.department_id ?? "")) patch.department_id = dept || null;
   if (isStudent && course.trim() !== (profile.course ?? "")) patch.course = course.trim() || null;
   if (font !== profile.font_size) patch.font_size = font;
+  if (emailMe !== (profile.notify_email ?? true)) patch.notify_email = emailMe;
   const dirty = Object.keys(patch).length > 0;
 
   const save = useMutation({
@@ -231,6 +233,18 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
             </span>
           }
           description={t("darkModeHint")}
+        />
+        <Switch
+          id="profile-email"
+          checked={emailMe}
+          onCheckedChange={setEmailMe}
+          label={
+            <span className="inline-flex items-center gap-1.5">
+              <Mail className="size-4 text-muted-foreground" aria-hidden />
+              {t("emailNotifications")}
+            </span>
+          }
+          description={t("emailNotificationsHint")}
         />
       </Card>
 
