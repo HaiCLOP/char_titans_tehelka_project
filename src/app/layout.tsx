@@ -36,8 +36,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={locale} data-font-size={fontSize} className={`${geist.variable} ${notoBengali.variable} ${dark ? "dark" : ""}`}>
       <body className="min-h-dvh">
         <NextIntlClientProvider>
-          <Providers>{children}</Providers>
-          <CiviCompanion />
+          <Providers>
+            {children}
+            <CiviCompanion />
+          </Providers>
           <PwaManager />
           <Toaster position="top-center" toastOptions={{ className: "!rounded-2xl !border-border !bg-surface !text-foreground !shadow-md" }} />
         </NextIntlClientProvider>
