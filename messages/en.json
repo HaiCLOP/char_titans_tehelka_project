@@ -784,7 +784,8 @@
       "pirate": "Pirate"
     },
     "emailNotifications": "Email me notifications",
-    "emailNotificationsHint": "Updates on your reports and jobs also arrive by email. If sending fails, it is retried automatically."
+    "emailNotificationsHint": "Updates on your reports and jobs also arrive by email. If sending fails, it is retried automatically.",
+    "hostelNone": "Not in a hostel"
   },
   "errors": {
     "notFoundTitle": "Page not found",
@@ -1333,16 +1334,46 @@
       "private": "Only you, your department admins and super admins see your level."
     },
     "items": {
-      "first_report": { "name": "First report", "desc": "Report your first issue" },
-      "five_reports": { "name": "Regular reporter", "desc": "Report 5 issues" },
-      "ten_reports": { "name": "Campus champion", "desc": "Report 10 issues" },
-      "helper": { "name": "Helper", "desc": "Say \"me too\" on 5 issues" },
-      "fixer_friend": { "name": "Fixer's friend", "desc": "Get one of your reports fixed" },
-      "feedback_giver": { "name": "Feedback giver", "desc": "Rate 3 fixes" },
-      "water_watcher": { "name": "Water watcher", "desc": "Report 3 water or plumbing issues" },
-      "power_patrol": { "name": "Power patrol", "desc": "Report 3 electrical issues" },
-      "clean_campus": { "name": "Clean campus", "desc": "Report 3 sanitation issues" },
-      "streak_3": { "name": "On a roll", "desc": "Report in 3 weeks in a row" }
+      "first_report": {
+        "name": "First report",
+        "desc": "Report your first issue"
+      },
+      "five_reports": {
+        "name": "Regular reporter",
+        "desc": "Report 5 issues"
+      },
+      "ten_reports": {
+        "name": "Campus champion",
+        "desc": "Report 10 issues"
+      },
+      "helper": {
+        "name": "Helper",
+        "desc": "Say \"me too\" on 5 issues"
+      },
+      "fixer_friend": {
+        "name": "Fixer's friend",
+        "desc": "Get one of your reports fixed"
+      },
+      "feedback_giver": {
+        "name": "Feedback giver",
+        "desc": "Rate 3 fixes"
+      },
+      "water_watcher": {
+        "name": "Water watcher",
+        "desc": "Report 3 water or plumbing issues"
+      },
+      "power_patrol": {
+        "name": "Power patrol",
+        "desc": "Report 3 electrical issues"
+      },
+      "clean_campus": {
+        "name": "Clean campus",
+        "desc": "Report 3 sanitation issues"
+      },
+      "streak_3": {
+        "name": "On a roll",
+        "desc": "Report in 3 weeks in a row"
+      }
     }
   },
   "assign": {

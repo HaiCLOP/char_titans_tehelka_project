@@ -17,7 +17,7 @@ import { CharacterPicker } from "./character-picker";
 import { BadgesCard } from "@/components/badges/badges-card";
 import { resolveCharacter } from "@/lib/campus";
 
-type Props = { profile: Profile; email: string | null; departments: NamedRef[]; initialDark: boolean };
+type Props = { profile: Profile; email: string | null; departments: NamedRef[]; hostels: NamedRef[]; initialDark: boolean };
 
 function Segmented<V extends string>({
   label, value, options, onChange,
@@ -54,7 +54,7 @@ function Segmented<V extends string>({
   );
 }
 
-export function ProfileForm({ profile, email, departments, initialDark }: Props) {
+export function ProfileForm({ profile, email, departments, hostels, initialDark }: Props) {
   const t = useTranslations("profile");
   const tr = useTranslations("roles");
   const locale = useLocale();
@@ -165,13 +165,19 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
           }}
           error={nameError ?? undefined}
         />
-        <Input
+        {/* A real hostel from the locations list (same as onboarding), so Civi and the report form can place
+            "my hostel" on the map. An older free-text value stays selectable until it is changed. */}
+        <Select
           id="profile-hostel"
           label={t("hostel")}
           hint={t("hostelHint")}
           value={hostel}
-          maxLength={80}
           onChange={(e) => setHostel(e.target.value)}
+          options={[
+            { value: "", label: t("hostelNone") },
+            ...hostels.map((h) => ({ value: h.name_en, label: pickLang(h, "name", locale) })),
+            ...(profile.hostel && !hostels.some((h) => h.name_en === profile.hostel) ? [{ value: profile.hostel, label: profile.hostel }] : []),
+          ]}
         />
         {isStudent ? (
           <Input

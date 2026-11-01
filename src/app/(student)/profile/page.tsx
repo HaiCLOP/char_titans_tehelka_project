@@ -12,11 +12,22 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metaTitle") };
 }
 
-// S10 — Profile. Departments are publicly readable, so they are loaded here with the RLS client.
+// S10 — Profile. Departments and hostels are publicly readable, so they are loaded here with the RLS client.
 export default async function ProfilePage() {
   const { user, profile } = await requireUser();
   const [supabase, store] = await Promise.all([createClient(), cookies()]);
   const dark = store.get(MODE_COOKIE)?.value === "dark";
-  const { data } = await supabase.from("departments").select("id, name_en, name_as").order("name_en");
-  return <ProfileForm profile={profile} email={user.email ?? null} departments={(data ?? []) as NamedRef[]} initialDark={dark} />;
+  const [{ data }, { data: hostels }] = await Promise.all([
+    supabase.from("departments").select("id, name_en, name_as").order("name_en"),
+    supabase.from("locations").select("id, name_en, name_as").eq("type", "hostel").order("name_en"),
+  ]);
+  return (
+    <ProfileForm
+      profile={profile}
+      email={user.email ?? null}
+      departments={(data ?? []) as NamedRef[]}
+      hostels={(hostels ?? []) as NamedRef[]}
+      initialDark={dark}
+    />
+  );
 }
