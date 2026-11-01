@@ -12,7 +12,9 @@ import {
   Compass,
   X,
   ChevronUp,
-  HelpCircle,
+  ClipboardList,
+  MessagesSquare,
+  Map,
 } from "lucide-react";
 import { Civi, type CiviPose } from "./civi";
 
@@ -58,6 +60,26 @@ const PAGE_ADVICE: Record<string, PageAdvice> = {
     tipEn: "Track all your submitted complaints here. You'll receive live status alerts when staff act on them.",
     tipAs: "আপোনাৰ সকলো অভিযোগ ইয়াত অনুসৰণ কৰক। স্থিতি সলনি হ'লে আপুনি জাননী পাব।",
   },
+  "/admin": {
+    pose: "hero",
+    tipEn: "Welcome to Ops! Keep an eye on overdue SLA tickets and assign unassigned P1/P2 emergencies.",
+    tipAs: "কাৰ্য কেন্দ্ৰলৈ স্বাগতম! সময়সীমা পাৰ হোৱা অভিযোগ আৰু দায়িত্বহীন জৰুৰী কামবোৰ আগতীয়াকৈ দায়িত্ব দিয়ক।",
+  },
+  "/admin/queue": {
+    pose: "helping",
+    tipEn: "Triage Queue: Filter by status, assign field staff, and inspect duplicate reports.",
+    tipAs: "কাৰ্য তালিকা: অৱস্থা অনুসৰি বাছক আৰু ক্ষেত্ৰ মেৰামতি কৰ্মীক দ্ৰুত দায়িত্ব দিয়ক।",
+  },
+  "/admin/agent": {
+    pose: "learning",
+    tipEn: "Ask CivicSense AI Agent about recurring hostel complaints, SLA bottlenecks, and workloads.",
+    tipAs: "হোষ্টেল বা বিভাগৰ সমস্যাৰ আৰ্হি আৰু কৰ্মচাৰীৰ কাৰ্যভাৰ জানিবলৈ এআই এজেন্টক সোধক।",
+  },
+  "/admin/map": {
+    pose: "thinking",
+    tipEn: "Geographic incident clustering: zoom into specific campus zones to spot maintenance hotspots.",
+    tipAs: "স্থানিক সমস্যা নিৰীক্ষণ: বিশেষ ভৱন বা হোষ্টেলত জুম কৰি সমস্যাৰ কেন্দ্ৰবিন্দু চাওক।",
+  },
 };
 
 export function CiviCompanion() {
@@ -67,6 +89,8 @@ export function CiviCompanion() {
 
   const [expanded, setExpanded] = useState(false);
   const [minimized, setMinimized] = useState(false);
+
+  const isAdmin = pathname.startsWith("/admin");
 
   // Pick contextual advice based on route
   const advice =
@@ -82,6 +106,12 @@ export function CiviCompanion() {
           pose: "thinking" as CiviPose,
           tipEn: "Live tracking active! University staff must provide resolution photo proof before closing.",
           tipAs: "লাইভ অনুসৰণ সক্ৰিয়! সমস্যা সমাধান হ'লে কৰ্মচাৰীয়ে ফটো প্ৰমাণ আপলোড কৰিব লাগিব।",
+        }
+      : pathname.startsWith("/admin/t/")
+      ? {
+          pose: "helping" as CiviPose,
+          tipEn: "Review complaint details, attach internal work notes, update status, and track SLA countdown.",
+          tipAs: "অভিযোগৰ সবিশেষ চাওক, আভ্যন্তৰীণ মন্তব্য যোগ কৰক, স্থিতি সলনি কৰক আৰু এছএলএ সময় নিৰীক্ষণ কৰক।",
         }
       : {
           pose: "hero" as CiviPose,
@@ -106,7 +136,13 @@ export function CiviCompanion() {
   }, [pathname]);
 
   const triggerTour = () => {
-    window.dispatchEvent(new CustomEvent("civicsense:open-civi-tour"));
+    if (isAdmin) {
+      window.dispatchEvent(new CustomEvent("civicsense:open-admin-tour"));
+    } else if (pathname === "/") {
+      window.dispatchEvent(new CustomEvent("civicsense:open-civi-tour"));
+    } else {
+      router.push("/?tour=true");
+    }
     setExpanded(false);
   };
 
@@ -201,94 +237,139 @@ export function CiviCompanion() {
                 >
                   <span className="flex items-center gap-2">
                     <Compass className="size-3.5 text-primary" />
-                    <span>{locale === "as" ? "কেম্পাছ পৰিচিতি ভ্ৰমণ চাওক" : "Take App Tour"}</span>
+                    <span>
+                      {isAdmin
+                        ? locale === "as"
+                          ? "পৰিচালনা ভ্ৰমণ চাওক"
+                          : "Take Ops Tour"
+                        : locale === "as"
+                        ? "কেম্পাছ পৰিচিতি ভ্ৰমণ চাওক"
+                        : "Take App Tour"}
+                    </span>
                   </span>
                   <span className="text-[10px] font-semibold text-primary">Start</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExpanded(false);
-                    router.push("/report");
-                  }}
-                  className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted transition-colors text-left"
-                >
-                  <span className="flex items-center gap-2">
-                    <PlusCircle className="size-3.5 text-primary" />
-                    <span>{locale === "as" ? "নতুন অভিযোগ দাখিল কৰক" : "Report an Issue"}</span>
-                  </span>
-                </button>
+                {isAdmin ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpanded(false);
+                        router.push("/admin/queue");
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2">
+                        <ClipboardList className="size-3.5 text-primary" />
+                        <span>{locale === "as" ? "কাৰ্য তালিকা (Triage)" : "Triage Queue"}</span>
+                      </span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExpanded(false);
-                    router.push("/report/voice");
-                  }}
-                  className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted transition-colors text-left"
-                >
-                  <span className="flex items-center gap-2">
-                    <Mic className="size-3.5 text-primary" />
-                    <span>{locale === "as" ? "ভয়েচ এছিষ্টেণ্টৰে কওক" : "Voice Reporting"}</span>
-                  </span>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpanded(false);
+                        router.push("/admin/agent");
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2">
+                        <MessagesSquare className="size-3.5 text-primary" />
+                        <span>{locale === "as" ? "এআই এজেন্টক সোধক" : "Ask AI Agent"}</span>
+                      </span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExpanded(false);
-                    router.push("/departments");
-                  }}
-                  className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted transition-colors text-left"
-                >
-                  <span className="flex items-center gap-2">
-                    <Building2 className="size-3.5 text-primary" />
-                    <span>{locale === "as" ? "বিভাগসমূহৰ ডাইৰেক্টৰি" : "Department Directory"}</span>
-                  </span>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpanded(false);
+                        router.push("/admin/map");
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Map className="size-3.5 text-primary" />
+                        <span>{locale === "as" ? "চৌহদ মানচিত্ৰ" : "Campus Map"}</span>
+                      </span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpanded(false);
+                        router.push("/report");
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2">
+                        <PlusCircle className="size-3.5 text-primary" />
+                        <span>{locale === "as" ? "নতুন অভিযোগ দাখিল কৰক" : "Report an Issue"}</span>
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpanded(false);
+                        router.push("/report/voice");
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Mic className="size-3.5 text-primary" />
+                        <span>{locale === "as" ? "ভয়েচ এছিষ্টেণ্টৰে কওক" : "Voice Reporting"}</span>
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpanded(false);
+                        router.push("/departments");
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-muted transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Building2 className="size-3.5 text-primary" />
+                        <span>{locale === "as" ? "বিভাগসমূহৰ ডাইৰেক্টৰি" : "Department Directory"}</span>
+                      </span>
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           ) : (
-            /* Floating Mascot Badge with Speech Bubble */
-            <div className="flex items-end gap-2.5">
-              {bubbleVisible && (
-                <motion.div
-                  initial={{ opacity: 0, x: 8, scale: 0.95 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="relative max-w-[240px] rounded-2xl border border-border bg-surface p-2.5 text-xs text-foreground shadow-lg leading-snug"
-                >
-                  <p className="line-clamp-2 text-[11px] font-medium text-muted-foreground">{tipText}</p>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setBubbleVisible(false);
-                    }}
-                    className="absolute -top-1.5 -left-1.5 grid size-4 place-items-center rounded-full bg-surface-muted border border-border text-muted-foreground hover:text-foreground"
-                    aria-label="Dismiss tip"
+            /* Minimized/Collapsed Floating Pill with Brief Speech Bubble */
+            <div className="flex items-end gap-2">
+              <AnimatePresence>
+                {bubbleVisible && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.18 }}
+                    onClick={() => setExpanded(true)}
+                    className="max-w-[220px] sm:max-w-xs cursor-pointer rounded-2xl border border-border bg-surface px-3.5 py-2 text-xs font-medium text-foreground shadow-lg dark:shadow-black/40 hover:bg-surface-muted transition-colors"
                   >
-                    <X className="size-2.5" />
-                  </button>
-                </motion.div>
-              )}
+                    <p className="line-clamp-2 leading-relaxed">{tipText}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
-                className="group relative grid size-14 place-items-center rounded-full border border-border bg-surface shadow-xl hover:scale-105 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Chat with Civi, your campus assistant"
-                title="Tap to talk with Civi"
+                className="group relative flex items-center justify-center rounded-full border border-border bg-surface p-1 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
+                title="Tap Civi for help"
+                aria-label="Tap Civi for help"
               >
-                <Civi
-                  pose={advice.pose}
-                  size="md"
-                  interactive={false}
-                  className="drop-shadow-xs"
-                />
-                <span className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold shadow-xs">
-                  <HelpCircle className="size-2.5" />
+                <Civi pose={advice.pose} size="md" interactive={false} />
+                <span className="absolute -top-1 -right-1 flex size-3">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex size-3 rounded-full bg-primary" />
                 </span>
               </button>
             </div>

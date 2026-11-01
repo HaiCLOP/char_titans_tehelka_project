@@ -109,7 +109,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
         <HomeComposer name={data.name} avatar={data.avatar} />
 
         {/* Mobile-only 4-Stat Metric Strip (< lg) */}
-        <div className="lg:hidden">
+        <div id="tour-mobile-kpis" className="lg:hidden">
           <div className="rounded-2xl border border-border bg-surface p-3.5 shadow-xs space-y-2.5">
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">

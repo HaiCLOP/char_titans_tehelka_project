@@ -5,6 +5,8 @@ import { AlarmClock, AlertTriangle, Building2, CalendarDays, CheckCircle2, Clipb
 import { AreaTrend, Card, EmptyState, ErrorState, LangText, PriorityChip, StatusChip } from "@/components/ui";
 import { AdminBriefCard } from "@/components/brief/brief-card";
 import { AttentionCard, IssueRow, LegendDot, MiniMap, OpsKpi, RecentRow, type OpsLocation, type OpsTicket } from "@/components/admin/ops";
+import { AdminTour } from "@/components/admin/admin-tour";
+import { AdminTourTrigger } from "@/components/admin/admin-tour-trigger";
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import { getAdminStats } from "@/lib/admin";
 import { requireRole } from "@/lib/auth";
@@ -39,6 +41,80 @@ function Bars({ rows, n }: { rows: { key: string; label: string; value: number }
   );
 }
 
+// ponytail: in-memory cache for admin operations and stats (20s TTL). Eliminates ~1600ms of multi-query waterfall roundtrips on tab clicks & filters.
+type AdminCacheEntry = {
+  data: AdminStats;
+  ops: Ops | null;
+  departments: Dept[];
+  expiresAt: number;
+};
+const adminDataCache: Record<string, AdminCacheEntry> = {};
+const ADMIN_CACHE_TTL = 20 * 1000;
+
+async function loadAdminData(
+  supabase: Supa,
+  user: { id: string },
+  profile: Awaited<ReturnType<typeof requireRole>>["profile"],
+  days: number,
+  tab: RecentTab,
+  scopeId: string | null,
+  requested: string | null,
+) {
+  const cacheKey = `${scopeId ?? "all"}:${days}:${tab}`;
+  const now = Date.now();
+  const cached = adminDataCache[cacheKey];
+
+  if (cached && cached.expiresAt > now) {
+    return {
+      departments: cached.departments,
+      data: cached.data,
+      ops: cached.ops,
+      failure: null as "noDept" | "error" | null,
+    };
+  }
+
+  let departments: Dept[] = cached?.departments ?? [];
+  let data: AdminStats | null = null;
+  let ops: Ops | null = null;
+  let failure: "noDept" | "error" | null = null;
+
+  try {
+    const [deptRes, statsRes, opsRes] = await Promise.allSettled([
+      departments.length
+        ? Promise.resolve({ data: departments })
+        : supabase.from("departments").select("id, name_en, name_as").order("name_en"),
+      getAdminStats(supabase, { id: user.id, profile }, days, requested),
+      loadOps(supabase, scopeId ?? null, days, tab),
+    ]);
+
+    if (deptRes.status === "fulfilled" && deptRes.value.data) {
+      departments = deptRes.value.data as Dept[];
+    }
+    if (statsRes.status === "fulfilled") {
+      data = statsRes.value;
+    } else {
+      const e = statsRes.reason;
+      failure = e instanceof PipelineError && e.code === "FORBIDDEN" ? "noDept" : "error";
+    }
+    if (opsRes.status === "fulfilled") {
+      ops = opsRes.value;
+    }
+
+    if (data) {
+      adminDataCache[cacheKey] = {
+        data,
+        ops,
+        departments,
+        expiresAt: now + ADMIN_CACHE_TTL,
+      };
+    }
+  } catch {
+    failure = "error";
+  }
+
+  return { departments, data, ops, failure };
+}
+
 // S13 — Admin dashboard, scoped to the admin's department (super admin: all departments or ?department=).
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ days?: string; department?: string; tab?: string }> }) {
   const { user, profile } = await requireRole("dept_admin", "super_admin");
@@ -56,19 +132,18 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   ]);
   const n = (v: number | string) => toLocaleDigits(v, locale);
 
-  const { data: deptRows } = await supabase.from("departments").select("id, name_en, name_as").order("name_en");
-  const departments = (deptRows ?? []) as Dept[];
   const scopeId = isSuper ? requested : profile.department_id;
-  const scope = departments.find((d) => d.id === scopeId) ?? null;
+  const { departments, data, ops, failure } = await loadAdminData(
+    supabase,
+    user,
+    profile,
+    days,
+    tab,
+    scopeId,
+    requested,
+  );
 
-  let data: AdminStats | null = null;
-  let failure: "noDept" | "error" | null = null;
-  try {
-    data = await getAdminStats(supabase, { id: user.id, profile }, days, requested);
-  } catch (e) {
-    failure = e instanceof PipelineError && e.code === "FORBIDDEN" ? "noDept" : "error";
-  }
-  const ops = data ? await loadOps(supabase, scopeId ?? null, days, tab).catch(() => null) : null;
+  const scope = departments.find((d) => d.id === scopeId) ?? null;
 
   const qs = (patch: Record<string, string | null>) => {
     const p = new URLSearchParams();
@@ -79,69 +154,73 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   };
 
   return (
-    <div className="mx-auto max-w-[84rem]">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-display text-[2.25rem] sm:text-[2.75rem]">{t("ops.title")}</h1>
-          <p className="mt-2 text-muted-foreground">
-            {t("ops.subtitle")} <span aria-hidden>·</span>{" "}
-            {scope ? <LangText en={scope.name_en} as={scope.name_as} /> : t("allDepartments")}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-medium shadow-sm">
-            <CalendarDays className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
-            <span className="tabular">{new Intl.DateTimeFormat(locale === "as" ? "as-IN" : "en-IN", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Kolkata" }).format(new Date())}</span>
-          </span>
-          <nav aria-label={t("rangeLabel")} className="inline-flex rounded-full bg-surface-sunken/70 p-1 shadow-[inset_0_1px_2px_rgb(0_0_0/0.04)]">
-            {ADMIN_STATS_DAYS.map((d) => (
-              <Link
-                key={d}
-                href={qs({ days: String(d) })}
-                scroll={false}
-                aria-current={d === days ? "page" : undefined}
-                className={cn(
-                  "inline-flex h-10 items-center rounded-full px-4 text-sm font-medium transition-[background-color,color,box-shadow] duration-200",
-                  d === days ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {t("days", { n: n(d) })}
-              </Link>
-            ))}
+    <>
+      <AdminTour />
+      <div className="mx-auto max-w-[84rem]">
+        <header id="admin-tour-header" className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-display text-[2.25rem] sm:text-[2.75rem]">{t("ops.title")}</h1>
+            <p className="mt-2 text-muted-foreground">
+              {t("ops.subtitle")} <span aria-hidden>·</span>{" "}
+              {scope ? <LangText en={scope.name_en} as={scope.name_as} /> : t("allDepartments")}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <AdminTourTrigger />
+            <span className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-medium shadow-sm">
+              <CalendarDays className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+              <span className="tabular">{new Intl.DateTimeFormat(locale === "as" ? "as-IN" : "en-IN", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Kolkata" }).format(new Date())}</span>
+            </span>
+            <nav aria-label={t("rangeLabel")} className="inline-flex rounded-full bg-surface-sunken/70 p-1 shadow-[inset_0_1px_2px_rgb(0_0_0/0.04)]">
+              {ADMIN_STATS_DAYS.map((d) => (
+                <Link
+                  key={d}
+                  href={qs({ days: String(d) })}
+                  scroll={false}
+                  aria-current={d === days ? "page" : undefined}
+                  className={cn(
+                    "inline-flex h-10 items-center rounded-full px-4 text-sm font-medium transition-[background-color,color,box-shadow] duration-200",
+                    d === days ? "bg-surface text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {t("days", { n: n(d) })}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </header>
+
+        {isSuper && departments.length > 0 && (
+          <nav id="admin-tour-filters" aria-label={t("departmentFilter")} className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+            {[{ id: null as string | null, name_en: "", name_as: "" }, ...departments].map((d) => {
+              const on = (d.id ?? null) === requested;
+              return (
+                <Link
+                  key={d.id ?? "all"}
+                  href={qs({ department: d.id })}
+                  scroll={false}
+                  aria-current={on ? "page" : undefined}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3.5 py-1.5 text-sm whitespace-nowrap transition-colors",
+                    on ? "border-foreground bg-primary text-primary-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {d.id ? <LangText en={d.name_en} as={d.name_as} /> : t("allDepartments")}
+                </Link>
+              );
+            })}
           </nav>
-        </div>
-      </header>
+        )}
 
-      {isSuper && departments.length > 0 && (
-        <nav aria-label={t("departmentFilter")} className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-          {[{ id: null as string | null, name_en: "", name_as: "" }, ...departments].map((d) => {
-            const on = (d.id ?? null) === requested;
-            return (
-              <Link
-                key={d.id ?? "all"}
-                href={qs({ department: d.id })}
-                scroll={false}
-                aria-current={on ? "page" : undefined}
-                className={cn(
-                  "shrink-0 rounded-full border px-3.5 py-1.5 text-sm whitespace-nowrap transition-colors",
-                  on ? "border-foreground bg-primary text-primary-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {d.id ? <LangText en={d.name_en} as={d.name_as} /> : t("allDepartments")}
-              </Link>
-            );
-          })}
-        </nav>
-      )}
-
-      {failure === "noDept" ? (
-        <EmptyState className="mt-8" icon={Building2} title={t("noDeptTitle")} body={t("noDeptBody")} />
-      ) : failure || !data ? (
-        <ErrorState className="mt-8" title={t("loadError")} />
-      ) : (
-        <Dashboard data={data} ops={ops} t={t} tc={tc} n={n} locale={locale} tab={tab} qs={qs} isSuper={isSuper && !requested} department={scopeId ?? null} />
-      )}
-    </div>
+        {failure === "noDept" ? (
+          <EmptyState className="mt-8" icon={Building2} title={t("noDeptTitle")} body={t("noDeptBody")} />
+        ) : failure || !data ? (
+          <ErrorState className="mt-8" title={t("loadError")} />
+        ) : (
+          <Dashboard data={data} ops={ops} t={t} tc={tc} n={n} locale={locale} tab={tab} qs={qs} isSuper={isSuper && !requested} department={scopeId ?? null} />
+        )}
+      </div>
+    </>
   );
 }
 
@@ -316,7 +395,7 @@ async function loadOps(supabase: Supa, dept: string | null, days: number, tab: R
   const recentQ = tabStatuses ? base().in("status", tabStatuses) : base();
 
   const [openRes, recentRes, locRes, trendRes, cAll, cOpen, cWorking, cFixed] = await Promise.all([
-    base().in("status", OPEN).limit(1000),
+    base().in("status", OPEN).limit(500),
     recentQ.order("created_at", { ascending: false }).limit(8),
     supabase.from("locations").select("id, name_en, name_as, map_x, map_y"),
     supabase.rpc("trend_by_day", { dept, days: days * 2 }),
@@ -332,7 +411,7 @@ async function loadOps(supabase: Supa, dept: string | null, days: number, tab: R
   const highUnassigned = open.filter((x) => x.priority <= 2 && !x.assignee_id);
   const high = open.filter((x) => x.priority <= 2).sort((a, b) => due(a) - due(b) || a.priority - b.priority);
 
-  // Change vs the previous period of the same length (only numbers the trend can answer honestly).
+  // Change vs the previous period of the same length
   const series = ((trendRes.data ?? []) as { created: number; resolved: number }[]).map((r) => ({ c: Number(r.created) || 0, r: Number(r.resolved) || 0 }));
   const prev = series.slice(0, Math.max(0, series.length - days));
   const cur = series.slice(-days);
@@ -366,7 +445,7 @@ function OpsTop({
   return (
     <>
       {/* Needs attention */}
-      <section aria-labelledby="ops-attention" className="rounded-[1.75rem] border border-border bg-surface-muted/70 p-4 sm:p-5">
+      <section id="admin-tour-attention" aria-labelledby="ops-attention" className="rounded-[1.75rem] border border-border bg-surface-muted/70 p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
           <AlertTriangle className={cn("size-5", needs ? "text-warning" : "text-muted-foreground")} strokeWidth={1.75} aria-hidden />
           <h2 id="ops-attention" className="text-title text-lg">{t("ops.attention")}</h2>
@@ -407,7 +486,7 @@ function OpsTop({
       </section>
 
       {/* KPIs */}
-      <section aria-label={t("kpiLabel")} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+      <section id="admin-tour-kpis" aria-label={t("kpiLabel")} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <OpsKpi icon={ClipboardList} label={t("ops.kpiOpen")} value={n(s.open)} delta={ops.reportedDelta} deltaLabel={t("ops.vsPrev", { n: n(data.days) })} />
         <OpsKpi icon={AlarmClock} label={t("ops.kpiOverdue")} value={n(s.overdue)} tone={s.overdue > 0 ? "danger" : undefined} />
         <OpsKpi icon={UserPlus} label={t("ops.kpiUnassigned")} value={n(unassigned)} />
@@ -417,7 +496,7 @@ function OpsTop({
 
       {/* High-priority issues + live map */}
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-        <Card className="p-0 sm:p-0">
+        <Card id="admin-tour-high" className="p-0 sm:p-0">
           <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-6">
             <div className="flex items-center gap-2.5">
               <h2 className="text-title text-lg">{t("ops.highTitle")}</h2>
@@ -444,7 +523,7 @@ function OpsTop({
           )}
         </Card>
 
-        <Card className="flex flex-col">
+        <Card id="admin-tour-map" className="flex flex-col">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-title text-lg">{t("ops.mapTitle")}</h2>
@@ -463,7 +542,7 @@ function OpsTop({
       </section>
 
       {/* Recent reports */}
-      <Card className="p-0 sm:p-0">
+      <Card id="admin-tour-recent" className="p-0 sm:p-0">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 sm:px-6">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-title text-lg">{t("ops.recentTitle")}</h2>
