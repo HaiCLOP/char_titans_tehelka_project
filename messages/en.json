@@ -9,6 +9,7 @@
     "myReports": "My Reports",
     "map": "Campus Map",
     "pulse": "Campus Pulse",
+    "guide": "Tutorial",
     "notifications": "Notifications",
     "community": "Community",
     "guidelines": "Guidelines",
@@ -999,78 +1000,39 @@
     }
   },
   "departments": {
-    "emergency": {
-      "label": "Auto-assign emergencies",
-      "description": "Urgent reports (fights, harassment, injuries) go straight to someone in the routed department: field staff, or a department admin when the report is sensitive. Off: they wait for an admin.",
-      "on": "Emergencies will be auto-assigned",
-      "off": "Emergencies wait for an admin",
-      "error": "Could not save the setting",
-      "loadError": "Could not load the setting"
-    },
-    "title": "Departments",
-    "subtitle": "Fixing units, what they handle, how fast, and who works in them.",
-    "new": "New department",
-    "listLabel": "Departments",
-    "membersLabel": "Members",
-    "emptyTitle": "No departments yet",
-    "emptyBody": "Create the first department so complaints can be routed.",
-    "noCategories": "No categories — nothing is routed here.",
-    "counts": "{members, plural, one {{m} member} other {{m} members}} · {open, plural, other {{o} open}}",
-    "hours": "{n} h",
-    "days": "{n} d",
-    "editAria": "Edit {name}",
-    "deleteAria": "Delete {name}",
-    "dialog": {
-      "newTitle": "New department",
-      "editTitle": "Edit department",
-      "body": "Names appear to reporters. Categories decide which complaints are routed here.",
-      "nameEn": "Name (English)",
-      "nameAs": "Name (Assamese)",
-      "categories": "Handles these categories",
-      "sla": "Time to act (hours)",
-      "slaHint": "Per priority. 24 h = 1 day, 168 h = 7 days.",
-      "cancel": "Cancel",
-      "save": "Save",
-      "create": "Create"
-    },
-    "delete": {
-      "title": "Delete this department?",
-      "body": "Only possible while no complaint or member belongs to it.",
-      "cancel": "Cancel",
-      "confirm": "Delete"
-    },
-    "toast": {
-      "created": "Department created",
-      "saved": "Department saved",
-      "deleted": "Department deleted"
-    },
-    "errors": {
-      "names": "Give both names (at least 2 characters).",
-      "bengaliRa": "Use the Assamese letter ৰ in the Assamese name, not the Bengali one.",
-      "sla": "Hours must be whole numbers from 1 to 2160.",
-      "invalid": "Some values are not valid. Check and try again.",
-      "inUse": "This department still has complaints or members. Move them to another department first.",
-      "generic": "Something went wrong. Please try again."
-    },
-    "workflow": {
-      "title": "Assignment workflow",
-      "body": "How new tickets reach staff. Matching uses skills, buildings, current load and hidden experience: severe work goes to experienced staff, routine work to newer staff so they learn.",
-      "modeLabel": "Safe tickets (not urgent, not sensitive, AI confident)",
-      "mode": {
-        "off": "Manual",
-        "approval": "Suggest + approve",
-        "auto": "Automatic"
-      },
-      "modeHint": {
-        "off": "Admins pick staff themselves; suggestions still show in each ticket.",
-        "approval": "The best match is suggested with a confidence score; an admin approves it in one click.",
-        "auto": "The best match is assigned straight away."
-      },
-      "teamSize": "Emergency team size",
-      "teamSizeHint": "The most experienced people are sent together.",
-      "people": "{count, plural, one {{n} person} other {{n} people}}",
-      "saved": "Workflow saved"
-    }
+    "tag": "Institutional Directory",
+    "title": "Campus Departments & Accountability",
+    "subtitle": "Transparent performance tracking, verified resolution metrics, and official contact channels for Dibrugarh University services.",
+    "searchPlaceholder": "Search departments or services...",
+    "allCategories": "All Categories",
+    "noResults": "No departments found matching your search.",
+    "emergency247": "24×7 Emergency Support",
+    "newDept": "Evaluating",
+    "slaLabel": "SLA Target",
+    "resolvedLabel": "Fixed",
+    "ratingLabel": "Rating",
+    "viewDetails": "View Profile & Track Record",
+    "backToDirectory": "Back to Department Directory",
+    "reportToDept": "Report Issue to this Department",
+    "officeLabel": "Office Location",
+    "phoneLabel": "Contact Phone",
+    "hoursLabel": "Operating Hours",
+    "scoreBreakdownTitle": "Transparent Performance Index",
+    "scoreBreakdownSubtitle": "Formula based on 40% SLA speed, 25% resolution volume, 25% student satisfaction, and 10% verified evidence.",
+    "performanceIndex": "Score",
+    "slaAdherence": "SLA Adherence Speed",
+    "resolutionRatio": "Resolution Volume Ratio",
+    "resolvedCount": "resolved",
+    "userSatisfaction": "Student Satisfaction Rating",
+    "noRating": "Pending reviews",
+    "evidenceTransparency": "Resolution Evidence Transparency",
+    "weight": "weight",
+    "auditGuarantee": "Independently audited against official Dibrugarh University university maintenance logs.",
+    "servicesHandledTitle": "Handled Services & Redressal Scope",
+    "slaCommitmentTitle": "Institutional Response Guarantees",
+    "resolvedIssuesTitle": "Recently Resolved Campus Issues",
+    "resolvedIssuesSubtitle": "Verified completed work carried out by this department across campus.",
+    "noResolvedYet": "No public resolved issues recorded for this department yet."
   },
   "members": {
     "title": "Members · {department}",
@@ -1532,5 +1494,52 @@
     "noteAdmin": "Written by AI from counts only; check it against the numbers on this page.",
     "notePublic": "Written by AI for campus admins from counts only, no complaint text.",
     "written": "Updated"
+  },
+  "guide": {
+    "title": "Reporting Tutorial",
+    "subtitle": "Learn how to write actionable grievances, add clean evidence, choose the right privacy mode, and test the AI triage simulator.",
+    "step1": {
+      "title": "Select Issue",
+      "heading": "Step 1: Choose the Most Specific Category",
+      "desc": "Routing your ticket to the right maintenance engineers starts with precise categorization.",
+      "examples": {
+        "water": "No running water, leaking main pipelines, broken bathroom cisterns, contaminated tank supply.",
+        "electricity": "Blown fuses, flickering corridor lights, non-functioning ceiling fans, exposed wires.",
+        "infrastructure": "Cracked stairs, broken window glass, unhinged doors, damaged classroom benches.",
+        "sanitation": "Overflowing dustbins, uncleaned washrooms, blocked drainage canals, stagnant rainwater.",
+        "safety": "Dark campus stretches, missing manhole covers, stray animal menace, emergency hazards.",
+        "academic": "Broken laboratory equipment, faulty projectors, non-functioning departmental printers.",
+        "administrative": "Pending certificate verification, hostel room allocation disputes, library card issues.",
+        "other": "General civic and campus maintenance queries not covered by standard branches."
+      }
+    },
+    "step2": {
+      "title": "Describe Problem",
+      "heading": "Step 2: Write with Specificity and Context",
+      "desc": "Vague reports require back-and-forth clarification. Detailed descriptions allow technicians to bring exact replacement parts on their first visit."
+    },
+    "step3": {
+      "title": "Add Evidence",
+      "heading": "Step 3: Capture Clean, Focused Evidence",
+      "desc": "Photos help staff diagnose problems remotely. Adhere strictly to institutional data minimization guidelines."
+    },
+    "step4": {
+      "title": "Privacy Options",
+      "heading": "Step 4: Understand Public vs Private vs Anonymous",
+      "desc": "Choose who gets to see your report based on the sensitivity of the issue."
+    },
+    "step5": {
+      "title": "Practice Simulator",
+      "heading": "Step 5: Test the Interactive AI Simulator",
+      "desc": "Experiment with different descriptions and see how CivicSense categorizes, estimates SLAs, and flags duplicates without affecting live campus numbers."
+    }
+  },
+  "voice": {
+    "title": "Voice Reporting Agent",
+    "subtitle": "Speak naturally in Assamese or English. Civi converts your conversation into a structured campus grievance.",
+    "speakNow": "Speak now",
+    "listening": "Listening…",
+    "tapToSpeak": "Tap microphone to speak",
+    "submit": "Confirm and submit"
   }
 }

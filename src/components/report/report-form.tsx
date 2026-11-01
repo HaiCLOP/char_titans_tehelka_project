@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowDown, CheckCircle2, CloudUpload, EyeOff, Globe2, Lock, MapPin, Pencil, RotateCw, Send,
+  AlertTriangle, ArrowDown, Camera, CheckCircle2, CloudUpload, ExternalLink, EyeOff, Globe2, Lock, MapPin, Pencil, RotateCw, Send,
   ShieldAlert, ScanText, Undo2, Users,
 } from "lucide-react";
 import {
@@ -1021,21 +1021,34 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
         }
       >
         {/* Your currently uploaded photo reference (for direct visual comparison) */}
-        {photos.length > 0 && photos[0]?.url && (
-          <div className="mb-3.5 flex items-center gap-3 rounded-xl border border-border/80 bg-surface-muted/60 p-2.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photos[0].url}
-              alt={t("dup.yourPhoto")}
-              className="size-14 rounded-lg object-cover border border-border shrink-0 shadow-2xs"
-            />
-            <div className="min-w-0 flex-1">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-primary">
+        {photos.length > 0 && (
+          <div className="mb-4 rounded-xl border border-border bg-surface-muted/60 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
                 {t("dup.yourPhoto")}
               </span>
-              <span className="block text-xs font-semibold text-foreground truncate mt-0.5">
-                {text.trim() || t("dup.yourPhoto")}
+              <span className="text-[10px] text-muted-foreground">
+                {photos.length === 1 ? "1 photo" : `${photos.length} photos`}
               </span>
+            </div>
+            <div className="flex items-center gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+              {photos.map((p, idx) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={p.id || idx}
+                  src={p.url}
+                  alt={`${t("dup.yourPhoto")} ${idx + 1}`}
+                  className="size-16 sm:size-20 rounded-xl object-cover border border-border shrink-0 shadow-2xs"
+                />
+              ))}
+              <div className="min-w-0 flex-1 pl-1">
+                <span className="block text-xs font-semibold text-foreground truncate">
+                  {text.trim() || t("dup.yourPhoto")}
+                </span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                  {location ? (locale === "as" ? location.name_as : location.name_en) : "Dibrugarh University"}
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -1045,14 +1058,29 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
             <li key={item.id} className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 shadow-2xs transition-all hover:border-border-strong">
               <div className="flex gap-3 sm:gap-3.5">
                 {/* Uploaded photo of the already reported complaint */}
-                {item.photo_url && (
-                  <div className="shrink-0">
+                {item.photo_url ? (
+                  <div className="shrink-0 relative group">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={item.photo_url}
                       alt={item.title_en ?? item.code}
                       className="size-20 sm:size-24 rounded-xl object-cover border border-border/80 shadow-2xs"
                     />
+                    <a
+                      href={`/c/${item.code}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="absolute inset-0 rounded-xl bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-semibold gap-1 shadow-sm"
+                      title={t("dup.view")}
+                    >
+                      <span>{t("dup.view")}</span>
+                      <ExternalLink className="size-3" />
+                    </a>
+                  </div>
+                ) : (
+                  <div className="shrink-0 size-20 sm:size-24 rounded-xl border border-dashed border-border bg-surface-muted/40 flex flex-col items-center justify-center p-2 text-center text-muted-foreground">
+                    <Camera className="size-5 opacity-40 mb-1" />
+                    <span className="text-[10px] leading-tight text-subtle-foreground font-medium">No photo</span>
                   </div>
                 )}
 

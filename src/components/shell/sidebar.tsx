@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Activity, Bell, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
+import { Activity, Bell, BookOpen, Building2, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { BrandMark } from "./brand-mark";
 import { NavLink } from "./nav-link";
@@ -11,6 +11,8 @@ const MAIN = [
   { href: "/my", key: "myReports", icon: ClipboardList },
   { href: "/map", key: "map", icon: Map },
   { href: "/pulse", key: "pulse", icon: Activity },
+  { href: "/departments", key: "departments", icon: Building2 },
+  { href: "/guide", key: "guide", icon: BookOpen },
   { href: "/notifications", key: "notifications", icon: Bell },
 ] as const;
 

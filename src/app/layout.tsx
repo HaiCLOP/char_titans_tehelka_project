@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { Toaster } from "sonner";
 import { Providers } from "@/components/providers";
+import { PwaManager } from "@/components/pwa/pwa-manager";
 import { FONT_SIZE_COOKIE, MODE_COOKIE } from "@/lib/theme";
 import "./globals.css";
 
@@ -16,6 +17,12 @@ const notoBengali = Noto_Sans_Bengali({ subsets: ["bengali"], variable: "--font-
 export const metadata: Metadata = {
   title: "CivicSense — Campus Together",
   description: "Bilingual AI campus issue management for Dibrugarh University",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CivicSense",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-dvh">
         <NextIntlClientProvider>
           <Providers>{children}</Providers>
+          <PwaManager />
           <Toaster position="top-center" toastOptions={{ className: "!rounded-2xl !border-border !bg-surface !text-foreground !shadow-md" }} />
         </NextIntlClientProvider>
       </body>
