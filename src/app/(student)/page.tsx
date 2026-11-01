@@ -12,6 +12,7 @@ import { HomeComposer } from "@/components/home/composer";
 import { AiDailyBriefCard } from "@/components/home/ai-daily-brief";
 import { IssueFeed } from "@/components/home/issue-feed";
 import { DashboardTour } from "@/components/home/dashboard-tour";
+import { StreakChip } from "@/components/badges/streak-chip";
 
 type Stats = { open: number; in_progress: number; resolved: number; overdue: number; avg_resolution_hours: number | null };
 type TrendRow = { day: string; created: number; resolved: number };
@@ -83,6 +84,7 @@ async function loadHome(view: "open" | "resolved") {
   return {
     name: profile?.full_name ?? null,
     avatar,
+    studentId: user && (profile?.role === "student" || profile?.role === "staff") ? user.id : null,
     issues: issues.status === "fulfilled" ? issues.value : null,
     stats: statsAndTrend.stats,
     trend: statsAndTrend.trend,
@@ -107,6 +109,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
       <div className="space-y-6 min-w-0">
         {/* 1. Quick Report Composer ("What needs fixing? like this but better") */}
         <HomeComposer name={data.name} avatar={data.avatar} />
+        {data.studentId && <StreakChip userId={data.studentId} />}
 
         {/* Mobile-only 4-Stat Metric Strip (< lg) */}
         <div id="tour-mobile-kpis" className="lg:hidden">

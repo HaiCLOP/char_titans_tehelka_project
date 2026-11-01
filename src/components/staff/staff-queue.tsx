@@ -14,6 +14,7 @@ import { useRealtime } from "@/components/use-realtime";
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
 import { ResolveDrawer } from "./resolve-drawer";
 import { ExperienceLine } from "@/components/admin/departments";
+import { LevelUpWatcher } from "@/components/badges/level-up";
 
 /** Own hidden experience (only they, their dept admins and super admins see it). Quietly absent on error. */
 function MyExperience() {
@@ -26,6 +27,7 @@ function MyExperience() {
   if (!q.data) return null;
   return (
     <Card className="mt-5">
+      <LevelUpWatcher exp={q.data} />
       <p className="text-sm font-medium">{t("title")}</p>
       <ExperienceLine exp={q.data} />
       <p className="mt-2 text-xs text-muted-foreground">{t("body")}</p>

@@ -14,6 +14,7 @@ import { signOut } from "@/app/auth/actions";
 import { apiFetch, isApiError } from "@/components/api-client";
 import { saveFontSize, type FontSize } from "./font-size";
 import { CharacterPicker } from "./character-picker";
+import { BadgesCard } from "@/components/badges/badges-card";
 import { resolveCharacter } from "@/lib/campus";
 
 type Props = { profile: Profile; email: string | null; departments: NamedRef[]; initialDark: boolean };
@@ -255,6 +256,11 @@ export function ProfileForm({ profile, email, departments, initialDark }: Props)
         </Button>
       </div>
     </form>
+    {(profile.role === "student" || profile.role === "staff") && (
+      <section id="badges" className="scroll-mt-20">
+        <BadgesCard userId={profile.id} />
+      </section>
+    )}
     <CharacterPicker
       open={pickerOpen}
       onOpenChange={setPickerOpen}

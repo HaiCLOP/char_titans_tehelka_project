@@ -366,6 +366,8 @@ export const ComplaintDetailSchema = ComplaintListItemSchema.extend({
     .object({ note_en: z.string().nullable(), note_as: z.string().nullable(), photo_url: z.string().nullable() })
     .nullable(),
   rating: z.number().int().min(1).max(5).nullable(),
+  /** Optional reporter comment left with the rating (migration 20261102010000). */
+  rating_comment: z.string().nullable().optional(),
   verified_by_reporter: z.boolean().nullable(),
   department: NamedRefSchema.nullable(),
   is_owner: z.boolean(),
@@ -423,6 +425,8 @@ export const VerifyRequestSchema = z
   .object({
     fixed: z.boolean(),
     rating: z.number().int().min(1).max(5).optional(),
+    /** Optional short comment with the rating (fixed=true only). */
+    comment: z.string().trim().max(280).optional(),
     reason: z.string().trim().max(500).optional(),
   })
   .refine((v) => v.fixed || (v.reason?.length ?? 0) >= 3, { message: "Please say what is still wrong", path: ["reason"] });
@@ -432,6 +436,7 @@ export const VerifyResultSchema = z.object({
   id: z.string(),
   status: z.enum(STATUSES),
   rating: z.number().int().nullable(),
+  rating_comment: z.string().nullable().optional(),
   verified_by_reporter: z.boolean().nullable(),
 });
 export type VerifyResult = z.infer<typeof VerifyResultSchema>;
@@ -645,6 +650,27 @@ export const StaffExperienceSchema = z.object({
   open_jobs: z.number().int(),
 });
 export type StaffExperience = z.infer<typeof StaffExperienceSchema>;
+
+/** Student badges (my_badges(), migration 20261102020000): computed from the caller's own reports only. */
+export const BADGE_IDS = [
+  "first_report", "five_reports", "ten_reports", "helper", "fixer_friend", "feedback_giver",
+  "water_watcher", "power_patrol", "clean_campus", "streak_3",
+] as const;
+export type BadgeId = (typeof BADGE_IDS)[number];
+export const BadgeSchema = z.object({
+  id: z.enum(BADGE_IDS),
+  earned: z.boolean(),
+  progress: z.number().int(),
+  target: z.number().int(),
+  earned_at: z.string().nullable(),
+});
+export type Badge = z.infer<typeof BadgeSchema>;
+export const MyBadgesSchema = z.object({
+  badges: z.array(BadgeSchema),
+  streak: z.object({ current: z.number().int(), best: z.number().int(), this_week: z.boolean() }),
+  reports: z.number().int(),
+});
+export type MyBadges = z.infer<typeof MyBadgesSchema>;
 
 export const MemberSchema = z.object({
   id: z.string(),
