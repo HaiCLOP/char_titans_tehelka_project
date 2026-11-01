@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState, type ChangeEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowRight, Building2, Droplets, ImagePlus, Sparkles, X, Zap } from "lucide-react";
+import { ArrowRight, Building2, Droplets, ImagePlus, MessageCircle, Sparkles, X, Zap } from "lucide-react";
 import { Avatar, buttonVariants } from "@/components/ui";
 import { Civi } from "@/components/mascot/civi";
 
@@ -15,6 +16,7 @@ export const REPORT_PHOTO_DRAFT_KEY = "cs_report_photo_draft";
 /** "What needs fixing?" — starts a report from the home page without leaving the flow. */
 export function HomeComposer({ name, avatar }: { name: string | null; avatar?: { id: string; character: number | null; src: string | null } | null }) {
   const t = useTranslations("home");
+  const tChat = useTranslations("reportChat");
   const locale = useLocale();
   const router = useRouter();
 
@@ -221,6 +223,13 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
           <ArrowRight className="size-3.5" aria-hidden />
         </button>
       </div>
+      <Link
+        href="/report/chat"
+        className="mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <MessageCircle className="size-4" strokeWidth={1.75} aria-hidden />
+        {tChat("entry")}
+      </Link>
     </form>
   );
 }

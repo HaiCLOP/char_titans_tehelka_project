@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
@@ -7,7 +8,7 @@ import { useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import {
   AlertTriangle, ArrowDown, Camera, CheckCircle2, ChevronDown, CloudUpload, ExternalLink, EyeOff, Globe2, Lock, MapPin, Mic, Pencil, RotateCw, Send, Square,
-  ShieldAlert, ScanText, Undo2, Users,
+  MessageCircle, ShieldAlert, ScanText, Undo2, Users,
 } from "lucide-react";
 import {
   CATEGORIES, COMPLAINTS_PER_HOUR, MAX_PHOTOS, type Category, type Intake, type LocationItem, type SimilarItem, type SubmitComplaintInput,
@@ -193,6 +194,7 @@ export type ReportFormProps = {
 
 export function ReportForm({ initialLocationId, initialCategory }: ReportFormProps = {}) {
   const t = useTranslations("report");
+  const tChat = useTranslations("reportChat");
   const tc = useTranslations("category");
   const tp = useTranslations("priority");
   const locale = useLocale();
@@ -661,6 +663,13 @@ export function ReportForm({ initialLocationId, initialCategory }: ReportFormPro
       <div className="mb-5">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
+        <Link
+          href="/report/chat"
+          className="mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-full text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <MessageCircle className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+          {tChat("entry")}
+        </Link>
       </div>
 
       <form onSubmit={onSubmit} noValidate className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
