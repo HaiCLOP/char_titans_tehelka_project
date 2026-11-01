@@ -6,20 +6,21 @@ import { useLocale, useTranslations } from "next-intl";
 import { useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import {
-  Building2, CalendarClock, ChevronLeft, ChevronRight, Languages, Lock, MapPin, RotateCcw, SearchX, Star, ThumbsDown,
+  Building2, CalendarClock, ChevronLeft, ChevronRight, Languages, Lock, MapPin, RotateCcw, SearchX, ThumbsDown,
   ThumbsUp, Wrench,
 } from "lucide-react";
-import type { ComplaintDetail, SupportResult, TimelineEvent, VerifyRequest, VerifyResult } from "@/lib/domain";
-import { cn, toLocaleDigits } from "@/lib/utils";
+import { OPEN_STATUSES, type ComplaintDetail, type Status, type SupportResult, type TimelineEvent, type VerifyRequest, type VerifyResult } from "@/lib/domain";
+import { toLocaleDigits } from "@/lib/utils";
 import {
-  Button, Card, CardHeader, CategoryChip, Chip, Dialog, EmptyState, LangText, LifecycleTrack, PriorityChip, RelativeTime, StatusChip,
-  Textarea, Timeline, buttonVariants, type TimelineItem,
+  Button, Card, CardHeader, CategoryChip, Chip, Dialog, EmptyState, LangText, PriorityChip, RelativeTime, StatusChip,
+  Textarea, buttonVariants, type TimelineItem,
 } from "@/components/ui";
 import { apiFetch, isApiError } from "@/components/api-client";
 import { useRealtime } from "@/components/use-realtime";
 import { TicketChat } from "@/components/chat/ticket-chat";
 import { SlaCountdown } from "./sla-countdown";
 import { EvidenceGallery } from "./evidence-gallery";
+import { BeforeAfter, Confetti, LiveLifecycleTrack, LiveTimeline, MeTooButton, RatingSummary, StarRating, type MeTooState } from "./ticket-fx";
 
 const KNOWN_EVENTS = ["created", "status", "assigned", "note", "metoo", "ai"];
 
@@ -85,32 +86,12 @@ export function PhotoCarousel({ photos }: { photos: string[] }) {
   );
 }
 
-function RatingPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const t = useTranslations("ticket.verify");
-  const locale = useLocale();
-  return (
-    <div role="radiogroup" aria-label={t("ratingLabel")} className="flex justify-center gap-1">
-      {[1, 2, 3, 4, 5].map((v) => (
-        <button
-          key={v}
-          type="button"
-          role="radio"
-          aria-checked={value === v}
-          aria-label={t("stars", { count: v, n: toLocaleDigits(v, locale) })}
-          onClick={() => onChange(v)}
-          className="grid size-11 place-items-center rounded-full transition hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Star className={cn("size-7", v <= value ? "fill-p3 text-p3" : "text-muted-foreground")} aria-hidden />
-        </button>
-      ))}
-    </div>
-  );
-}
-
 type VerifyMode = "fixed" | "notFixed" | "reopen" | null;
 
 export function TicketView({ initial }: { initial: ComplaintDetail }) {
   const t = useTranslations("ticket");
+  const tf = useTranslations("ticketFx");
+  const tu = useTranslations("ui");
   const ts = useTranslations("status");
   const locale = useLocale();
   const qc = useQueryClient();
@@ -126,7 +107,7 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
     retry: (count, e) => !isApiError(e, "NOT_FOUND") && count < 2,
     // Realtime follows RLS: only the owner and staff get change events. Everyone else polls lightly.
     refetchOnWindowFocus: !live,
-    refetchInterval: live ? false : 20_000,
+    refetchInterval: live ? false : 10_000,
   });
 
   useRealtime(
@@ -142,24 +123,40 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
   const [showOriginal, setShowOriginal] = useState(false);
   const [mode, setMode] = useState<VerifyMode>(null);
   const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [ratingError, setRatingError] = useState<string | null>(null);
+  const [celebrate, setCelebrate] = useState(0);
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
 
+  // Optimistic "Me too": bump the count at once, roll back if the server says no.
   const support = useMutation({
     mutationFn: () => apiFetch<SupportResult>(`/api/complaints/${encodeURIComponent(id)}/support`, { method: "POST" }),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<ComplaintDetail>(key);
+      qc.setQueryData<ComplaintDetail>(key, (d) =>
+        d ? { ...d, metoo_count: d.metoo_count + 1, supported_by_me: true, can_support: false } : d,
+      );
+      return { prev };
+    },
     onSuccess: (r) => {
       qc.setQueryData<ComplaintDetail>(key, (d) => (d ? { ...d, metoo_count: r.metoo_count, supported_by_me: true, can_support: false } : d));
       toast.success(t("metoo.done"));
-      void qc.invalidateQueries({ queryKey: key });
     },
-    onError: () => toast.error(t("metoo.failed")),
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
+      toast.error(t("metoo.failed"));
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: key }),
   });
 
   const verify = useMutation({
     mutationFn: (body: VerifyRequest) =>
       apiFetch<VerifyResult>(`/api/complaints/${encodeURIComponent(id)}/verify`, { method: "POST", json: body }),
     onSuccess: (_r, body) => {
-      toast.success(body.fixed ? t("verify.thanks") : t("verify.reopened"));
+      toast.success(body.fixed ? tf("celebrate") : t("verify.reopened"));
+      if (body.fixed) setCelebrate((c) => c + 1);
       setMode(null);
       void qc.invalidateQueries({ queryKey: key });
       void qc.invalidateQueries({ queryKey: ["complaints", "mine"] });
@@ -176,12 +173,18 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
   const open = (m: VerifyMode) => {
     setMode(m);
     setRating(0);
+    setComment("");
+    setRatingError(null);
     setReason("");
     setReasonError(null);
   };
   const confirmVerify = () => {
     if (mode === "fixed") {
-      verify.mutate({ fixed: true, ...(rating ? { rating } : {}) });
+      if (!rating) {
+        setRatingError(tf("ratingNeeded"));
+        return;
+      }
+      verify.mutate({ fixed: true, rating, ...(comment.trim() ? { comment: comment.trim() } : {}) });
       return;
     }
     if (reason.trim().length < 3) {
@@ -217,6 +220,18 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
   }));
 
   const showResolution = (d.status === "resolved" || d.status === "closed") && d.resolution;
+  const isOpen = (OPEN_STATUSES as readonly Status[]).includes(d.status);
+  const metooState: MeTooState = d.can_support
+    ? "can"
+    : d.supported_by_me
+      ? "supported"
+      : d.is_owner
+        ? d.visibility === "private"
+          ? "private"
+          : "own"
+        : !isOpen
+          ? "closed"
+          : "view";
   const originalLang = d.original_lang ?? undefined;
 
   return (
@@ -241,7 +256,7 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
             </Chip>
           )}
         </div>
-        <LifecycleTrack status={d.status} size="lg" className="mt-4" />
+        <LiveLifecycleTrack status={d.status} className="mt-4" />
         <LangText tag="h1" en={d.title_en} as={d.title_as} fallback={d.code} className="mt-3 text-xl font-bold tracking-tight sm:text-2xl" />
         <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
           <div className="flex min-w-0 items-center gap-1.5">
@@ -267,21 +282,9 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
         </dl>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <SlaCountdown due={d.sla_due_at} status={d.status} className="text-sm" />
-          {d.can_support ? (
-            <Button variant="soft" onClick={() => support.mutate()} loading={support.isPending}>
-              {!support.isPending && <ThumbsUp aria-hidden />}
-              {t("metoo.button", { n: n(d.metoo_count) })}
-            </Button>
-          ) : d.supported_by_me ? (
-            <Chip tone="primary" size="md" icon={ThumbsUp}>
-              {t("metoo.supported", { n: n(d.metoo_count) })}
-            </Chip>
-          ) : d.metoo_count > 0 ? (
-            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-              <ThumbsUp className="size-4" aria-hidden />
-              {t("metoo.count", { count: d.metoo_count, n: n(d.metoo_count) })}
-            </span>
-          ) : null}
+          {(metooState !== "view" || d.metoo_count > 0) && (
+            <MeTooButton state={metooState} count={d.metoo_count} pending={support.isPending} onPress={() => support.mutate()} />
+          )}
         </div>
       </Card>
 
@@ -318,18 +321,19 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
             <Card className="border-p4/40">
               <CardHeader icon={<Wrench className="size-4 text-p4" aria-hidden />} title={t("resolution.title")} className="mb-3" />
               <LangText tag="p" en={d.resolution.note_en} as={d.resolution.note_as} fallback={t("resolution.noNote")} className="text-sm" />
-              {d.resolution.photo_url && (
-                <EvidenceGallery photos={[d.resolution.photo_url]} />
+              {(d.photos[0] || d.resolution.photo_url) && (
+                <div className="mt-4">
+                  <p className="mb-2 text-sm font-medium">{tf("beforeAfter")}</p>
+                  <BeforeAfter before={d.photos[0] ?? null} after={d.resolution.photo_url} />
+                </div>
               )}
               {d.status === "closed" && d.rating && (
-                <p className="mt-3 flex items-center gap-1 text-sm">
-                  {t("verify.yourRating")}
-                  <span className="inline-flex" aria-label={t("verify.stars", { count: d.rating, n: n(d.rating) })}>
-                    {[1, 2, 3, 4, 5].map((v) => (
-                      <Star key={v} className={cn("size-4", v <= d.rating! ? "fill-p3 text-p3" : "text-muted-foreground")} aria-hidden />
-                    ))}
-                  </span>
-                </p>
+                <RatingSummary
+                  rating={d.rating}
+                  comment={d.rating_comment}
+                  title={d.is_owner ? tf("yourFeedback") : tf("reporterFeedback")}
+                  className="mt-4"
+                />
               )}
             </Card>
           )}
@@ -365,8 +369,22 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
         </div>
 
         <Card className="min-w-0">
-          <CardHeader title={t("timeline")} className="mb-4" />
-          <Timeline items={timeline} />
+          <CardHeader
+            title={t("timeline")}
+            className="mb-4"
+            action={
+              live ? (
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="relative flex size-2" aria-hidden>
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60 motion-reduce:animate-none" />
+                    <span className="relative inline-flex size-2 rounded-full bg-success" />
+                  </span>
+                  {tf("live")}
+                </span>
+              ) : undefined
+            }
+          />
+          <LiveTimeline items={timeline} emptyText={tu("timelineEmpty")} />
         </Card>
       </div>
 
@@ -380,14 +398,39 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
             <Button variant="ghost" onClick={() => setMode(null)}>
               {t("verify.cancel")}
             </Button>
-            <Button onClick={confirmVerify} loading={verify.isPending} disabled={mode === "fixed" && rating === 0}>
+            <Button onClick={confirmVerify} loading={verify.isPending}>
               {mode === "fixed" ? t("verify.confirm") : t("verify.send")}
             </Button>
           </>
         }
       >
         {mode === "fixed" ? (
-          <RatingPicker value={rating} onChange={setRating} />
+          <div className="space-y-3">
+            <StarRating
+              value={rating}
+              onChange={(v) => {
+                setRating(v);
+                setRatingError(null);
+              }}
+              label={t("verify.ratingLabel")}
+            />
+            {ratingError && (
+              <p role="alert" className="text-center text-sm text-danger">
+                {ratingError}
+              </p>
+            )}
+            <Textarea
+              id="verify-comment"
+              label={tf("commentLabel")}
+              placeholder={tf("commentPlaceholder")}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              maxLength={280}
+              showCount
+              rows={3}
+              className="min-h-20"
+            />
+          </div>
         ) : (
           <Textarea
             id="verify-reason"
@@ -404,6 +447,8 @@ export function TicketView({ initial }: { initial: ComplaintDetail }) {
           />
         )}
       </Dialog>
+
+      <Confetti fire={celebrate} />
 
       <p className="text-center text-xs text-muted-foreground">
         <Link href="/report" className={buttonVariants({ variant: "ghost", size: "sm" })}>

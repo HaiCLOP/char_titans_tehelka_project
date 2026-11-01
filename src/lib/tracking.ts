@@ -365,7 +365,7 @@ export async function listComplaints(supabase: Client, viewer: Viewer, q: Compla
 const DETAIL_COLUMNS =
   `${LIST_COLUMNS}, user_id, anonymous, original_text, location_note, department_id, assignee_id, parent_id, ` +
   "is_sensitive, ai_status, ai_meta, video_urls, resolution_note_en, resolution_note_as, resolution_photo_url, rating, " +
-  "verified_by_reporter, resolved_at, department:departments(id, name_en, name_as)";
+  "rating_comment, verified_by_reporter, resolved_at, department:departments(id, name_en, name_as)";
 
 type DetailRow = ListRow & {
   user_id: string | null;
@@ -383,6 +383,7 @@ type DetailRow = ListRow & {
   resolution_note_as: string | null;
   resolution_photo_url: string | null;
   rating: number | null;
+  rating_comment?: string | null;
   verified_by_reporter: boolean | null;
   resolved_at: string | null;
   department: NamedRef | null;
@@ -629,6 +630,8 @@ export async function getComplaintDetail(
         }
       : null,
     rating: row.rating,
+    // Reporter's own words: only the reporter and staff of the ticket see them.
+    rating_comment: isOwner || staffView ? (row.rating_comment ?? null) : null,
     verified_by_reporter: row.verified_by_reporter,
     department: row.department ?? null,
     is_owner: isOwner,
@@ -777,7 +780,12 @@ export async function verifyComplaint(
 
   let patch: Record<string, unknown>;
   if (row.status === "resolved" && body.fixed) {
-    patch = { status: "closed", verified_by_reporter: true, ...(body.rating ? { rating: body.rating } : {}) };
+    patch = {
+      status: "closed",
+      verified_by_reporter: true,
+      ...(body.rating ? { rating: body.rating } : {}),
+      ...(body.comment ? { rating_comment: body.comment } : {}),
+    };
   } else if (row.status === "resolved") {
     patch = { status: "in_progress", verified_by_reporter: false };
   } else if (row.status === "closed" && !body.fixed) {
@@ -801,7 +809,7 @@ export async function verifyComplaint(
     .update(patch)
     .eq("id", row.id)
     .eq("status", row.status) // optimistic: someone else may have moved it meanwhile
-    .select("id, status, rating, verified_by_reporter")
+    .select("id, status, rating, rating_comment, verified_by_reporter")
     .maybeSingle();
   if (upErr) {
     if (upErr.code === "P0001") throw new PipelineError("INVALID_TRANSITION", "That status change is not allowed");

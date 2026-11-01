@@ -22,6 +22,7 @@ import { apiFetch, isApiError } from "@/components/api-client";
 import { useRealtime } from "@/components/use-realtime";
 import { EvidenceGallery } from "@/components/ticket/evidence-gallery";
 import { SlaCountdown } from "@/components/ticket/sla-countdown";
+import { RatingSummary } from "@/components/ticket/ticket-fx";
 import { ResolveDrawer } from "@/components/staff/resolve-drawer";
 import { TicketChat } from "@/components/chat/ticket-chat";
 import { ReplyDraftPanel } from "@/components/assist/reply-draft-panel";
@@ -610,7 +611,9 @@ export function Workspace({ initial, departments, isSuper }: { initial: Complain
               {d.resolution.photo_url && (
                 <EvidenceGallery photos={[d.resolution.photo_url]} />
               )}
-              {d.rating != null && <p className="mt-3 text-sm text-muted-foreground">{t("rating", { n: n(d.rating) })}</p>}
+              {d.rating != null && (
+                <RatingSummary rating={d.rating} comment={d.rating_comment} className="mt-3" />
+              )}
             </Card>
           )}
 
