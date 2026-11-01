@@ -63,6 +63,8 @@ export type ReportAgentResult = {
   draft: ReportDraft | null;
   /** Best matching campus locations for the draft (chosen one first when `location_id` was sent). */
   locations: LocationItem[];
+  /** The place Civi is confident about (chosen, named, or the student's own hostel); the client pre-selects it. */
+  picked_location_id: string | null;
   questions_asked: number;
   is_urgent: boolean;
   source: "ai" | "fallback";
@@ -279,11 +281,16 @@ export async function runReportAgentTurn(supabase: SupabaseClient, userId: strin
   const need = draft ? null : (turn.need ?? "details");
 
   let locations: LocationItem[] = [];
+  let picked: string | null = null;
   if (draft) {
     // The named place first; the "where exactly" detail only when no place was named.
+    // Only real names count: a generic "hostel" must not suggest every hostel on campus.
     const query = draft.location_query || draft.location_note || "";
-    const ranked = query ? rankLocations(allLocations, query) : [];
-    locations = chosen ? [chosen, ...ranked.filter((l) => l.id !== chosen.id)].slice(0, 3) : ranked;
+    const ranked = query ? rankLocations(allLocations, query, 3, true) : [];
+    const home = usesHomeHostel && homeHostel ? (rankLocations(allLocations, homeHostel, 1, true)[0] ?? null) : null;
+    const first = chosen ?? (ranked.length === 1 ? ranked[0] : null) ?? (ranked.length ? null : home);
+    picked = first?.id ?? null;
+    locations = first ? [first, ...ranked.filter((l) => l.id !== first.id)].slice(0, 3) : ranked;
   }
 
   return {
@@ -291,6 +298,7 @@ export async function runReportAgentTurn(supabase: SupabaseClient, userId: strin
     need,
     draft,
     locations,
+    picked_location_id: picked,
     questions_asked: draft ? asked : asked + 1,
     is_urgent: Boolean(draft?.is_urgent || kw.is_urgent),
     source,

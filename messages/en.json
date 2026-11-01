@@ -537,6 +537,37 @@
       "network": "No connection. Check your internet and try again.",
       "rateLimited": "Too many messages. Wait a few minutes, then try again.",
       "retry": "Retry"
+    },
+    "summary": {
+      "title": "Here's your report",
+      "edit": "Edit",
+      "doneEditing": "Done",
+      "addPlace": "Add the place"
+    },
+    "privacy": {
+      "ask": "Who should see this report?",
+      "suggestSensitive": "This sounds personal, so I'd keep it for admins only.",
+      "recommended": "Recommended",
+      "ready": "All set. Tap Submit when you are ready.",
+      "change": "Change",
+      "options": {
+        "public": {
+          "label": "Public",
+          "hint": "Other students can see it and say \"Me too\". Your name is never shown publicly."
+        },
+        "public_anon": {
+          "label": "Public, hide my name",
+          "hint": "Visible to students, and staff will not see your name either."
+        },
+        "private": {
+          "label": "Private",
+          "hint": "Only you and the staff handling it."
+        },
+        "sensitive": {
+          "label": "Sensitive",
+          "hint": "Harassment, safety or a personal matter. Only admins see it."
+        }
+      }
     }
   },
   "emergency": {

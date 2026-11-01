@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { AlertTriangle, ClipboardList, EyeOff, Globe2, ImagePlus, Loader2, Lock, MapPin, RotateCcw, RotateCw, Send, ShieldAlert, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ClipboardList, EyeOff, Globe2, ImagePlus, Loader2, Lock, MapPin, Pencil, RotateCcw, RotateCw, Send, ShieldAlert, X } from "lucide-react";
 import {
   CATEGORIES,
   COMPLAINTS_PER_HOUR,
@@ -23,7 +23,7 @@ import type { ReportAgentResult, ReportDraft } from "@/lib/report-agent";
 import { compressImage } from "@/lib/image";
 import { pickLang } from "@/lib/lang";
 import { cn, toLocaleDigits } from "@/lib/utils";
-import { Button, Card, CardHeader, Combobox, Drawer, Input, LangText, Select, StatusChip, Switch, Textarea } from "@/components/ui";
+import { Button, Card, CategoryChip, Chip, Combobox, Drawer, Input, LangText, PriorityChip, Select, StatusChip, Textarea } from "@/components/ui";
 import { ApiError, apiFetch, isApiError } from "@/components/api-client";
 import { Civi, type CiviPose } from "@/components/mascot/civi";
 import { EmergencyBanner } from "./emergency-banner";
@@ -36,6 +36,14 @@ const MAX_TURN_CHARS = 1000;
 type ChatMsg = { id: string; role: "user" | "assistant"; content: string };
 type Photo = { id: string; blob: Blob; url: string; status: "uploading" | "done" | "error"; path?: string };
 type EditableDraft = ReportDraft & { requestId: string };
+/** Who can see the report, asked as one tap in the chat instead of a privacy form. */
+type Privacy = "public" | "public_anon" | "private" | "sensitive";
+const PRIVACY: { id: Privacy; icon: typeof Globe2 }[] = [
+  { id: "public", icon: Globe2 },
+  { id: "public_anon", icon: EyeOff },
+  { id: "private", icon: Lock },
+  { id: "sensitive", icon: ShieldAlert },
+];
 
 const uid = () => crypto.randomUUID();
 const fileName = (blob: Blob) => `photo.${blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg"}`;
@@ -61,10 +69,8 @@ export function ChatReport() {
   const [aiOffline, setAiOffline] = useState(false);
   const [suggested, setSuggested] = useState<LocationItem[]>([]);
   const [location, setLocation] = useState<LocationItem | null>(null);
-  const [visibility, setVisibility] = useState<Visibility>("public");
-  const [anonymous, setAnonymous] = useState(false);
-  const [sensitive, setSensitive] = useState(false);
-  const sensitiveUserOff = useRef(false);
+  const [privacy, setPrivacy] = useState<Privacy | null>(null);
+  const [editing, setEditing] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [similar, setSimilar] = useState<SimilarItem[]>([]);
   const [dupOpen, setDupOpen] = useState(false);
@@ -132,8 +138,11 @@ export function ChatReport() {
       if (r.draft) {
         setDraft({ ...r.draft, requestId: uid() }); // one idempotency key per draft
         setSuggested(r.locations);
+        // Civi already knows the place (named, chosen, or the student's own hostel): fill it in.
+        const picked = r.locations.find((l) => l.id === r.picked_location_id);
+        if (picked) setLocation(picked);
         setShowErrors(false);
-        if (r.draft.is_sensitive_suggested && !sensitiveUserOff.current) setSensitive(true);
+        setEditing(false);
       }
     },
   });
@@ -164,8 +173,8 @@ export function ChatReport() {
     setAiOffline(false);
     setSimilar([]);
     dupChecked.current = null;
-    sensitiveUserOff.current = false;
-    setSensitive(false);
+    setPrivacy(null);
+    setEditing(false);
   };
 
   // Keep the newest message (or the fresh draft) in view above the pinned composer.
@@ -176,13 +185,18 @@ export function ChatReport() {
   useEffect(() => {
     if (draftId) draftRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [draftId]);
+  useEffect(() => {
+    if (privacy) endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+  }, [privacy]);
 
   // ---------- submit ----------
   const titleField = locale === "as" ? "title_as" : "title_en";
   const titleError = draft && draft[titleField].trim().length < 3 ? t("draft.needTitle") : null;
   const textError = draft && !draft.text.trim() && photoPaths.length === 0 ? t("draft.needText") : null;
   const isUrgent = Boolean(draft?.is_urgent || turn.data?.is_urgent);
-  const effectiveVisibility: Visibility = sensitive ? "private" : visibility;
+  const sensitive = privacy === "sensitive";
+  const anonymous = privacy === "public_anon";
+  const effectiveVisibility: Visibility = privacy === "public" || privacy === "public_anon" ? "public" : "private";
 
   const submit = useMutation({
     mutationFn: (body: SubmitComplaintInput) => apiFetch<SubmitResult>("/api/complaints", { method: "POST", json: body }),
@@ -238,7 +252,8 @@ export function ChatReport() {
 
   const onSubmit = async () => {
     setShowErrors(true);
-    if (!draft || titleError || textError || uploading || uploadFailed || submit.isPending || checking) return;
+    if (!draft || !privacy || titleError || textError || uploading || uploadFailed || submit.isPending || checking) return;
+    if (titleError || textError) setEditing(true);
     const key = `${draft.requestId}|${location?.id ?? ""}`;
     if (dupChecked.current !== key) {
       dupChecked.current = key;
@@ -381,173 +396,183 @@ export function ChatReport() {
 
       {isUrgent && <EmergencyBanner className="mt-4" compact />}
 
-      {/* Draft card */}
+      {/* Draft: a short summary Civi filled in, editable on request, then one privacy question */}
       {draft && (
-        <div ref={draftRef} className="mt-4 scroll-mt-4">
-          <Card className="space-y-4">
-            <CardHeader as="h2" title={t("draft.title")} className="mb-0" />
-            <p className="-mt-2 text-xs text-muted-foreground">{t("draft.hint")}</p>
+        <div ref={draftRef} className="mt-4 scroll-mt-4 space-y-3">
+          <Card className="space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">{t("summary.title")}</p>
+                <h2 className="mt-1 text-base font-bold tracking-tight break-words">{draft[titleField] || t("draft.needTitle")}</h2>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setEditing((v) => !v)} aria-expanded={editing}>
+                {editing ? <ChevronDown aria-hidden strokeWidth={1.75} className="rotate-180" /> : <Pencil aria-hidden strokeWidth={1.75} />}
+                {editing ? t("summary.doneEditing") : t("summary.edit")}
+              </Button>
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground line-clamp-4 whitespace-pre-wrap">{draft.text}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <CategoryChip category={draft.category} />
+              <PriorityChip priority={draft.priority} />
+              {location ? (
+                <Chip tone="neutral" icon={MapPin}>{pickLang(location, "name", locale)}</Chip>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-dashed border-border-strong px-3 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  <MapPin className="size-4" strokeWidth={1.75} aria-hidden />
+                  {t("summary.addPlace")}
+                </button>
+              )}
+              {draft.location_note && <span className="text-xs text-muted-foreground">{draft.location_note}</span>}
+            </div>
             {aiOffline && (
               <p role="status" className="rounded-field bg-surface-muted px-3 py-2 text-xs text-foreground">
                 {t("aiOffline")}
               </p>
             )}
-            <Input
-              id="chat-title"
-              label={t("draft.titleLabel")}
-              value={draft[titleField]}
-              maxLength={locale === "as" ? 120 : 90}
-              onChange={(e) => patch({ [titleField]: e.target.value })}
-              error={showErrors ? titleError ?? undefined : undefined}
-            />
-            <Textarea
-              id="chat-text"
-              label={t("draft.text")}
-              value={draft.text}
-              rows={3}
-              maxLength={2000}
-              onChange={(e) => patch({ text: e.target.value })}
-              error={showErrors ? textError ?? undefined : undefined}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Select
-                id="chat-category"
-                label={t("draft.category")}
-                value={draft.category}
-                onChange={(e) => patch({ category: e.target.value as Category })}
-                options={CATEGORIES.map((c) => ({ value: c, label: tc(c) }))}
-              />
-              <Select
-                id="chat-priority"
-                label={t("draft.priority")}
-                value={String(draft.priority)}
-                onChange={(e) => patch({ priority: Number(e.target.value) })}
-                options={[1, 2, 3, 4].map((p) => ({ value: String(p), label: tp(String(p)) }))}
-              />
-            </div>
 
-            {/* Location: suggestions from the chat, or search */}
-            <div className="space-y-3">
-              {suggested.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium">{t("draft.suggested")}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {suggested.map((l) => {
-                      const on = location?.id === l.id;
-                      return (
-                        <button
-                          key={l.id}
-                          type="button"
-                          aria-pressed={on}
-                          onClick={() => setLocation(on ? null : l)}
-                          className={cn(
-                            "inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                            on ? "border-foreground bg-surface text-foreground ring-1 ring-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground",
-                          )}
-                        >
-                          <MapPin className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                          <span className="min-w-0 break-words">{pickLang(l, "name", locale)}</span>
-                        </button>
-                      );
-                    })}
+            {editing && (
+              <div className="space-y-4 border-t border-border pt-4">
+                <Input
+                  id="chat-title"
+                  label={t("draft.titleLabel")}
+                  value={draft[titleField]}
+                  maxLength={locale === "as" ? 120 : 90}
+                  onChange={(e) => patch({ [titleField]: e.target.value })}
+                  error={showErrors ? titleError ?? undefined : undefined}
+                />
+                <Textarea
+                  id="chat-text"
+                  label={t("draft.text")}
+                  value={draft.text}
+                  rows={3}
+                  maxLength={2000}
+                  onChange={(e) => patch({ text: e.target.value })}
+                  error={showErrors ? textError ?? undefined : undefined}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Select
+                    id="chat-category"
+                    label={t("draft.category")}
+                    value={draft.category}
+                    onChange={(e) => patch({ category: e.target.value as Category })}
+                    options={CATEGORIES.map((c) => ({ value: c, label: tc(c) }))}
+                  />
+                  <Select
+                    id="chat-priority"
+                    label={t("draft.priority")}
+                    value={String(draft.priority)}
+                    onChange={(e) => patch({ priority: Number(e.target.value) })}
+                    options={[1, 2, 3, 4].map((p) => ({ value: String(p), label: tp(String(p)) }))}
+                  />
+                </div>
+                {suggested.length > 1 && (
+                  <div>
+                    <p className="text-sm font-medium">{t("draft.suggested")}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {suggested.map((l) => {
+                        const on = location?.id === l.id;
+                        return (
+                          <button
+                            key={l.id}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => setLocation(on ? null : l)}
+                            className={cn(
+                              "inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              on ? "border-foreground bg-surface text-foreground ring-1 ring-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            <MapPin className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                            <span className="min-w-0 break-words">{pickLang(l, "name", locale)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
-              <Combobox<LocationItem>
-                id="chat-location"
-                label={t("draft.location")}
-                placeholder={t("draft.locationPlaceholder")}
-                value={location}
-                onChange={setLocation}
-                loadOptions={loadLocations}
-                getKey={(l) => l.id}
-                getLabel={(l) => pickLang(l, "name", locale)}
-                getSearchText={(l) => `${l.name_en} ${l.name_as}`}
-                emptyText={t("draft.locationEmpty")}
-              />
-              <Input
-                id="chat-location-note"
-                label={t("draft.locationNote")}
-                placeholder={t("draft.locationNotePlaceholder")}
-                value={draft.location_note ?? ""}
-                maxLength={200}
-                onChange={(e) => patch({ location_note: e.target.value })}
-              />
-            </div>
-
-            {/* Privacy: same rules as the form (sensitive ⇒ private) */}
-            <div className="space-y-4 border-t border-border pt-4">
-              <div>
-                <p id="chat-visibility-label" className="text-sm font-medium">{tr("privacy.visibility")}</p>
-                <div role="radiogroup" aria-labelledby="chat-visibility-label" className="mt-2 grid grid-cols-2 gap-2">
-                  {(["public", "private"] as const).map((v) => {
-                    const on = effectiveVisibility === v;
-                    const Icon = v === "public" ? Globe2 : Lock;
-                    return (
-                      <button
-                        key={v}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        disabled={sensitive}
-                        onClick={() => setVisibility(v)}
-                        className={cn(
-                          "flex h-11 items-center justify-center gap-2 rounded-full border text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60",
-                          on ? "border-foreground bg-surface text-foreground ring-1 ring-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <Icon className="size-4" strokeWidth={1.75} aria-hidden />
-                        {tr(`privacy.${v}`)}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {sensitive ? tr("privacy.forcedPrivate") : tr(`privacy.${effectiveVisibility}Hint`)}
-                </p>
-              </div>
-              <Switch
-                id="chat-anonymous"
-                checked={anonymous}
-                onCheckedChange={setAnonymous}
-                label={
-                  <span className="inline-flex items-center gap-1.5">
-                    <EyeOff className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
-                    {tr("privacy.anonymous")}
-                  </span>
-                }
-                description={tr("privacy.anonymousHint")}
-              />
-              <Switch
-                id="chat-sensitive"
-                checked={sensitive}
-                onCheckedChange={(v) => {
-                  setSensitive(v);
-                  if (!v) sensitiveUserOff.current = true;
-                }}
-                label={
-                  <span className="inline-flex items-center gap-1.5">
-                    <ShieldAlert className="size-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
-                    {tr("privacy.sensitive")}
-                  </span>
-                }
-                description={draft.is_sensitive_suggested && sensitive ? tr("privacy.sensitiveAuto") : tr("privacy.sensitiveHint")}
-              />
-            </div>
-
-            {submit.isError && (
-              <div role="alert" className="flex flex-wrap items-center gap-3 rounded-card border border-danger-border bg-danger-soft p-3 text-sm">
-                <AlertTriangle className="size-4 shrink-0 text-danger" strokeWidth={1.75} aria-hidden />
-                <span className="min-w-0 flex-1">{submitErrorText}</span>
-                {!isApiError(submit.error, "RATE_LIMITED") && !isApiError(submit.error, "VALIDATION_ERROR") && (
-                  <Button size="sm" variant="secondary" onClick={doSubmit}>
-                    <RotateCw aria-hidden strokeWidth={1.75} />
-                    {tr("errors.retry")}
-                  </Button>
                 )}
+                <Combobox<LocationItem>
+                  id="chat-location"
+                  label={t("draft.location")}
+                  placeholder={t("draft.locationPlaceholder")}
+                  value={location}
+                  onChange={setLocation}
+                  loadOptions={loadLocations}
+                  getKey={(l) => l.id}
+                  getLabel={(l) => pickLang(l, "name", locale)}
+                  getSearchText={(l) => `${l.name_en} ${l.name_as}`}
+                  emptyText={t("draft.locationEmpty")}
+                />
+                <Input
+                  id="chat-location-note"
+                  label={t("draft.locationNote")}
+                  placeholder={t("draft.locationNotePlaceholder")}
+                  value={draft.location_note ?? ""}
+                  maxLength={200}
+                  onChange={(e) => patch({ location_note: e.target.value })}
+                />
               </div>
             )}
           </Card>
+
+          {/* Privacy as one question in the chat (sensitive ⇒ private, same rules as the form) */}
+          <ol className="space-y-3">
+            <Bubble role="assistant" label={t("civi")}>
+              {t("privacy.ask")}
+              {draft.is_sensitive_suggested && <span className="mt-1 block text-muted-foreground">{t("privacy.suggestSensitive")}</span>}
+            </Bubble>
+            {privacy ? (
+              <>
+                <Bubble role="user" label={t("you")}>{t(`privacy.options.${privacy}.label`)}</Bubble>
+                <li className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-2.5 text-sm text-foreground">{t("privacy.ready")}</span>
+                  <Button variant="ghost" size="sm" onClick={() => setPrivacy(null)}>{t("privacy.change")}</Button>
+                </li>
+              </>
+            ) : (
+              <li>
+                <div role="radiogroup" aria-label={t("privacy.ask")} className="grid gap-2 sm:grid-cols-2">
+                  {(draft.is_sensitive_suggested ? [PRIVACY[3], ...PRIVACY.slice(0, 3)] : PRIVACY).map(({ id, icon: Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={false}
+                      onClick={() => setPrivacy(id)}
+                      className="flex min-h-14 items-start gap-3 rounded-2xl border border-border bg-surface px-3.5 py-3 text-left transition hover:border-border-strong hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-foreground">
+                          {t(`privacy.options.${id}.label`)}
+                          {draft.is_sensitive_suggested && id === "sensitive" && (
+                            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{t("privacy.recommended")}</span>
+                          )}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">{t(`privacy.options.${id}.hint`)}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </li>
+            )}
+          </ol>
+
+          {submit.isError && (
+            <div role="alert" className="flex flex-wrap items-center gap-3 rounded-card border border-danger-border bg-danger-soft p-3 text-sm">
+              <AlertTriangle className="size-4 shrink-0 text-danger" strokeWidth={1.75} aria-hidden />
+              <span className="min-w-0 flex-1">{submitErrorText}</span>
+              {!isApiError(submit.error, "RATE_LIMITED") && !isApiError(submit.error, "VALIDATION_ERROR") && (
+                <Button size="sm" variant="secondary" onClick={doSubmit}>
+                  <RotateCw aria-hidden strokeWidth={1.75} />
+                  {tr("errors.retry")}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -555,7 +580,7 @@ export function ChatReport() {
 
       {/* Pinned composer (sits above the mobile bottom nav; never covers the last message at full scroll) */}
       <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-20 -mx-4 mt-4 space-y-2 bg-background px-4 pt-2 pb-2 sm:mx-0 sm:px-0 lg:bottom-4">
-        {draft && !done && (
+        {draft && privacy && !done && (
           <Button size="lg" block onClick={() => void onSubmit()} loading={submit.isPending || checking}>
             {!(submit.isPending || checking) && <Send aria-hidden strokeWidth={1.75} />}
             {submit.isPending ? t("submitting") : checking ? t("checking") : uploading ? t("waitingUploads") : t("submit")}
