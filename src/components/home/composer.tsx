@@ -3,8 +3,9 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowRight, Building2, Droplets, ImagePlus, PenLine, Sparkles, X, Zap } from "lucide-react";
+import { ArrowRight, Building2, Droplets, ImagePlus, Sparkles, X, Zap } from "lucide-react";
 import { Avatar, buttonVariants } from "@/components/ui";
+import { Civi } from "@/components/mascot/civi";
 
 /** Key /report reads to prefill the description (kept out of the URL so complaint text never lands in logs). */
 export const REPORT_DRAFT_KEY = "cs_report_draft";
@@ -81,6 +82,7 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
 
   return (
     <form
+      id="tour-composer"
       onSubmit={(e) => {
         e.preventDefault();
         go();
@@ -93,12 +95,7 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
           {name ? (
             <Avatar name={name} src={avatar?.src} characterId={avatar?.character} seed={avatar?.id} size="md" decorative />
           ) : (
-            <span
-              className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary shadow-2xs"
-              aria-hidden
-            >
-              <PenLine className="size-4" strokeWidth={2} />
-            </span>
+            <Civi pose="hero" size="sm" interactive={false} />
           )}
           <div className="min-w-0">
             <h2 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
@@ -193,6 +190,7 @@ export function HomeComposer({ name, avatar }: { name: string | null; avatar?: {
       {/* Bottom Actions */}
       <div className="mt-3.5 flex items-center justify-between gap-3 border-t border-border/60 pt-3">
         <button
+          id="tour-photo-btn"
           type="button"
           onClick={() => fileInputRef.current?.click()}
           className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-surface-muted hover:text-foreground transition-colors"

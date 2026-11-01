@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Activity, Bell, BookOpen, Building2, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
+import { Activity, Bell, Building2, ClipboardList, House, LayoutDashboard, Map, Plus, UserRound, Wrench } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { BrandMark } from "./brand-mark";
 import { NavLink } from "./nav-link";
@@ -12,7 +12,6 @@ const MAIN = [
   { href: "/map", key: "map", icon: Map },
   { href: "/pulse", key: "pulse", icon: Activity },
   { href: "/departments", key: "departments", icon: Building2 },
-  { href: "/guide", key: "guide", icon: BookOpen },
   { href: "/notifications", key: "notifications", icon: Bell },
 ] as const;
 
@@ -47,7 +46,7 @@ export async function Sidebar() {
   );
 
   return (
-    <aside className="fixed top-1/2 left-5 z-30 hidden -translate-y-1/2 lg:block">
+    <aside id="tour-sidebar" className="fixed top-1/2 left-5 z-30 hidden -translate-y-1/2 lg:block">
       <div className="flex w-[4.25rem] flex-col items-center gap-2 rounded-full border border-border bg-surface px-2 py-3 shadow-rail">
         <Link href="/" aria-label={t("shell.home")} className="mb-2 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <BrandMark className="size-12" />

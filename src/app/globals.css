@@ -323,3 +323,8 @@ input::placeholder, textarea::placeholder { color: var(--subtle-foreground); opa
 @media (prefers-reduced-motion: reduce) {
   *, ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; transition: none !important; }
 }
+
+.tour-active-highlight {
+  position: relative !important;
+  z-index: 45 !important;
+}

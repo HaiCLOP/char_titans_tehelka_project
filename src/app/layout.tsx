@@ -6,6 +6,7 @@ import { getLocale } from "next-intl/server";
 import { Toaster } from "sonner";
 import { Providers } from "@/components/providers";
 import { PwaManager } from "@/components/pwa/pwa-manager";
+import { CiviCompanion } from "@/components/mascot/civi-companion";
 import { FONT_SIZE_COOKIE, MODE_COOKIE } from "@/lib/theme";
 import "./globals.css";
 
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-dvh">
         <NextIntlClientProvider>
           <Providers>{children}</Providers>
+          <CiviCompanion />
           <PwaManager />
           <Toaster position="top-center" toastOptions={{ className: "!rounded-2xl !border-border !bg-surface !text-foreground !shadow-md" }} />
         </NextIntlClientProvider>

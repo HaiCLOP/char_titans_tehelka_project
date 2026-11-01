@@ -11,6 +11,7 @@ import { getCampusDailyBrief } from "@/lib/ai/brief";
 import { HomeComposer } from "@/components/home/composer";
 import { AiDailyBriefCard } from "@/components/home/ai-daily-brief";
 import { IssueFeed } from "@/components/home/issue-feed";
+import { DashboardTour } from "@/components/home/dashboard-tour";
 
 type Stats = { open: number; in_progress: number; resolved: number; overdue: number; avg_resolution_hours: number | null };
 type TrendRow = { day: string; created: number; resolved: number };
@@ -97,7 +98,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
   const s = data.stats;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px] items-start">
+    <>
+      <DashboardTour />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px] items-start">
       {/* ============================================================ */}
       {/* LEFT COLUMN (BIG): Quick Report Composer + All Issues Feed   */}
       {/* ============================================================ */}
@@ -147,7 +150,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
         </div>
 
         {/* 2. All Issues Section */}
-        <section className="space-y-4">
+        <section id="tour-issue-feed" className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3">
             <div>
               <h2 className="text-lg font-bold tracking-tight text-foreground">
@@ -191,7 +194,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
       {/* ============================================================ */}
       <aside className="space-y-5 lg:sticky lg:top-20">
         {/* 1. Desktop 4-Metric Tile Card: Open, Being fixed, Fixed, Avg Fix Time */}
-        <div className="hidden lg:block rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-xs space-y-3.5">
+        <div id="tour-kpis" className="hidden lg:block rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-xs space-y-3.5">
           <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               {t("home.weekTitle")}
@@ -238,12 +241,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
         </div>
 
         {/* 2. AI Campus Daily Brief (Vertical stack on right rail) */}
-        <AiDailyBriefCard
-          vertical
-          bullets={locale === "as" ? data.brief.bullets_as : data.brief.bullets_en}
-          title={locale === "as" ? "দৈনিক এআই চৌহদ সাৰাংশ" : "AI Campus Daily Brief"}
-          badge={locale === "as" ? "এআই লাইভ" : "AI Live"}
-        />
+        <div id="tour-ai-brief">
+          <AiDailyBriefCard
+            vertical
+            bullets={locale === "as" ? data.brief.bullets_as : data.brief.bullets_en}
+            title={locale === "as" ? "দৈনিক এআই চৌহদ সাৰাংশ" : "AI Campus Daily Brief"}
+            badge={locale === "as" ? "এআই লাইভ" : "AI Live"}
+          />
+        </div>
 
         {/* 3. Helpful Navigation Shortcuts */}
         <div className="rounded-2xl border border-border/70 bg-surface/50 p-4 space-y-2.5">
@@ -269,5 +274,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
         </div>
       </aside>
     </div>
+    </>
   );
 }
